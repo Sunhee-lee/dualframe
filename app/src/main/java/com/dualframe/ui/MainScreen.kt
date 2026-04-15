@@ -2,6 +2,7 @@ package com.dualframe.ui
 
 import android.graphics.Bitmap
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -120,6 +121,7 @@ fun MainScreen(
             previewView = previewView,
             secondBitmap = secondBitmap,
             dualPreviewAvailable = dualAvailable,
+            showGuides = state.settings.showGuides,
             isRecording = state.appStatus == AppStatus.RECORDING,
             modifier = Modifier.weight(1f),
         )
@@ -206,14 +208,27 @@ private fun StatusChip(status: AppStatus) {
 
 // ── Preview Panels (inline for now — will be extracted to PreviewPanels.kt) ──
 
+/**
+ * Two separate live preview regions from one rear camera source.
+ *
+ * When showGuides is ON, each panel gets a colored border overlay:
+ * - 9:16 panel: yellow border (matches its label color)
+ * - 16:9 panel: cyan border (matches its label color)
+ * - During recording, both borders turn red
+ * When showGuides is OFF, no border is drawn.
+ */
 @Composable
 private fun PreviewPanels(
     previewView: PreviewView,
     secondBitmap: Bitmap?,
     dualPreviewAvailable: Boolean,
+    showGuides: Boolean,
     isRecording: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // Guide colors: match the label color for each panel, red during recording
+    val guide9x16 = if (isRecording) Color(0xFFFF1744) else Color(0xFFFFD54F)
+    val guide16x9 = if (isRecording) Color(0xFFFF1744) else Color(0xFF00BCD4)
 
     Column(
         modifier = modifier
@@ -230,7 +245,11 @@ private fun PreviewPanels(
                     .width(140.dp)
                     .aspectRatio(9f / 16f)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black),
+                    .background(Color.Black)
+                    .then(
+                        if (showGuides) Modifier.border(2.dp, guide9x16, RoundedCornerShape(8.dp))
+                        else Modifier
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 if (dualPreviewAvailable && secondBitmap != null) {
@@ -259,7 +278,11 @@ private fun PreviewPanels(
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black),
+                    .background(Color.Black)
+                    .then(
+                        if (showGuides) Modifier.border(2.dp, guide16x9, RoundedCornerShape(8.dp))
+                        else Modifier
+                    ),
             ) {
                 AndroidView(
                     factory = { previewView },

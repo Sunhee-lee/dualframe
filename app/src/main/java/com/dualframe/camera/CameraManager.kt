@@ -94,11 +94,15 @@ class CameraManager(private val context: Context) {
                 it.surfaceProvider = previewView.surfaceProvider
             }
 
-            // 2. Build Recorder with automatic quality fallback:
-            //    UHD → FHD → HD. Prioritizes stability over max resolution.
+            // 2. Build Recorder — intentionally conservative quality selection.
+            //    FHD first, HD fallback. UHD is excluded because binding 3 use cases
+            //    (Preview + ImageAnalysis + VideoCapture) already puts pressure on the
+            //    camera HAL and codec pipeline. UHD on top of that causes frame drops,
+            //    encoder stalls, or outright binding failures on many mid-range devices.
+            //    FHD provides excellent crop headroom for both 16:9 and 9:16 exports.
             val qualitySelector = QualitySelector.fromOrderedList(
-                listOf(Quality.UHD, Quality.FHD, Quality.HD),
-                FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
+                listOf(Quality.FHD, Quality.HD),
+                FallbackStrategy.higherQualityOrLowerThan(Quality.HD)
             )
             val recorder = Recorder.Builder()
                 .setQualitySelector(qualitySelector)
