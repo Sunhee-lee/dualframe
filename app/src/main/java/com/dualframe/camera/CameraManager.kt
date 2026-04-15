@@ -20,7 +20,6 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.dualframe.data.VideoQuality
 import com.dualframe.util.FileStorage
 import java.io.File
 import java.util.concurrent.Executors
@@ -77,14 +76,12 @@ class CameraManager(private val context: Context) {
      * Bind camera with preview, recording, and secondary analysis feed.
      *
      * @param lifecycleOwner Activity lifecycle
-     * @param previewView The PreviewView for the primary 16:9 preview
-     * @param quality Desired video quality setting
+     * @param previewView The PreviewView for the primary live preview
      * @param onError Called if camera setup fails entirely
      */
     suspend fun bindCamera(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
-        quality: VideoQuality,
         onError: (String) -> Unit,
     ) {
         try {
@@ -97,8 +94,12 @@ class CameraManager(private val context: Context) {
                 it.surfaceProvider = previewView.surfaceProvider
             }
 
-            // 2. Build Recorder with quality from settings
-            val qualitySelector = buildQualitySelector(quality)
+            // 2. Build Recorder with automatic quality fallback:
+            //    UHD → FHD → HD. Prioritizes stability over max resolution.
+            val qualitySelector = QualitySelector.fromOrderedList(
+                listOf(Quality.UHD, Quality.FHD, Quality.HD),
+                FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
+            )
             val recorder = Recorder.Builder()
                 .setQualitySelector(qualitySelector)
                 .build()
@@ -232,26 +233,6 @@ class CameraManager(private val context: Context) {
         val safeH = cropH.coerceAtMost(bitmap.height - y)
 
         return Bitmap.createBitmap(bitmap, x, y, safeW, safeH)
-    }
-
-    // ── Quality selection ─────────────────────────────────────────────
-
-    private fun buildQualitySelector(quality: VideoQuality): QualitySelector {
-        return when (quality) {
-            VideoQuality.AUTO -> QualitySelector.fromOrderedList(
-                listOf(Quality.UHD, Quality.FHD, Quality.HD),
-                FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
-            )
-            VideoQuality.UHD -> QualitySelector.from(
-                Quality.UHD, FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
-            )
-            VideoQuality.FHD -> QualitySelector.from(
-                Quality.FHD, FallbackStrategy.higherQualityOrLowerThan(Quality.HD)
-            )
-            VideoQuality.HD -> QualitySelector.from(
-                Quality.HD, FallbackStrategy.higherQualityThen(Quality.SD)
-            )
-        }
     }
 
     // ── Recording ─────────────────────────────────────────────────────

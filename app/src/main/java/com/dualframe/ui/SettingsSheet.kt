@@ -26,7 +26,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dualframe.data.AppSettings
-import com.dualframe.data.VideoQuality
 
 /**
  * Settings bottom sheet. Shown when the user taps the settings icon.
@@ -60,18 +59,6 @@ fun SettingsSheet(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // ── Video Quality ──
-            SettingSectionTitle("Video Quality")
-            RadioGroup(
-                options = VideoQuality.entries.map { it.label },
-                selectedIndex = VideoQuality.entries.indexOf(settings.videoQuality),
-                onSelected = { index ->
-                    onSettingsChange(settings.copy(videoQuality = VideoQuality.entries[index]))
-                },
-            )
-
-            SettingDivider()
 
             // ── Audio Recording ──
             SwitchSetting(

@@ -73,7 +73,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             cameraManager.bindCamera(
                 lifecycleOwner = lifecycleOwner,
                 previewView = previewView,
-                quality = _uiState.value.settings.videoQuality,
                 onError = { msg -> setError(msg) },
             )
             _uiState.update { it.copy(cameraReady = true) }

@@ -12,7 +12,7 @@ DualFrame captures a single high-quality master video from your rear camera and 
 2. **Dual live preview** — Two separate live video regions on screen:
    - **Top**: 16:9 landscape preview (native CameraX PreviewView, full framerate)
    - **Bottom**: 9:16 portrait preview (ImageAnalysis frames, center-cropped, displayed as bitmap)
-3. **One master recording** — Records a single high-quality file (quality configurable: Auto/UHD/FHD/HD).
+3. **One master recording** — Records a single high-quality file (automatic quality: UHD→FHD→HD fallback).
 4. **Two automatic exports** — After recording stops, Media3 Transformer center-crops the master file into both aspect ratios using actual video metadata for accurate crop math.
 5. **Gallery-ready** — Exported files saved to `Movies/DualFrame/` via MediaStore.
 
@@ -47,7 +47,6 @@ com.dualframe/
 
 | Setting | Options | Default |
 |---------|---------|---------|
-| Video Quality | Auto / UHD / FHD / HD | Auto |
 | Audio Recording | On / Off | On |
 | Countdown | Off / 3s / 5s | Off |
 | Keep Screen Awake | On / Off | On |
@@ -57,9 +56,9 @@ com.dualframe/
 
 CameraX only supports one `Preview` surface. To show two separate live video regions:
 
-1. **PreviewView** (native) renders into the 16:9 container at full framerate
-2. **ImageAnalysis** use case captures frames at 640x480, rotates them, center-crops to 9:16, and emits as `Bitmap` via `StateFlow`
-3. The 9:16 container displays this bitmap as a Compose `Image`
+1. **Top: 9:16 portrait** — `ImageAnalysis` captures frames at 640×480, rotates, center-crops to 9:16, and emits as `Bitmap` via `StateFlow`, displayed as a Compose `Image`
+2. **Bottom: 16:9 landscape** — native CameraX `PreviewView` renders at full framerate
+3. Both regions are live and derived from the same rear camera source
 4. If a device can't bind all 3 use cases (rare on minSdk 29+), the app falls back to single preview with overlay guides
 
 ## Export Crop Math
@@ -95,7 +94,6 @@ cd dualframe
 
 | Feature | How to Test |
 |---------|-------------|
-| Quality change | Settings → Video Quality → change → re-record → verify resolution in gallery file info |
 | Audio on/off | Settings → Audio Recording → toggle off → record → verify no audio in playback |
 | Countdown | Settings → Countdown → 3s → tap record → verify 3-2-1 countdown before recording starts |
 | Keep screen awake | Settings → toggle off → wait → screen should dim normally; toggle on → screen stays on |

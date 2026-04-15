@@ -49,13 +49,13 @@ import com.dualframe.viewmodel.MainViewModel
  * Layout (portrait):
  * ┌────────────────────────────┐
  * │  DualFrame    [status] [⚙] │  ← header
- * │ ┌────────────────────────┐ │
- * │ │  16:9 Live Preview     │ │  ← PreviewView (native CameraX)
- * │ └────────────────────────┘ │
  * │       ┌────────────┐       │
- * │       │ 9:16 Live  │       │  ← ImageAnalysis bitmap
+ * │       │ 9:16 Live  │       │  ← ImageAnalysis bitmap (top)
  * │       │ Preview    │       │
  * │       └────────────┘       │
+ * │ ┌────────────────────────┐ │
+ * │ │  16:9 Live Preview     │ │  ← PreviewView native CameraX (bottom)
+ * │ └────────────────────────┘ │
  * │   [timer / countdown]      │
  * │       ● Record ●          │
  * │   [export progress]        │
@@ -115,12 +115,11 @@ fun MainScreen(
             onSettingsTap = { showSettings = true },
         )
 
-        // ── Preview panels ──
+        // ── Preview panels (9:16 on top, 16:9 on bottom) ──
         PreviewPanels(
             previewView = previewView,
             secondBitmap = secondBitmap,
             dualPreviewAvailable = dualAvailable,
-            showGuides = state.settings.showGuides,
             isRecording = state.appStatus == AppStatus.RECORDING,
             modifier = Modifier.weight(1f),
         )
@@ -212,11 +211,9 @@ private fun PreviewPanels(
     previewView: PreviewView,
     secondBitmap: Bitmap?,
     dualPreviewAvailable: Boolean,
-    showGuides: Boolean,
     isRecording: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val borderColor = if (isRecording) Color(0xFFFF1744) else Color(0xFF333333)
 
     Column(
         modifier = modifier
@@ -225,41 +222,7 @@ private fun PreviewPanels(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // ── 16:9 Primary Preview (native CameraX PreviewView) ──
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("16:9 Landscape", color = Color(0xFF00BCD4), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black)
-                    .then(
-                        if (showGuides) Modifier.padding(0.dp) // guides drawn inside
-                        else Modifier
-                    ),
-            ) {
-                AndroidView(
-                    factory = { previewView },
-                    modifier = Modifier.fillMaxSize(),
-                )
-                if (showGuides) {
-                    // Thin border overlay to indicate active crop region
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(2.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.Transparent)
-                            .then(
-                                Modifier.background(Color.Transparent)
-                            ),
-                    )
-                }
-            }
-        }
-
-        // ── 9:16 Secondary Preview (ImageAnalysis bitmap or fallback) ──
+        // ── 9:16 Portrait Preview (top — ImageAnalysis bitmap or fallback) ──
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("9:16 Portrait", color = Color(0xFFFFD54F), fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Box(
@@ -271,7 +234,6 @@ private fun PreviewPanels(
                 contentAlignment = Alignment.Center,
             ) {
                 if (dualPreviewAvailable && secondBitmap != null) {
-                    // Real live secondary preview from ImageAnalysis
                     Image(
                         bitmap = secondBitmap.asImageBitmap(),
                         contentDescription = "9:16 live preview",
@@ -279,7 +241,6 @@ private fun PreviewPanels(
                         contentScale = ContentScale.Crop,
                     )
                 } else {
-                    // Fallback: no dual preview — show placeholder text
                     Text(
                         "9:16",
                         color = Color(0xFF555555),
@@ -287,6 +248,23 @@ private fun PreviewPanels(
                         fontWeight = FontWeight.Bold,
                     )
                 }
+            }
+        }
+
+        // ── 16:9 Landscape Preview (bottom — native CameraX PreviewView) ──
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("16:9 Landscape", color = Color(0xFF00BCD4), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black),
+            ) {
+                AndroidView(
+                    factory = { previewView },
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         }
     }
