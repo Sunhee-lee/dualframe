@@ -3,6 +3,7 @@ package com.dualframe.ui
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +18,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -30,14 +33,6 @@ import androidx.media3.common.util.UnstableApi
 import com.dualframe.ui.theme.DualFrameTheme
 import com.dualframe.viewmodel.MainViewModel
 
-/**
- * Single Activity for the DualFrame app.
- *
- * Handles:
- * - Runtime permission requests (CAMERA required, RECORD_AUDIO optional)
- * - Launches the main screen once camera permission is granted
- * - Shows a permission-denied UI if the user declines
- */
 @UnstableApi
 class MainActivity : ComponentActivity() {
 
@@ -45,14 +40,12 @@ class MainActivity : ComponentActivity() {
 
     private var hasCameraPermission by mutableStateOf(false)
     private var hasAudioPermission by mutableStateOf(false)
-    private var permissionRequested by mutableStateOf(false)
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         hasCameraPermission = permissions[Manifest.permission.CAMERA] == true
         hasAudioPermission = permissions[Manifest.permission.RECORD_AUDIO] == true
-        permissionRequested = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,7 +53,6 @@ class MainActivity : ComponentActivity() {
 
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
-        // Check existing permissions
         hasCameraPermission = ContextCompat.checkSelfPermission(
             this, Manifest.permission.CAMERA
         ) == PackageManager.PERMISSION_GRANTED
@@ -69,38 +61,49 @@ class MainActivity : ComponentActivity() {
             this, Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
 
-        // Request permissions if camera not yet granted
         if (!hasCameraPermission) {
             permissionLauncher.launch(
                 arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
             )
         } else if (!hasAudioPermission) {
-            // Camera granted but audio not — request audio separately
             permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
-        } else {
-            permissionRequested = true
         }
 
         setContent {
             DualFrameTheme {
+                // Keep screen awake based on settings
+                val uiState by viewModel.uiState.collectAsState()
+                KeepScreenAwakeEffect(uiState.settings.keepScreenAwake)
+
                 if (hasCameraPermission) {
                     MainScreen(
                         viewModel = viewModel,
                         hasAudioPermission = hasAudioPermission,
                     )
                 } else {
-                    // Permission denied screen
                     PermissionDeniedScreen(
                         onRequestAgain = {
                             permissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.CAMERA,
-                                    Manifest.permission.RECORD_AUDIO,
-                                )
+                                arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
                             )
                         }
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Toggle FLAG_KEEP_SCREEN_ON based on the setting.
+     * Using a composable effect so it reacts to settings changes in real time.
+     */
+    @Composable
+    private fun KeepScreenAwakeEffect(enabled: Boolean) {
+        LaunchedEffect(enabled) {
+            if (enabled) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
     }

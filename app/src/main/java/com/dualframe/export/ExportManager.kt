@@ -12,6 +12,7 @@ import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import com.dualframe.util.FileStorage
+import com.dualframe.util.VideoMetadata
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -22,35 +23,31 @@ import kotlinx.coroutines.withContext
 /**
  * Handles post-recording export of the master file into 16:9 and 9:16 crops.
  *
- * Design decisions:
- * - Uses Media3 Transformer which is the modern, supported way to do video transforms on Android.
- * - Crop is center-based: we extract the largest centered rectangle of the target aspect ratio
- *   from the source frame.
- * - Each export runs sequentially (not simultaneously) to avoid GPU/CPU contention.
- * - The Transformer handles re-encoding efficiently with hardware acceleration where available.
+ * Key improvement over v1: reads actual video metadata (width, height, rotation)
+ * from the master file instead of assuming a fixed 16:9 source. This ensures correct
+ * center-crop calculations for any camera output resolution/orientation.
  *
- * Crop math:
- * - Media3 Crop effect uses normalized coordinates in [-1, 1] range for both axes.
- * - left=-1 is the left edge, right=1 is the right edge, top=1 is top, bottom=-1 is bottom.
- * - To crop, we set the edges inward from the full frame.
+ * Media3 Transformer Crop effect uses normalized coordinates [-1, 1]:
+ *   - left=-1 is left edge, right=1 is right edge
+ *   - bottom=-1 is bottom edge, top=1 is top edge
+ *   - Values closer to 0 = more cropping from that edge
  *
- * Example: A 16:9 source (1920x1080) → 9:16 output
- *   We need to crop width. Target aspect = 9/16 = 0.5625
- *   Source aspect = 16/9 = 1.778
- *   We keep full height, crop width to: 1080 * (9/16) = 607.5 px
- *   Fraction of width to keep: 607.5/1920 = 0.3164
- *   In normalized coords: left = -0.3164, right = 0.3164
+ * IMPORTANT: Transformer reads the rotation metadata from the file and applies it
+ * BEFORE the Crop effect. So the Crop operates on the already-rotated (display)
+ * frame. Our crop coordinates should be calculated based on the display dimensions,
+ * not the raw buffer dimensions.
  */
 @UnstableApi
 class ExportManager(private val context: Context) {
 
     companion object {
         private const val TAG = "ExportManager"
+        private const val TARGET_LANDSCAPE = 16f / 9f  // 1.778
+        private const val TARGET_PORTRAIT = 9f / 16f    // 0.5625
     }
 
     /**
      * Export the master file to a 16:9 landscape version.
-     * Center-crops vertically if needed (e.g., if source is 4:3).
      *
      * @param masterFile The recorded master video file
      * @param onProgress Progress callback 0f..1f
@@ -62,10 +59,15 @@ class ExportManager(private val context: Context) {
     ): File? = withContext(Dispatchers.Main) {
         val outputFile = FileStorage.createExportFile(context, "16x9")
         try {
+            val metadata = VideoMetadata.fromFile(masterFile)
+            if (metadata == null) {
+                Log.e(TAG, "Cannot read metadata, using fallback crop")
+            }
             runTransform(
                 inputFile = masterFile,
                 outputFile = outputFile,
-                targetAspectRatio = 16f / 9f,
+                targetAspectRatio = TARGET_LANDSCAPE,
+                sourceMetadata = metadata,
                 onProgress = onProgress,
             )
             Log.i(TAG, "16:9 export complete: ${outputFile.absolutePath}")
@@ -79,7 +81,6 @@ class ExportManager(private val context: Context) {
 
     /**
      * Export the master file to a 9:16 portrait version.
-     * Center-crops horizontally from the source.
      *
      * @param masterFile The recorded master video file
      * @param onProgress Progress callback 0f..1f
@@ -91,10 +92,15 @@ class ExportManager(private val context: Context) {
     ): File? = withContext(Dispatchers.Main) {
         val outputFile = FileStorage.createExportFile(context, "9x16")
         try {
+            val metadata = VideoMetadata.fromFile(masterFile)
+            if (metadata == null) {
+                Log.e(TAG, "Cannot read metadata, using fallback crop")
+            }
             runTransform(
                 inputFile = masterFile,
                 outputFile = outputFile,
-                targetAspectRatio = 9f / 16f,
+                targetAspectRatio = TARGET_PORTRAIT,
+                sourceMetadata = metadata,
                 onProgress = onProgress,
             )
             Log.i(TAG, "9:16 export complete: ${outputFile.absolutePath}")
@@ -107,59 +113,83 @@ class ExportManager(private val context: Context) {
     }
 
     /**
-     * Run the actual Transformer export with a center-crop to the target aspect ratio.
+     * Core transform: center-crop the source to the target aspect ratio.
      *
-     * The Crop effect in Media3 uses normalized coordinates [-1, 1]:
-     *   - For width:  left=-1 means left edge, right=1 means right edge
-     *   - For height: bottom=-1 means bottom edge, top=1 means top edge
+     * Crop coordinate math (explained):
      *
-     * To center-crop to a target aspect ratio from a source with a different aspect ratio,
-     * we compute what fraction of each dimension to keep and set the crop edges accordingly.
+     * The Crop effect works AFTER Transformer applies the rotation metadata.
+     * So the frame the Crop sees is in display orientation (post-rotation).
+     *
+     * For a source with display dimensions W×H (display aspect = W/H):
+     *
+     * Case 1: target aspect > source aspect (target is wider relative to source)
+     *   → We need to crop top and bottom (reduce height)
+     *   → Keep full width: left=-1, right=1
+     *   → Height fraction to keep = sourceAspect / targetAspect
+     *   → In normalized coords: bottom = -fraction, top = fraction
+     *
+     * Case 2: target aspect < source aspect (target is taller relative to source)
+     *   → We need to crop left and right (reduce width)
+     *   → Keep full height: bottom=-1, top=1
+     *   → Width fraction to keep = targetAspect / sourceAspect
+     *   → In normalized coords: left = -fraction, right = fraction
+     *
+     * Case 3: target ≈ source (within tolerance)
+     *   → No crop needed, pass through
+     *
+     * @param inputFile Source video
+     * @param outputFile Destination file
+     * @param targetAspectRatio Desired output W/H ratio
+     * @param sourceMetadata Actual video metadata (null = fallback to 16:9 assumption)
+     * @param onProgress Progress callback
      */
     private suspend fun runTransform(
         inputFile: File,
         outputFile: File,
         targetAspectRatio: Float,
+        sourceMetadata: VideoMetadata?,
         onProgress: (Float) -> Unit,
     ) = suspendCancellableCoroutine { cont ->
 
-        // We don't know the exact source resolution at this point, but the Crop effect
-        // works in normalized space. We compute the crop assuming:
-        // - If targetAspect > sourceAspect: crop top/bottom (keep full width)
-        // - If targetAspect < sourceAspect: crop left/right (keep full height)
-        //
-        // Since the master is typically recorded at 16:9 (landscape sensor),
-        // but the phone is portrait, CameraX records in the sensor's native orientation
-        // with rotation metadata. Media3 Transformer respects this metadata.
-        //
-        // For a typical 16:9 master:
-        //   - 16:9 export: minimal or no crop needed
-        //   - 9:16 export: heavy horizontal crop from 16:9 → 9:16
+        // Use actual display aspect from metadata, or fallback to 16:9
+        val sourceAspect = sourceMetadata?.displayAspectRatio ?: (16f / 9f)
 
-        // Use Presentation effect to force output resolution and aspect ratio.
-        // The Crop effect handles the center-crop, then Presentation scales to final size.
-
-        val sourceAspect = 16f / 9f // Most rear cameras record 16:9 by default
+        Log.i(TAG, "Crop: source aspect=$sourceAspect, target aspect=$targetAspectRatio")
 
         val cropLeft: Float
         val cropRight: Float
         val cropBottom: Float
         val cropTop: Float
 
-        if (targetAspectRatio >= sourceAspect) {
-            // Target is wider or same — crop height (top/bottom)
+        val aspectTolerance = 0.01f
+        if (kotlin.math.abs(targetAspectRatio - sourceAspect) < aspectTolerance) {
+            // Source already matches target — no crop
+            cropLeft = -1f
+            cropRight = 1f
+            cropBottom = -1f
+            cropTop = 1f
+            Log.i(TAG, "No crop needed, aspects match within tolerance")
+        } else if (targetAspectRatio > sourceAspect) {
+            // Target is wider → crop height (top/bottom)
             val keepFraction = sourceAspect / targetAspectRatio
             cropLeft = -1f
             cropRight = 1f
             cropBottom = -keepFraction
             cropTop = keepFraction
+            Log.i(TAG, "Cropping height: keep ${"%.1f".format(keepFraction * 100)}%")
         } else {
-            // Target is taller — crop width (left/right)
+            // Target is taller → crop width (left/right)
             val keepFraction = targetAspectRatio / sourceAspect
             cropLeft = -keepFraction
             cropRight = keepFraction
             cropBottom = -1f
             cropTop = 1f
+            Log.i(TAG, "Cropping width: keep ${"%.1f".format(keepFraction * 100)}%")
+        }
+
+        // Validate crop bounds are within [-1, 1]
+        require(cropLeft >= -1f && cropRight <= 1f && cropBottom >= -1f && cropTop <= 1f) {
+            "Crop out of bounds: left=$cropLeft right=$cropRight bottom=$cropBottom top=$cropTop"
         }
 
         val cropEffect = Crop(cropLeft, cropRight, cropBottom, cropTop)
@@ -186,31 +216,29 @@ class ExportManager(private val context: Context) {
                     exportResult: ExportResult,
                     exportException: ExportException,
                 ) {
+                    Log.e(TAG, "Transformer error", exportException)
                     if (cont.isActive) cont.resumeWithException(exportException)
                 }
             })
             .build()
 
-        // Start the export
         transformer.start(editedMediaItem, outputFile.absolutePath)
 
-        // Poll progress on the main thread
-        // Transformer doesn't have a progress callback, so we poll via getProgress()
+        // Poll progress — Transformer only exposes progress via polling
         val handler = android.os.Handler(android.os.Looper.getMainLooper())
-        val progressBundle = androidx.media3.common.util.ProgressHolder()
+        val progressHolder = androidx.media3.common.util.ProgressHolder()
         val pollRunnable = object : Runnable {
             override fun run() {
                 if (!cont.isActive) return
-                val state = transformer.getProgress(progressBundle)
+                val state = transformer.getProgress(progressHolder)
                 if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
-                    onProgress(progressBundle.progress / 100f)
+                    onProgress(progressHolder.progress / 100f)
                 }
-                if (state != Transformer.PROGRESS_STATE_NOT_STARTED) {
-                    handler.postDelayed(this, 250)
-                }
+                // Keep polling while transform is running
+                handler.postDelayed(this, 200)
             }
         }
-        handler.postDelayed(pollRunnable, 250)
+        handler.postDelayed(pollRunnable, 200)
 
         cont.invokeOnCancellation {
             transformer.cancel()
