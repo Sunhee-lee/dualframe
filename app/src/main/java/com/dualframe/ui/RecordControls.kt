@@ -8,14 +8,11 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -25,23 +22,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dualframe.data.AppStatus
-import com.dualframe.util.formatDuration
 
 /**
- * Record button + timer + countdown display.
+ * Record button + countdown display.
+ *
+ * Recording timer is shown in the header bar (MainScreen), not here.
  *
  * Visual states:
  * - IDLE / EXPORT_COMPLETE / ERROR:  white circle with red inner dot → "tap to record"
  * - COUNTDOWN:  pulsing orange ring with countdown number inside
  * - RECORDING:  red circle with white stop square → "tap to stop"
- * - EXPORTING:  grey disabled circle with spinner-like appearance
+ * - EXPORTING:  grey disabled circle
  */
 @Composable
 fun RecordControls(
@@ -52,12 +48,6 @@ fun RecordControls(
     onRecordTap: () -> Unit,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        // Timer (only during recording)
-        if (appStatus == AppStatus.RECORDING) {
-            RecordingTimer(recordingSeconds)
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
         // Countdown number (only during countdown)
         if (appStatus == AppStatus.COUNTDOWN) {
             CountdownDisplay(countdownRemaining)
@@ -138,36 +128,6 @@ private fun RecordButton(
                 )
             }
         }
-    }
-}
-
-// ── Recording Timer ───────────────────────────────────────────────────
-
-@Composable
-private fun RecordingTimer(seconds: Int) {
-    val transition = rememberInfiniteTransition(label = "blink")
-    val alpha by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.3f,
-        animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
-        label = "blink_alpha",
-    )
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFFF1744).copy(alpha = alpha)),
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = formatDuration(seconds),
-            color = Color.White,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-        )
     }
 }
 
