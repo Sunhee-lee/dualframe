@@ -204,27 +204,8 @@ class ExportManager(private val context: Context) {
             )
             .build()
 
-        val transformer = Transformer.Builder(context)
-            .addListener(object : Transformer.Listener {
-                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    onProgress(1f)
-                    if (cont.isActive) cont.resume(Unit)
-                }
-
-                override fun onError(
-                    composition: Composition,
-                    exportResult: ExportResult,
-                    exportException: ExportException,
-                ) {
-                    Log.e(TAG, "Transformer error", exportException)
-                    if (cont.isActive) cont.resumeWithException(exportException)
-                }
-            })
-            .build()
-
-        transformer.start(editedMediaItem, outputFile.absolutePath)
-
-        // Poll progress — Transformer only exposes progress via polling
+        // Handler + runnable for progress polling (declared before listener so
+        // the listener can stop polling on completion/error)
         val handler = android.os.Handler(android.os.Looper.getMainLooper())
         val progressHolder = androidx.media3.common.util.ProgressHolder()
         val pollRunnable = object : Runnable {
@@ -234,10 +215,31 @@ class ExportManager(private val context: Context) {
                 if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
                     onProgress(progressHolder.progress / 100f)
                 }
-                // Keep polling while transform is running
                 handler.postDelayed(this, 200)
             }
         }
+
+        val transformer = Transformer.Builder(context)
+            .addListener(object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    handler.removeCallbacks(pollRunnable)
+                    onProgress(1f)
+                    if (cont.isActive) cont.resume(Unit)
+                }
+
+                override fun onError(
+                    composition: Composition,
+                    exportResult: ExportResult,
+                    exportException: ExportException,
+                ) {
+                    handler.removeCallbacks(pollRunnable)
+                    Log.e(TAG, "Transformer error", exportException)
+                    if (cont.isActive) cont.resumeWithException(exportException)
+                }
+            })
+            .build()
+
+        transformer.start(editedMediaItem, outputFile.absolutePath)
         handler.postDelayed(pollRunnable, 200)
 
         cont.invokeOnCancellation {

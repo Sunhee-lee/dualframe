@@ -79,11 +79,14 @@ class CameraManager(private val context: Context) {
      * @param previewView The PreviewView for the primary live preview
      * @param onError Called if camera setup fails entirely
      */
+    /**
+     * @return true if camera was bound successfully, false on total failure
+     */
     suspend fun bindCamera(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
         onError: (String) -> Unit,
-    ) {
+    ): Boolean {
         try {
             val provider = getCameraProvider()
             cameraProvider = provider
@@ -143,9 +146,11 @@ class CameraManager(private val context: Context) {
                 )
                 Log.i(TAG, "Camera bound: Preview + VideoCapture (fallback, no dual preview)")
             }
+            return true
         } catch (e: Exception) {
             Log.e(TAG, "Camera bind failed completely", e)
             onError("Camera setup failed: ${e.message}")
+            return false
         }
     }
 
@@ -164,10 +169,16 @@ class CameraManager(private val context: Context) {
             if (bitmap != null) {
                 val rotated = rotateBitmap(bitmap, imageProxy.imageInfo.rotationDegrees)
                 val cropped = centerCrop(rotated, 9f / 16f)
+
+                // Recycle the previous frame bitmap to prevent memory leak.
+                // At ~15-30fps this would otherwise leak ~1.2MB/frame of native memory.
+                val previous = _secondPreviewBitmap.value
                 _secondPreviewBitmap.value = cropped
-                // Recycle intermediates if they're different objects
-                if (rotated !== bitmap) bitmap.recycle()
-                if (cropped !== rotated) rotated.recycle()
+                previous?.recycle()
+
+                // Recycle intermediates that are distinct from the emitted bitmap
+                if (rotated !== bitmap && rotated !== cropped) rotated.recycle()
+                if (bitmap !== rotated && bitmap !== cropped) bitmap.recycle()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Frame processing error", e)

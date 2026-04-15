@@ -44,7 +44,6 @@ fun RecordControls(
     appStatus: AppStatus,
     cameraReady: Boolean,
     countdownRemaining: Int,
-    recordingSeconds: Int,
     onRecordTap: () -> Unit,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {

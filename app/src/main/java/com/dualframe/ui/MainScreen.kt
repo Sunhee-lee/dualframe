@@ -136,7 +136,6 @@ fun MainScreen(
                 appStatus = state.appStatus,
                 cameraReady = state.cameraReady,
                 countdownRemaining = state.countdownRemaining,
-                recordingSeconds = state.recordingDurationSeconds,
                 onRecordTap = { viewModel.toggleRecording(hasAudioPermission) },
             )
 

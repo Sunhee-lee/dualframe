@@ -70,12 +70,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun bindCamera(lifecycleOwner: LifecycleOwner, previewView: PreviewView) {
         viewModelScope.launch {
-            cameraManager.bindCamera(
+            val success = cameraManager.bindCamera(
                 lifecycleOwner = lifecycleOwner,
                 previewView = previewView,
                 onError = { msg -> setError(msg) },
             )
-            _uiState.update { it.copy(cameraReady = true) }
+            _uiState.update { it.copy(cameraReady = success) }
         }
     }
 
@@ -324,9 +324,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun buildShowFolderIntent(): Intent {
         return Intent(Intent.ACTION_VIEW).apply {
-            // Opens the default video gallery/collection
-            data = android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-            type = "video/*"
+            // Opens the default video gallery/collection.
+            // Must use setDataAndType — setting data and type separately clears the other.
+            setDataAndType(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*")
         }
     }
 
