@@ -10,6 +10,7 @@ import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
 import com.dualframe.util.FileStorage
 import com.dualframe.util.VideoMetadata
@@ -209,7 +210,7 @@ class ExportManager(private val context: Context) {
         lateinit var transformer: Transformer
 
         val handler = android.os.Handler(android.os.Looper.getMainLooper())
-        val progressHolder = Transformer.ProgressHolder()
+        val progressHolder = ProgressHolder()
         val pollRunnable = object : Runnable {
             override fun run() {
                 if (!cont.isActive) return
