@@ -209,7 +209,7 @@ class ExportManager(private val context: Context) {
         lateinit var transformer: Transformer
 
         val handler = android.os.Handler(android.os.Looper.getMainLooper())
-        val progressHolder = androidx.media3.common.util.ProgressHolder()
+        val progressHolder = Transformer.ProgressHolder()
         val pollRunnable = object : Runnable {
             override fun run() {
                 if (!cont.isActive) return
