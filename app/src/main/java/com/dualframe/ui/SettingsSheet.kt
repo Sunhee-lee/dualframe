@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dualframe.data.AppSettings
 import com.dualframe.data.FrameRate
+import com.dualframe.data.VideoQuality
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +63,18 @@ fun SettingsSheet(
                 label = "Audio Recording",
                 checked = settings.audioEnabled,
                 onCheckedChange = { onSettingsChange(settings.copy(audioEnabled = it)) },
+            )
+
+            SettingDivider()
+
+            // ── Video Quality ──
+            SettingSectionTitle("Video Quality")
+            RadioGroup(
+                options = VideoQuality.entries.map { it.label },
+                selectedIndex = VideoQuality.entries.indexOf(settings.videoQuality),
+                onSelected = { index ->
+                    onSettingsChange(settings.copy(videoQuality = VideoQuality.entries[index]))
+                },
             )
 
             SettingDivider()

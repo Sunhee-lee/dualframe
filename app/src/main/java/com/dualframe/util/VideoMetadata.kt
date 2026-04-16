@@ -24,6 +24,49 @@ data class VideoMetadata(
         private const val TAG = "VideoMetadata"
 
         /**
+         * Read the actual frame rate from a video file.
+         * Uses METADATA_KEY_CAPTURE_FRAMERATE which reports the real capture fps.
+         * Falls back to frame count / duration calculation if that key is unavailable.
+         * Returns a human-readable string like "30 fps" or "unknown".
+         */
+        fun readActualFps(file: File): String {
+            if (!file.exists() || file.length() == 0L) return "unknown"
+            val retriever = MediaMetadataRetriever()
+            return try {
+                retriever.setDataSource(file.absolutePath)
+                // Primary: CAPTURE_FRAMERATE is the most accurate on API 29+
+                val captureFps = retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE
+                )?.toFloatOrNull()
+                if (captureFps != null && captureFps > 0f) {
+                    val result = "%.1f fps".format(captureFps)
+                    Log.i(TAG, "Actual capture fps: $result")
+                    return result
+                }
+                // Fallback: compute from frame count and duration
+                val frameCount = retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_VIDEO_FRAME_COUNT
+                )?.toIntOrNull()
+                val durationMs = retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_DURATION
+                )?.toLongOrNull()
+                if (frameCount != null && durationMs != null && durationMs > 0) {
+                    val computed = frameCount * 1000f / durationMs
+                    val result = "%.1f fps".format(computed)
+                    Log.i(TAG, "Computed fps (frames/duration): $result")
+                    return result
+                }
+                Log.w(TAG, "Cannot determine fps from metadata")
+                "unknown"
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to read fps", e)
+                "unknown"
+            } finally {
+                try { retriever.release() } catch (_: Exception) { }
+            }
+        }
+
+        /**
          * Read metadata from a video file using MediaMetadataRetriever.
          * Returns null if the file can't be read or dimensions are missing.
          */

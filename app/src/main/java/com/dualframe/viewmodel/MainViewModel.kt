@@ -11,11 +11,14 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.util.UnstableApi
+import androidx.camera.video.Quality
 import com.dualframe.camera.CameraManager
 import com.dualframe.data.AppSettings
 import com.dualframe.data.AppStatus
 import com.dualframe.data.SettingsStore
 import com.dualframe.data.UiState
+import com.dualframe.data.VideoQuality
+import com.dualframe.util.VideoMetadata
 import com.dualframe.export.ExportManager
 import com.dualframe.util.FileStorage
 import java.io.File
@@ -68,11 +71,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // ── Camera ────────────────────────────────────────────────────────
 
     fun bindCamera(lifecycleOwner: LifecycleOwner, previewView: PreviewView) {
+        val settings = _uiState.value.settings
         viewModelScope.launch {
             val success = cameraManager.bindCamera(
                 lifecycleOwner = lifecycleOwner,
                 previewView = previewView,
-                targetFps = _uiState.value.settings.frameRate.fps,
+                targetFps = settings.frameRate.fps,
+                quality = settings.videoQuality.toCameraXQuality(),
                 onError = { msg -> setError(msg) },
             )
             _uiState.update { it.copy(cameraReady = success) }
@@ -99,13 +104,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         SettingsStore.save(getApplication(), newSettings)
         Log.i(TAG, "Settings updated: $newSettings")
 
-        // If frame rate changed and we're not recording, rebind camera immediately
-        // so the new fps takes effect without requiring an app restart.
-        // During recording, the new fps will apply on the next recording session.
-        if (newSettings.frameRate != oldSettings.frameRate) {
+        // If quality or frame rate changed and we're not recording, rebind camera
+        // immediately so the new settings take effect without an app restart.
+        // During recording, the new values will apply on the next recording session.
+        if (newSettings.frameRate != oldSettings.frameRate ||
+            newSettings.videoQuality != oldSettings.videoQuality
+        ) {
             viewModelScope.launch {
-                val success = cameraManager.rebindWithFps(
+                val success = cameraManager.rebindWithSettings(
                     newFps = newSettings.frameRate.fps,
+                    newQuality = newSettings.videoQuality.toCameraXQuality(),
                     onError = { msg -> setError(msg) },
                 )
                 _uiState.update { it.copy(cameraReady = success) }
@@ -175,6 +183,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 landscape16x9Name = null,
                 portrait9x16Name = null,
                 thumbnailBitmap = null,
+                actualFpsInfo = null,
             )
         }
 
@@ -287,8 +296,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 getApplication(), portrait, portraitName
             )
 
-            // Generate thumbnail from the portrait export (9:16 is more recognizable as a thumbnail)
+            // Generate thumbnail from the portrait export
             val thumbnail = generateThumbnail(portrait)
+
+            // Verify actual fps of the exported file. This confirms whether the
+            // requested fps was honored by the hardware, rather than just assuming.
+            val actualFps = withContext(Dispatchers.IO) {
+                VideoMetadata.readActualFps(portrait)
+            }
+            Log.i(TAG, "Export pipeline complete. Actual output fps: $actualFps")
 
             _uiState.update {
                 it.copy(
@@ -297,10 +313,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     portrait9x16Name = portraitName,
                     exportProgress = 1f,
                     thumbnailBitmap = thumbnail,
+                    actualFpsInfo = actualFps,
                 )
             }
-
-            Log.i(TAG, "Export pipeline complete")
         }
     }
 
@@ -375,4 +390,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         countdownJob?.cancel()
         cameraManager.release()
     }
+}
+
+/** Map user-facing VideoQuality enum to CameraX Quality constant. */
+private fun VideoQuality.toCameraXQuality(): Quality = when (this) {
+    VideoQuality.UHD -> Quality.UHD
+    VideoQuality.FHD -> Quality.FHD
+    VideoQuality.HD -> Quality.HD
 }

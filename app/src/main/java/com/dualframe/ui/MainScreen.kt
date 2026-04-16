@@ -412,10 +412,24 @@ private fun ResultActions(
                 contentScale = ContentScale.Crop,
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
     }
 
-    // Open + Share only (Folder button removed)
+    // Actual fps info from verified file metadata
+    state.actualFpsInfo?.let { fps ->
+        Text("Output: $fps", color = Color(0xFF888888), fontSize = 10.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+    }
+
+    // X dismiss button — returns to idle without deleting files
+    androidx.compose.material3.TextButton(
+        onClick = { viewModel.resetToIdle() },
+        modifier = Modifier.padding(bottom = 2.dp),
+    ) {
+        Text("✕  Close", color = Color(0xFF999999), fontSize = 12.sp)
+    }
+
+    // Open + Share
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -428,21 +442,6 @@ private fun ResultActions(
                 context.startActivity(android.content.Intent.createChooser(it, "Share video"))
             }
         }
-    }
-
-    Spacer(modifier = Modifier.height(6.dp))
-
-    state.landscape16x9Name?.let {
-        Text("16:9: $it", color = Color(0xFF888888), fontSize = 10.sp)
-    }
-    state.portrait9x16Name?.let {
-        Text("9:16: $it", color = Color(0xFF888888), fontSize = 10.sp)
-    }
-
-    Spacer(modifier = Modifier.height(6.dp))
-
-    androidx.compose.material3.TextButton(onClick = { viewModel.resetToIdle() }) {
-        Text("New Recording", color = MaterialTheme.colorScheme.primary)
     }
 }
 

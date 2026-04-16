@@ -23,6 +23,8 @@ data class UiState(
     val cameraReady: Boolean = false,
     // Thumbnail of latest export result
     val thumbnailBitmap: Bitmap? = null,
+    // Actual fps info from the exported file (verified, not just requested)
+    val actualFpsInfo: String? = null,
     // Settings
     val settings: AppSettings = AppSettings(),
 )

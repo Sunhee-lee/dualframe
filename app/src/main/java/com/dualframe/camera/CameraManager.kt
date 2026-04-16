@@ -67,33 +67,38 @@ class CameraManager(private val context: Context) {
 
     private val analysisExecutor = Executors.newSingleThreadExecutor()
 
-    // Stored for rebinding on camera switch
+    // Stored for rebinding on camera/quality/fps switch
     private var boundLifecycleOwner: LifecycleOwner? = null
     private var boundPreviewView: PreviewView? = null
-    private var boundTargetFps: Int = 30
+    private var boundTargetFps: Int = 0
+    private var boundQuality: Quality = Quality.FHD
 
     /**
      * Bind camera with preview, recording, and secondary analysis feed.
-     * @param targetFps Desired recording frame rate (24, 30, 60). Falls back if unsupported.
+     * @param targetFps Desired fps (0 = auto). Falls back if unsupported.
+     * @param quality Desired recording quality. Falls back if unsupported.
      * @return true if camera was bound successfully, false on total failure
      */
     suspend fun bindCamera(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
-        targetFps: Int = 30,
+        targetFps: Int = 0,
+        quality: Quality = Quality.FHD,
         onError: (String) -> Unit,
     ): Boolean {
         boundLifecycleOwner = lifecycleOwner
         boundPreviewView = previewView
         boundTargetFps = targetFps
+        boundQuality = quality
 
-        return bindCameraInternal(lifecycleOwner, previewView, targetFps, onError)
+        return bindCameraInternal(lifecycleOwner, previewView, targetFps, quality, onError)
     }
 
     private suspend fun bindCameraInternal(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
         targetFps: Int,
+        quality: Quality,
         onError: (String) -> Unit,
     ): Boolean {
         try {
@@ -106,12 +111,12 @@ class CameraManager(private val context: Context) {
                 it.surfaceProvider = previewView.surfaceProvider
             }
 
-            // 2. Build Recorder — prefer UHD for maximum crop headroom, with safe fallback.
-            //    UHD (4K) gives the best export quality when center-cropping to 16:9 and 9:16.
-            //    If UHD causes binding failures or isn't supported, CameraX falls back to FHD/HD.
-            //    This is safer than hard-requiring UHD, which would crash on mid-range devices.
-            val qualitySelector = QualitySelector.fromOrderedList(
-                listOf(Quality.UHD, Quality.FHD, Quality.HD),
+            // 2. Build Recorder — user-selected quality with safe fallback.
+            //    Both quality and fps are preferences: if the exact combo isn't supported
+            //    (e.g., UHD+60fps on a front camera), CameraX negotiates the closest match.
+            //    The fallback chain ensures the app never crashes due to unsupported combos.
+            val qualitySelector = QualitySelector.from(
+                quality,
                 FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
             )
             val recorder = Recorder.Builder()
@@ -186,24 +191,28 @@ class CameraManager(private val context: Context) {
         _secondPreviewBitmap.value = null // Clear stale frame from previous camera
         Log.i(TAG, "Switching camera to ${if (_useFrontCamera.value) "front" else "back"}")
 
-        return bindCameraInternal(owner, view, boundTargetFps, onError)
+        return bindCameraInternal(owner, view, boundTargetFps, boundQuality, onError)
     }
 
     /**
-     * Rebind with a new target fps. Only rebinds if the fps actually changed
-     * and the camera is not currently recording. Called by ViewModel when the
-     * user changes frame rate in settings while preview is live.
+     * Rebind with new fps and/or quality. Only rebinds if something actually changed
+     * and the camera is not recording. Called by ViewModel on settings changes.
      */
-    suspend fun rebindWithFps(newFps: Int, onError: (String) -> Unit): Boolean {
-        if (newFps == boundTargetFps) return true // No change — skip rebind
-        if (isRecording) return true // Don't interrupt recording; will apply on next bind
+    suspend fun rebindWithSettings(
+        newFps: Int,
+        newQuality: Quality,
+        onError: (String) -> Unit,
+    ): Boolean {
+        if (newFps == boundTargetFps && newQuality == boundQuality) return true
+        if (isRecording) return true // Don't interrupt recording; apply on next bind
 
         val owner = boundLifecycleOwner ?: return false
         val view = boundPreviewView ?: return false
 
         boundTargetFps = newFps
-        Log.i(TAG, "Rebinding camera with new target fps: $newFps")
-        return bindCameraInternal(owner, view, newFps, onError)
+        boundQuality = newQuality
+        Log.i(TAG, "Rebinding camera: quality=$newQuality, fps=$newFps")
+        return bindCameraInternal(owner, view, newFps, newQuality, onError)
     }
 
     // ── Frame processing ──────────────────────────────────────────────
@@ -215,12 +224,17 @@ class CameraManager(private val context: Context) {
                 val rotated = rotateBitmap(bitmap, imageProxy.imageInfo.rotationDegrees)
                 val cropped = centerCrop(rotated, 9f / 16f)
 
+                // Mirror horizontally for front camera so the 9:16 preview matches
+                // the native PreviewView which CameraX mirrors automatically.
+                val output = if (_useFrontCamera.value) mirrorBitmap(cropped) else cropped
+
                 // Emit the new frame. We do NOT recycle the previous bitmap because
                 // Compose may still be drawing it on the main thread. At 640x480 ARGB_8888
                 // (~1.2MB per frame), GC handles the turnover without issue.
-                _secondPreviewBitmap.value = cropped
+                _secondPreviewBitmap.value = output
 
                 // Recycle intermediates that are NOT the emitted bitmap
+                if (cropped !== output) cropped.recycle()
                 if (rotated !== bitmap && rotated !== cropped) rotated.recycle()
                 if (bitmap !== rotated && bitmap !== cropped) bitmap.recycle()
             }
@@ -258,6 +272,12 @@ class CameraManager(private val context: Context) {
     private fun rotateBitmap(bitmap: Bitmap, degrees: Int): Bitmap {
         if (degrees == 0) return bitmap
         val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    }
+
+    /** Mirror a bitmap horizontally (for front camera consistency with PreviewView). */
+    private fun mirrorBitmap(bitmap: Bitmap): Bitmap {
+        val matrix = Matrix().apply { preScale(-1f, 1f) }
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
