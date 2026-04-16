@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.util.Log
 import androidx.camera.video.VideoRecordEvent
-import androidx.camera.view.PreviewView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
@@ -71,12 +70,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── Camera ────────────────────────────────────────────────────────
 
-    fun bindCamera(lifecycleOwner: LifecycleOwner, previewView: PreviewView) {
+    /**
+     * Bind camera with GPU dual preview. No PreviewView needed — the renderer
+     * provides its own SurfaceTexture to CameraX. Always 2 use cases.
+     */
+    fun bindCamera(lifecycleOwner: LifecycleOwner) {
         val settings = _uiState.value.settings
         viewModelScope.launch {
             val success = cameraManager.bindCamera(
                 lifecycleOwner = lifecycleOwner,
-                previewView = previewView,
                 targetFps = settings.frameRate.fps,
                 quality = settings.videoQuality.toCameraXQuality(),
                 onError = { msg -> setError(msg) },
@@ -86,7 +88,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Switch front/back camera. Only allowed when not recording. */
     fun switchCamera() {
         if (cameraManager.isRecording) return
         _uiState.update { it.copy(cameraReady = false) }
@@ -95,8 +96,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 onError = { msg -> setError(msg) },
             )
             _uiState.update { it.copy(cameraReady = success) }
-            // Camera changed — refresh capabilities and auto-correct settings
             refreshSupportedCapabilities()
+        }
+    }
         }
     }
 
@@ -245,47 +247,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
 
-        // Rebind with 2 use cases (drop ImageAnalysis) BEFORE starting recording.
-        // This is the critical quality fix: with 3 use cases, CameraX downgrades
-        // VideoCapture to 720p. With only 2, FHD/UHD is preserved.
-        viewModelScope.launch {
-            val rebound = cameraManager.enterRecordingMode()
-            if (!rebound) {
-                setError("Failed to prepare recording mode")
-                return@launch
-            }
+        // No rebind needed — always 2 use cases (Preview + VideoCapture).
+        // Both previews stay live via GPU renderer during recording.
+        val file = cameraManager.startRecording(
+            audioEnabled = settings.audioEnabled,
+            hasAudioPermission = hasAudioPermission,
+            onEvent = ::onRecordingEvent,
+        )
 
-            val file = cameraManager.startRecording(
-                audioEnabled = settings.audioEnabled,
-                hasAudioPermission = hasAudioPermission,
-                onEvent = ::onRecordingEvent,
-            )
-
-            if (file == null) {
-                setError("Failed to start recording")
-                cameraManager.exitRecordingMode()
-                return@launch
-            }
-
-            masterFile = file
-            _uiState.update { it.copy(appStatus = AppStatus.RECORDING, recordingDurationSeconds = 0) }
-            startTimer()
+        if (file == null) {
+            setError("Failed to start recording")
+            return
         }
+
+        masterFile = file
+        _uiState.update { it.copy(appStatus = AppStatus.RECORDING, recordingDurationSeconds = 0) }
+        startTimer()
     }
 
     private fun stopRecording() {
         cameraManager.stopRecording()
         stopTimer()
-        // Restore 3 use cases (dual preview) after recording stops.
-        // Done in onRecordingEvent.Finalize to ensure recording has fully completed.
     }
 
     private fun onRecordingEvent(event: VideoRecordEvent) {
         when (event) {
             is VideoRecordEvent.Finalize -> {
-                // Restore dual preview by rebinding with ImageAnalysis
-                viewModelScope.launch { cameraManager.exitRecordingMode() }
-
                 if (event.hasError()) {
                     Log.e(TAG, "Recording finalize error: ${event.error}")
                     setError("Recording failed (error ${event.error})")

@@ -1,7 +1,8 @@
 package com.dualframe.ui
 
-import android.graphics.Bitmap
-import androidx.camera.view.PreviewView
+import android.graphics.SurfaceTexture
+import android.view.Surface
+import android.view.TextureView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -49,24 +50,6 @@ import com.dualframe.data.UiState
 import com.dualframe.util.formatDuration
 import com.dualframe.viewmodel.MainViewModel
 
-/**
- * Main screen — top-level scaffold.
- *
- * Layout (portrait, full-screen immersive):
- * ┌─────────────────────────────┐
- * │ DualFrame ● REC 01:23 🔄 ⚙│  ← header
- * │ ┌─────────────────────────┐│
- * │ │ [9:16]                  ││  ← large 9:16 preview (weight 3)
- * │ │                         ││
- * │ │                         ││
- * │ └─────────────────────────┘│
- * │ ┌─────────────────────────┐│
- * │ │ [16:9]                  ││  ← smaller 16:9 preview (weight 1)
- * │ └─────────────────────────┘│
- * │        ● Record ●          │
- * │   [Open] [Share]            │
- * └─────────────────────────────┘
- */
 @UnstableApi
 @Composable
 fun MainScreen(
@@ -76,24 +59,14 @@ fun MainScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-
-    val secondBitmap by viewModel.cameraManager.secondPreviewBitmap.collectAsState()
-    val dualAvailable by viewModel.cameraManager.dualPreviewAvailable.collectAsState()
-
-    val previewView = remember {
-        PreviewView(context).apply {
-            scaleType = PreviewView.ScaleType.FILL_CENTER
-            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-        }
-    }
+    val renderer = viewModel.cameraManager.renderer
 
     DisposableEffect(lifecycleOwner) {
-        viewModel.bindCamera(lifecycleOwner, previewView)
+        renderer.init { viewModel.bindCamera(lifecycleOwner) }
         onDispose { }
     }
 
     var showSettings by remember { mutableStateOf(false) }
-
     if (showSettings) {
         SettingsSheet(
             settings = state.settings,
@@ -105,64 +78,29 @@ fun MainScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0A0A0A)),
+        modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // ── Header ──
-        Header(
-            state = state,
-            canSwitchCamera = state.cameraReady && state.appStatus != AppStatus.RECORDING,
-            onCameraSwitch = { viewModel.switchCamera() },
-        )
+        Header(state, state.cameraReady && state.appStatus != AppStatus.RECORDING, { viewModel.switchCamera() })
 
-        // ── Preview panels (9:16 top = large, 16:9 bottom = smaller) ──
-        PreviewPanels(
-            previewView = previewView,
-            secondBitmap = secondBitmap,
-            dualPreviewAvailable = dualAvailable,
-            showGuides = state.settings.showGuides,
-            modifier = Modifier.weight(1f),
-        )
+        PreviewPanels(renderer, state.settings.showGuides, Modifier.weight(1f))
 
-        // ── Controls area — raised above gesture/nav zone ──
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(top = 8.dp, bottom = 36.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ExportStatusStub(state)
-
-            // Record button row with settings button to its right
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                // Spacer for symmetry
-                Spacer(modifier = Modifier.width(48.dp))
-
-                RecordControls(
-                    appStatus = state.appStatus,
-                    cameraReady = state.cameraReady,
-                    countdownRemaining = state.countdownRemaining,
-                    onRecordTap = { viewModel.toggleRecording(hasAudioPermission) },
-                )
-
-                // Settings button — positioned next to record button
-                IconButton(
-                    onClick = { showSettings = true },
-                    modifier = Modifier.padding(start = 8.dp),
-                ) {
+            Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
+                Spacer(Modifier.width(48.dp))
+                RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
+                    viewModel.toggleRecording(hasAudioPermission)
+                }
+                IconButton({ showSettings = true }, Modifier.padding(start = 8.dp)) {
                     Text("⚙", fontSize = 22.sp, color = Color(0xFFAAAAAA))
                 }
             }
-
             ResultActions(state, viewModel, context)
-            ErrorArea(state, onDismiss = { viewModel.clearError() })
+            ErrorArea(state) { viewModel.clearError() }
         }
     }
 }
@@ -170,43 +108,14 @@ fun MainScreen(
 // ── Header ────────────────────────────────────────────────────────────
 
 @Composable
-private fun Header(
-    state: UiState,
-    canSwitchCamera: Boolean,
-    onCameraSwitch: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "DualFrame",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-        )
-
-        // Recording indicator — single REC dot + timer
-        if (state.appStatus == AppStatus.RECORDING) {
-            RecIndicator(state.recordingDurationSeconds)
-        }
-
+private fun Header(state: UiState, canSwitch: Boolean, onSwitch: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+        Text("DualFrame", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
+        if (state.appStatus == AppStatus.RECORDING) RecIndicator(state.recordingDurationSeconds)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (state.appStatus != AppStatus.RECORDING) {
-                StatusChip(state.appStatus)
-                Spacer(modifier = Modifier.width(4.dp))
-            }
-
-            // Camera switch button
-            IconButton(onClick = onCameraSwitch, enabled = canSwitchCamera) {
-                Text(
-                    text = "🔄",
-                    fontSize = 18.sp,
-                    color = if (canSwitchCamera) Color.White else Color(0xFF555555),
-                )
+            if (state.appStatus != AppStatus.RECORDING) { StatusChip(state.appStatus); Spacer(Modifier.width(4.dp)) }
+            IconButton(onSwitch, enabled = canSwitch) {
+                Text("🔄", fontSize = 18.sp, color = if (canSwitch) Color.White else Color(0xFF555555))
             }
         }
     }
@@ -214,26 +123,10 @@ private fun Header(
 
 @Composable
 private fun RecIndicator(seconds: Int) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .background(Color(0x44FF1744), RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFFF1744)),
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = formatDuration(seconds),
-            color = Color.White,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-        )
+    Row(Modifier.background(Color(0x44FF1744), RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF1744)))
+        Spacer(Modifier.width(6.dp))
+        Text(formatDuration(seconds), Color.White, 13.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
     }
 }
 
@@ -248,71 +141,48 @@ private fun StatusChip(status: AppStatus) {
         AppStatus.EXPORT_COMPLETE -> "Done" to Color(0xFF66BB6A)
         AppStatus.ERROR -> "Error" to Color(0xFFCF6679)
     }
-    Text(
-        text = text,
-        color = color,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier
-            .background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
-    )
+    Text(text, color, 11.sp, fontWeight = FontWeight.Bold,
+        modifier = Modifier.background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 
-// ── Preview Panels ────────────────────────────────────────────────────
+// ── Preview Panels (GPU dual render via TextureViews) ─────────────────
 
-/**
- * Two separate live preview regions. The 9:16 panel gets 2x the vertical weight
- * for clear visibility. The 16:9 panel stays visible at 1x weight.
- */
 @Composable
 private fun PreviewPanels(
-    previewView: PreviewView,
-    secondBitmap: Bitmap?,
-    dualPreviewAvailable: Boolean,
+    renderer: com.dualframe.camera.DualPreviewRenderer,
     showGuides: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        // ── 9:16 Portrait Preview (top — weight 2) ──
-        Box(
-            modifier = Modifier
-                .weight(2f)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black),
-        ) {
-            if (dualPreviewAvailable && secondBitmap != null) {
-                Image(
-                    bitmap = secondBitmap.asImageBitmap(),
-                    contentDescription = "9:16 live preview",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                )
-            } else {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("9:16", color = Color(0xFF555555), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                }
-            }
+    Column(modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.weight(2f).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
+            AndroidView(
+                factory = { ctx ->
+                    TextureView(ctx).apply {
+                        surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                            override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) { renderer.setOutput9x16(Surface(st)) }
+                            override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) { renderer.setOutput9x16(Surface(st)) }
+                            override fun onSurfaceTextureDestroyed(st: SurfaceTexture) = true
+                            override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
             if (showGuides) RuleOfThirdsGrid()
             AspectLabel("9:16")
         }
-
-        // ── 16:9 Landscape Preview (bottom, compact — weight 1) ──
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black),
-        ) {
+        Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
             AndroidView(
-                factory = { previewView },
+                factory = { ctx ->
+                    TextureView(ctx).apply {
+                        surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                            override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) { renderer.setOutput16x9(Surface(st)) }
+                            override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) { renderer.setOutput16x9(Surface(st)) }
+                            override fun onSurfaceTextureDestroyed(st: SurfaceTexture) = true
+                            override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
@@ -323,159 +193,79 @@ private fun PreviewPanels(
 
 @Composable
 private fun AspectLabel(text: String) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = text,
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(6.dp)
-                .background(Color(0xAA000000), RoundedCornerShape(6.dp))
-                .padding(horizontal = 8.dp, vertical = 3.dp),
-        )
+    Box(Modifier.fillMaxSize()) {
+        Text(text, Color.White, 12.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.TopStart).padding(6.dp)
+                .background(Color(0xAA000000), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
     }
 }
 
 @Composable
 private fun RuleOfThirdsGrid() {
-    val lineColor = Color.White.copy(alpha = 0.3f)
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height
-        val strokeWidth = 1f
-
-        drawLine(lineColor, Offset(w / 3f, 0f), Offset(w / 3f, h), strokeWidth)
-        drawLine(lineColor, Offset(2f * w / 3f, 0f), Offset(2f * w / 3f, h), strokeWidth)
-        drawLine(lineColor, Offset(0f, h / 3f), Offset(w, h / 3f), strokeWidth)
-        drawLine(lineColor, Offset(0f, 2f * h / 3f), Offset(w, 2f * h / 3f), strokeWidth)
-
-        val crossLen = 12f
-        val cx = w / 2f
-        val cy = h / 2f
-        val crossColor = Color.White.copy(alpha = 0.4f)
-        drawLine(crossColor, Offset(cx - crossLen, cy), Offset(cx + crossLen, cy), strokeWidth)
-        drawLine(crossColor, Offset(cx, cy - crossLen), Offset(cx, cy + crossLen), strokeWidth)
+    val c = Color.White.copy(alpha = 0.3f)
+    Canvas(Modifier.fillMaxSize()) {
+        val w = size.width; val h = size.height
+        drawLine(c, Offset(w/3f,0f), Offset(w/3f,h), 1f)
+        drawLine(c, Offset(2f*w/3f,0f), Offset(2f*w/3f,h), 1f)
+        drawLine(c, Offset(0f,h/3f), Offset(w,h/3f), 1f)
+        drawLine(c, Offset(0f,2f*h/3f), Offset(w,2f*h/3f), 1f)
+        val cc = Color.White.copy(alpha = 0.4f)
+        drawLine(cc, Offset(w/2f-12f,h/2f), Offset(w/2f+12f,h/2f), 1f)
+        drawLine(cc, Offset(w/2f,h/2f-12f), Offset(w/2f,h/2f+12f), 1f)
     }
 }
 
-// ── Export Status ──────────────────────────────────────────────────────
+// ── Export / Result / Error ────────────────────────────────────────────
 
 @Composable
 private fun ExportStatusStub(state: UiState) {
-    val isExporting = state.appStatus == AppStatus.EXPORTING_NATIVE ||
-        state.appStatus == AppStatus.EXPORTING_CROPPED
-    if (!isExporting) return
-
+    val exporting = state.appStatus == AppStatus.EXPORTING_NATIVE || state.appStatus == AppStatus.EXPORTING_CROPPED
+    if (!exporting) return
     val label = if (state.appStatus == AppStatus.EXPORTING_NATIVE) "Exporting native..." else "Exporting cropped..."
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, color = Color(0xFFFFA726), fontSize = 12.sp)
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(Modifier.height(4.dp))
         androidx.compose.material3.LinearProgressIndicator(
             progress = { state.exportProgress },
-            modifier = Modifier
-                .fillMaxWidth(0.6f)
-                .height(5.dp)
-                .clip(RoundedCornerShape(3.dp)),
-            color = Color(0xFFFFA726),
-            trackColor = Color(0xFF333333),
-        )
+            modifier = Modifier.fillMaxWidth(0.6f).height(5.dp).clip(RoundedCornerShape(3.dp)),
+            color = Color(0xFFFFA726), trackColor = Color(0xFF333333))
     }
 }
 
-// ── Post-export actions (Open + Share only) ───────────────────────────
-
 @Composable
-private fun ResultActions(
-    state: UiState,
-    viewModel: MainViewModel,
-    context: android.content.Context,
-) {
+private fun ResultActions(state: UiState, viewModel: MainViewModel, context: android.content.Context) {
     if (state.appStatus != AppStatus.EXPORT_COMPLETE) return
-
-    Spacer(modifier = Modifier.height(8.dp))
-
+    Spacer(Modifier.height(8.dp))
     state.thumbnailBitmap?.let { bmp ->
-        Box(
-            modifier = Modifier
-                .width(80.dp)
-                .aspectRatio(9f / 16f)
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color.Black),
-        ) {
-            Image(
-                bitmap = bmp.asImageBitmap(),
-                contentDescription = "Latest export",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-            )
+        Box(Modifier.width(80.dp).aspectRatio(9f/16f).clip(RoundedCornerShape(6.dp)).background(Color.Black)) {
+            Image(bmp.asImageBitmap(), "Latest export", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(Modifier.height(4.dp))
     }
-
-    // Output info — actual resolution and fps from exported files
-    state.nativeExportInfo?.let {
-        Text(it, color = Color(0xFFAAAAAA), fontSize = 10.sp)
-    }
-    state.croppedExportInfo?.let {
-        Text(it, color = Color(0xFFAAAAAA), fontSize = 10.sp)
-    }
-    Spacer(modifier = Modifier.height(4.dp))
-
-    // X dismiss button — returns to idle without deleting files
-    androidx.compose.material3.TextButton(
-        onClick = { viewModel.resetToIdle() },
-        modifier = Modifier.padding(bottom = 2.dp),
-    ) {
+    state.nativeExportInfo?.let { Text(it, color = Color(0xFFAAAAAA), fontSize = 10.sp) }
+    state.croppedExportInfo?.let { Text(it, color = Color(0xFFAAAAAA), fontSize = 10.sp) }
+    Spacer(Modifier.height(4.dp))
+    androidx.compose.material3.TextButton({ viewModel.resetToIdle() }, Modifier.padding(bottom = 2.dp)) {
         Text("✕  Close", color = Color(0xFF999999), fontSize = 12.sp)
     }
-
-    // Open + Share
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ActionTextButton("Open") {
-            viewModel.buildOpenIntent()?.let { context.startActivity(it) }
-        }
-        ActionTextButton("Share") {
-            viewModel.buildShareIntent()?.let {
-                context.startActivity(android.content.Intent.createChooser(it, "Share video"))
-            }
-        }
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        ActionBtn("Open") { viewModel.buildOpenIntent()?.let { context.startActivity(it) } }
+        ActionBtn("Share") { viewModel.buildShareIntent()?.let { context.startActivity(android.content.Intent.createChooser(it, "Share")) } }
     }
 }
 
 @Composable
-private fun ActionTextButton(label: String, onClick: () -> Unit) {
-    androidx.compose.material3.OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier.height(34.dp),
-    ) {
-        Text(label, fontSize = 12.sp)
-    }
+private fun ActionBtn(label: String, onClick: () -> Unit) {
+    androidx.compose.material3.OutlinedButton(onClick, Modifier.height(34.dp)) { Text(label, fontSize = 12.sp) }
 }
-
-// ── Error Area ────────────────────────────────────────────────────────
 
 @Composable
 private fun ErrorArea(state: UiState, onDismiss: () -> Unit) {
     val error = state.errorMessage ?: return
-    Spacer(modifier = Modifier.height(8.dp))
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF370000), RoundedCornerShape(8.dp))
-            .padding(10.dp),
-    ) {
+    Spacer(Modifier.height(8.dp))
+    Column(Modifier.fillMaxWidth().background(Color(0xFF370000), RoundedCornerShape(8.dp)).padding(10.dp)) {
         Text(error, color = Color(0xFFCF6679), fontSize = 12.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        androidx.compose.material3.TextButton(onClick = onDismiss) {
-            Text("Dismiss", color = Color(0xFFCF6679), fontSize = 11.sp)
-        }
+        Spacer(Modifier.height(4.dp))
+        androidx.compose.material3.TextButton(onDismiss) { Text("Dismiss", color = Color(0xFFCF6679), fontSize = 11.sp) }
     }
 }
