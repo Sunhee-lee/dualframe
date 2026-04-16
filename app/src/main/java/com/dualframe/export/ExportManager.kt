@@ -204,8 +204,10 @@ class ExportManager(private val context: Context) {
             )
             .build()
 
-        // Handler + runnable for progress polling (declared before listener so
-        // the listener can stop polling on completion/error)
+        // Progress polling requires a reference to the Transformer, and the Transformer
+        // listener needs to stop the poll. Use lateinit to break the circular dependency.
+        lateinit var transformer: Transformer
+
         val handler = android.os.Handler(android.os.Looper.getMainLooper())
         val progressHolder = androidx.media3.common.util.ProgressHolder()
         val pollRunnable = object : Runnable {
@@ -219,7 +221,7 @@ class ExportManager(private val context: Context) {
             }
         }
 
-        val transformer = Transformer.Builder(context)
+        transformer = Transformer.Builder(context)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                     handler.removeCallbacks(pollRunnable)
