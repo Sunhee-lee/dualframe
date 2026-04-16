@@ -157,6 +157,7 @@ private fun StatusChip(status: AppStatus) {
         AppStatus.EXPORTING_NATIVE -> "Exporting..." to Color(0xFFFFA726)
         AppStatus.EXPORTING_CROPPED -> "Exporting..." to Color(0xFFFFA726)
         AppStatus.EXPORT_COMPLETE -> "Done" to Color(0xFF66BB6A)
+        AppStatus.SAVING -> "Saving..." to Color(0xFFFFA726)
         AppStatus.ERROR -> "Error" to Color(0xFFCF6679)
     }
     Text(text = text, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold,

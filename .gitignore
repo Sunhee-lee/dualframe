@@ -8,3 +8,5 @@
 .externalNativeBuild
 .cxx
 local.properties
+.kotlin/
+hs_err_pid*.log

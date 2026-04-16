@@ -5,8 +5,9 @@ import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.OverlayEffect
-import androidx.media3.effect.TextOverlay
 import androidx.media3.effect.OverlaySettings
+import androidx.media3.effect.TextOverlay
+import androidx.media3.effect.TextureOverlay
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.Effects
@@ -64,7 +65,8 @@ object WatermarkHelper {
                     .build(),
             )
 
-            val overlayEffect = OverlayEffect(ImmutableList.of(textOverlay))
+            val overlays: ImmutableList<TextureOverlay> = ImmutableList.of<TextureOverlay>(textOverlay)
+            val overlayEffect = OverlayEffect(overlays)
 
             val editedMediaItem = EditedMediaItem.Builder(mediaItem)
                 .setEffects(Effects(listOf(), listOf(overlayEffect)))
