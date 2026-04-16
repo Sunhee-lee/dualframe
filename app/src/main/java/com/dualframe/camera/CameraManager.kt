@@ -253,7 +253,9 @@ class CameraManager(private val context: Context) {
         val provider = cameraProvider ?: return listOf(Quality.FHD, Quality.HD)
         val selector = currentCameraSelector()
         return try {
-            val supported = QualitySelector.getSupportedQualities(provider.getCameraInfo(selector))
+            val cameraInfo = provider.getCameraInfo(selector)
+            val capabilities = Recorder.getVideoCapabilities(cameraInfo)
+            val supported = capabilities.getSupportedQualities(capabilities.supportedDynamicRanges.first())
             listOf(Quality.UHD, Quality.FHD, Quality.HD).filter { it in supported }
                 .ifEmpty { listOf(Quality.FHD, Quality.HD) }
         } catch (e: Exception) {
