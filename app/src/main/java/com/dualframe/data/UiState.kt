@@ -3,29 +3,31 @@ package com.dualframe.data
 import android.graphics.Bitmap
 import android.net.Uri
 
-/**
- * Single source of truth for the main screen's UI state.
- * The ViewModel emits this; the Compose UI observes it.
- */
 data class UiState(
     val appStatus: AppStatus = AppStatus.IDLE,
     val recordingDurationSeconds: Int = 0,
-    val countdownRemaining: Int = 0, // 0 = not counting down; 3,2,1 = active countdown
+    val countdownRemaining: Int = 0,
     val errorMessage: String? = null,
-    val exportProgress: Float = 0f, // 0..1 for current export step
+    val exportProgress: Float = 0f,
     val masterFilePath: String? = null,
-    // Content URIs for exported files (for open/share intents)
-    val landscape16x9Uri: Uri? = null,
-    val portrait9x16Uri: Uri? = null,
     val cameraReady: Boolean = false,
     // Thumbnail of latest export result
     val thumbnailBitmap: Bitmap? = null,
-    // Export result info lines — truthful about which was native vs cropped
-    val nativeExportInfo: String? = null,  // e.g., "9:16 (native) — 30.0 fps"
-    val croppedExportInfo: String? = null, // e.g., "16:9 (cropped)"
+    // Export result info (shown in result panel)
+    val nativeExportInfo: String? = null,
+    val croppedExportInfo: String? = null,
+    // Temp file paths for exported files (NOT yet saved to gallery)
+    val nativeTempPath: String? = null,
+    val croppedTempPath: String? = null,
+    // Saved URIs (set only after explicit user save action)
+    val savedNativeUri: Uri? = null,
+    val savedCroppedUri: Uri? = null,
+    // Save status message (e.g., "Saved to gallery", "Saving...")
+    val saveMessage: String? = null,
+    // Whether the Remove Watermark dialog is showing
+    val showRemoveWatermarkDialog: Boolean = false,
     // Settings
     val settings: AppSettings = AppSettings(),
-    // Capability-driven: which quality options are available on the current camera
     val supportedQualities: List<VideoQuality> = VideoQuality.entries,
 )
 
@@ -33,8 +35,9 @@ enum class AppStatus {
     IDLE,
     COUNTDOWN,
     RECORDING,
-    EXPORTING_NATIVE,  // first export: passthrough or minimal crop of native framing
-    EXPORTING_CROPPED, // second export: center-crop to the other aspect ratio
-    EXPORT_COMPLETE,
+    EXPORTING_NATIVE,
+    EXPORTING_CROPPED,
+    EXPORT_COMPLETE, // result ready in temp, not yet saved to gallery
+    SAVING,          // actively saving to gallery
     ERROR,
 }

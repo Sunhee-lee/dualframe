@@ -111,6 +111,11 @@ fun MainScreen(
             ErrorArea(state) { viewModel.clearError() }
         }
     }
+
+    // Remove Watermark dialog
+    if (state.showRemoveWatermarkDialog) {
+        RemoveWatermarkDialog(viewModel, context) { viewModel.dismissRemoveWatermarkDialog() }
+    }
 }
 
 // ── Header ────────────────────────────────────────────────────────────
@@ -247,30 +252,134 @@ private fun ExportStatusStub(state: UiState) {
 
 @Composable
 private fun ResultActions(state: UiState, viewModel: MainViewModel, context: android.content.Context) {
-    if (state.appStatus != AppStatus.EXPORT_COMPLETE) return
+    if (state.appStatus != AppStatus.EXPORT_COMPLETE && state.appStatus != AppStatus.SAVING) return
     Spacer(Modifier.height(8.dp))
-    state.thumbnailBitmap?.let { bmp ->
-        Box(Modifier.width(80.dp).aspectRatio(9f/16f).clip(RoundedCornerShape(6.dp)).background(Color.Black)) {
-            Image(bmp.asImageBitmap(), "Latest export", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+
+    // Thumbnail LEFT, buttons RIGHT
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Thumbnail on the left
+        state.thumbnailBitmap?.let { bmp ->
+            Box(
+                Modifier.width(72.dp).aspectRatio(9f / 16f)
+                    .clip(RoundedCornerShape(6.dp)).background(Color.Black),
+            ) {
+                Image(bmp.asImageBitmap(), "Result", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            }
         }
+
+        Spacer(Modifier.width(12.dp))
+
+        // Action buttons stacked vertically on the right
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            ResultButton("Save Both (with Ads)", state.appStatus != AppStatus.SAVING) {
+                viewModel.saveBothWithWatermark()
+            }
+            ResultButton("Remove Watermark", state.appStatus != AppStatus.SAVING) {
+                viewModel.showRemoveWatermarkDialog()
+            }
+            ResultButton("Open Gallery", true) {
+                try { context.startActivity(viewModel.buildOpenGalleryIntent()) } catch (_: Exception) {}
+            }
+            ResultButton("Retake", true) {
+                viewModel.resetToIdle()
+            }
+        }
+    }
+
+    // Status messages
+    state.saveMessage?.let {
         Spacer(Modifier.height(4.dp))
+        Text(it, color = Color(0xFF66BB6A), fontSize = 11.sp)
     }
-    state.nativeExportInfo?.let { Text(it, color = Color(0xFFAAAAAA), fontSize = 10.sp) }
-    state.croppedExportInfo?.let { Text(it, color = Color(0xFFAAAAAA), fontSize = 10.sp) }
-    Spacer(Modifier.height(4.dp))
-    androidx.compose.material3.TextButton({ viewModel.resetToIdle() }, Modifier.padding(bottom = 2.dp)) {
-        Text("✕  Close", color = Color(0xFF999999), fontSize = 12.sp)
+    state.nativeExportInfo?.let {
+        Text(it, color = Color(0xFF888888), fontSize = 9.sp)
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        ActionBtn("Open") { viewModel.buildOpenIntent()?.let { context.startActivity(it) } }
-        ActionBtn("Share") { viewModel.buildShareIntent()?.let { context.startActivity(android.content.Intent.createChooser(it, "Share")) } }
+    state.croppedExportInfo?.let {
+        Text(it, color = Color(0xFF888888), fontSize = 9.sp)
     }
 }
 
 @Composable
-private fun ActionBtn(label: String, onClick: () -> Unit) {
-    androidx.compose.material3.OutlinedButton(onClick, Modifier.height(34.dp)) { Text(label, fontSize = 12.sp) }
+private fun ResultButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+    androidx.compose.material3.OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().height(34.dp),
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Text(label, fontSize = 11.sp, maxLines = 1)
+    }
 }
+
+/** Remove Watermark dialog with two options: Watch Ad or Go PRO. */
+@Composable
+private fun RemoveWatermarkDialog(
+    viewModel: MainViewModel,
+    context: android.content.Context,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1E1E1E),
+        title = { Text("Remove Watermark", color = Color.White) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = {
+                        onDismiss()
+                        // Show rewarded ad — on reward, save clean
+                        val activity = context as? android.app.Activity
+                        if (activity != null) {
+                            com.dualframe.monetize.AdRewardManager.showAd(
+                                activity = activity,
+                                onRewarded = { viewModel.saveBothClean() },
+                                onFailed = { msg ->
+                                    viewModel.clearError()
+                                    // Show error briefly via saveMessage
+                                },
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text("Watch a short ad to remove watermark", fontSize = 13.sp)
+                }
+                androidx.compose.material3.OutlinedButton(
+                    onClick = {
+                        onDismiss()
+                        // Launch billing purchase
+                        val activity = context as? android.app.Activity
+                        if (activity != null) {
+                            com.dualframe.monetize.BillingManager(context).apply {
+                                connect()
+                                // Note: in production, BillingManager should be a singleton
+                                // managed by ViewModel, not created per-click.
+                                launchPurchase(activity) { success ->
+                                    if (success) viewModel.saveBothClean()
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text("Go PRO - No Watermarks Forever", fontSize = 13.sp)
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            androidx.compose.material3.TextButton(onDismiss) {
+                Text("Cancel", color = Color(0xFF999999))
+            }
+        },
+    )
+}
+
 
 @Composable
 private fun ErrorArea(state: UiState, onDismiss: () -> Unit) {

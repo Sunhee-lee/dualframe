@@ -20,6 +20,7 @@ import com.dualframe.data.VideoQuality
 import com.dualframe.util.VideoMetadata
 import com.dualframe.export.ExportManager
 import com.dualframe.util.FileStorage
+import com.dualframe.util.WatermarkHelper
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -173,8 +174,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 appStatus = AppStatus.COUNTDOWN,
                 countdownRemaining = seconds,
-                landscape16x9Uri = null,
-                portrait9x16Uri = null,
                 thumbnailBitmap = null,
                 nativeExportInfo = null,
                 croppedExportInfo = null,
@@ -202,8 +201,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val settings = _uiState.value.settings
         _uiState.update {
             it.copy(
-                landscape16x9Uri = null,
-                portrait9x16Uri = null,
                 thumbnailBitmap = null,
                 nativeExportInfo = null,
                 croppedExportInfo = null,
@@ -349,20 +346,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            val nativeName = nativeFile.nameWithoutExtension + ".mp4"
-            val nativeUri = FileStorage.saveToMediaStore(getApplication(), nativeFile, nativeName)
-
-            // Read verified metadata from the native export (actual resolution + fps)
+            // Read verified metadata — do NOT save to gallery yet (user must explicitly save)
             val nativeMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(nativeFile) }
             val nativeRes = nativeMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
             val nativeFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(nativeFile) }
-
-            Log.i(TAG, "Native output: $nativeLabel $nativeRes $nativeFps (direct copy, no re-encode)")
-            if (isPortrait) {
-                _uiState.update { it.copy(portrait9x16Uri = nativeUri) }
-            } else {
-                _uiState.update { it.copy(landscape16x9Uri = nativeUri) }
-            }
+            Log.i(TAG, "Native output: $nativeLabel $nativeRes $nativeFps (temp, not saved)")
 
             // ── Step 2: Derived output — center-crop with resolution preservation ──
             // Uses Presentation.createForHeight() to prevent Transformer's default downscale.
@@ -377,23 +365,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            val croppedName = croppedFile.nameWithoutExtension + ".mp4"
-            val croppedUri = FileStorage.saveToMediaStore(getApplication(), croppedFile, croppedName)
             val croppedMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(croppedFile) }
             val croppedRes = croppedMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
             val croppedFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(croppedFile) }
-
-            Log.i(TAG, "Derived output: $croppedLabel $croppedRes $croppedFps (crop + re-encode)")
-
-            if (isPortrait) {
-                _uiState.update { it.copy(landscape16x9Uri = croppedUri) }
-            } else {
-                _uiState.update { it.copy(portrait9x16Uri = croppedUri) }
-            }
+            Log.i(TAG, "Derived output: $croppedLabel $croppedRes $croppedFps (temp, not saved)")
 
             val thumbnail = generateThumbnail(nativeFile)
 
-            // User-facing labels: simple, no technical jargon
+            // Files ready in temp — NOT saved to gallery yet.
+            // User must press Save Both or Remove Watermark to trigger gallery save.
             _uiState.update {
                 it.copy(
                     appStatus = AppStatus.EXPORT_COMPLETE,
@@ -401,8 +381,110 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     thumbnailBitmap = thumbnail,
                     nativeExportInfo = buildOutputLine(nativeLabel, nativeRes, nativeFps),
                     croppedExportInfo = buildOutputLine(croppedLabel, croppedRes, croppedFps),
+                    nativeTempPath = nativeFile.absolutePath,
+                    croppedTempPath = croppedFile.absolutePath,
+                    savedNativeUri = null,
+                    savedCroppedUri = null,
+                    saveMessage = null,
                 )
             }
+        }
+    }
+
+    // ── Explicit save actions ────────────────────────────────────────
+
+    /**
+     * Save both exports to gallery WITH watermark (free-tier path).
+     * Watermark is applied via Media3 Transformer text overlay.
+     */
+    fun saveBothWithWatermark() {
+        val state = _uiState.value
+        if (state.appStatus != AppStatus.EXPORT_COMPLETE) return
+        val nativePath = state.nativeTempPath ?: return
+        val croppedPath = state.croppedTempPath ?: return
+
+        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = "Applying watermark...") }
+
+        viewModelScope.launch {
+            val app: android.app.Application = getApplication()
+            val nativeFile = File(nativePath)
+            val croppedFile = File(croppedPath)
+
+            // Apply watermark to temp copies, then save those to gallery
+            val wmNative = FileStorage.createExportFile(app, "wm_native")
+            val wmCropped = FileStorage.createExportFile(app, "wm_cropped")
+
+            val wmNativeResult = WatermarkHelper.applyWatermark(app, nativeFile, wmNative)
+            val wmCroppedResult = WatermarkHelper.applyWatermark(app, croppedFile, wmCropped)
+
+            val sourceNative = wmNativeResult ?: nativeFile // fallback to unwatermarked if fails
+            val sourceCropped = wmCroppedResult ?: croppedFile
+
+            _uiState.update { it.copy(saveMessage = "Saving to gallery...") }
+
+            val uriN = withContext(Dispatchers.IO) {
+                FileStorage.saveToMediaStore(app, sourceNative, sourceNative.name)
+            }
+            val uriC = withContext(Dispatchers.IO) {
+                FileStorage.saveToMediaStore(app, sourceCropped, sourceCropped.name)
+            }
+
+            _uiState.update {
+                it.copy(
+                    appStatus = AppStatus.EXPORT_COMPLETE,
+                    savedNativeUri = uriN,
+                    savedCroppedUri = uriC,
+                    saveMessage = if (uriN != null && uriC != null) "Saved to gallery" else "Save failed",
+                )
+            }
+        }
+    }
+
+    /**
+     * Save both exports to gallery WITHOUT watermark (rewarded/PRO path).
+     */
+    fun saveBothClean() {
+        val state = _uiState.value
+        if (state.appStatus != AppStatus.EXPORT_COMPLETE && state.appStatus != AppStatus.SAVING) return
+        val nativePath = state.nativeTempPath ?: return
+        val croppedPath = state.croppedTempPath ?: return
+
+        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = "Saving (no watermark)...") }
+
+        viewModelScope.launch {
+            val app: android.app.Application = getApplication()
+            val nativeFile = File(nativePath)
+            val croppedFile = File(croppedPath)
+
+            val uriN = withContext(Dispatchers.IO) {
+                FileStorage.saveToMediaStore(app, nativeFile, nativeFile.name)
+            }
+            val uriC = withContext(Dispatchers.IO) {
+                FileStorage.saveToMediaStore(app, croppedFile, croppedFile.name)
+            }
+
+            _uiState.update {
+                it.copy(
+                    appStatus = AppStatus.EXPORT_COMPLETE,
+                    savedNativeUri = uriN,
+                    savedCroppedUri = uriC,
+                    saveMessage = if (uriN != null && uriC != null) "Saved (no watermark)" else "Save failed",
+                )
+            }
+        }
+    }
+
+    fun showRemoveWatermarkDialog() {
+        _uiState.update { it.copy(showRemoveWatermarkDialog = true) }
+    }
+
+    fun dismissRemoveWatermarkDialog() {
+        _uiState.update { it.copy(showRemoveWatermarkDialog = false) }
+    }
+
+    fun buildOpenGalleryIntent(): Intent {
+        return Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*")
         }
     }
 
@@ -422,26 +504,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // ── Post-export actions ───────────────────────────────────────────
-
-    /** Build an ACTION_VIEW intent for the latest exported file. */
-    fun buildOpenIntent(): Intent? {
-        val uri = _uiState.value.portrait9x16Uri ?: _uiState.value.landscape16x9Uri ?: return null
-        return Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "video/mp4")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
-
-    /** Build an ACTION_SEND intent to share the latest export. */
-    fun buildShareIntent(): Intent? {
-        val uri = _uiState.value.portrait9x16Uri ?: _uiState.value.landscape16x9Uri ?: return null
-        return Intent(Intent.ACTION_SEND).apply {
-            type = "video/mp4"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
+    // ── Post-export actions (removed auto-save intents) ─────────────
 
     // ── Error handling ────────────────────────────────────────────────
 
