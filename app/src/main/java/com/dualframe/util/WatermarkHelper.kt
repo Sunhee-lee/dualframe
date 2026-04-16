@@ -59,15 +59,13 @@ object WatermarkHelper {
             val overlayAnchorX: Float
             val overlayAnchorY: Float
             if (isPortrait) {
-                // Top-center area, ~20% from top. In Media3 overlay coordinates:
-                // X=0 is center, Y=1 is top, Y=-1 is bottom.
-                // 20% from top → Y = 1 - 0.4 = 0.6
-                overlayAnchorX = 0f
-                overlayAnchorY = 0.6f
+                // Top-right for portrait video. Media3 coords: X=1 is right, Y=1 is top.
+                overlayAnchorX = 0.85f
+                overlayAnchorY = 0.85f
             } else {
                 // Bottom-right for landscape
-                overlayAnchorX = 0.8f
-                overlayAnchorY = -0.8f
+                overlayAnchorX = 0.85f
+                overlayAnchorY = -0.85f
             }
 
             val textOverlay = TextOverlay.createStaticTextOverlay(
@@ -77,8 +75,9 @@ object WatermarkHelper {
                         0, length,
                         android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                     )
+                    // Smaller watermark — reduced from 1.2f to 0.8f
                     setSpan(
-                        android.text.style.RelativeSizeSpan(1.2f),
+                        android.text.style.RelativeSizeSpan(0.8f),
                         0, length,
                         android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                     )

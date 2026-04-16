@@ -173,7 +173,8 @@ private fun PreviewPanels(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box(Modifier.weight(2f).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
+        // 9:16 preview — explicit aspectRatio locks the container so it doesn't shift during recomposition
+        Box(Modifier.weight(2f).fillMaxWidth().aspectRatio(9f / 16f).clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
             AndroidView(
                 factory = { ctx ->
                     TextureView(ctx).apply {
@@ -188,9 +189,12 @@ private fun PreviewPanels(
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
+            // Ghost watermark overlay on preview — 30% opacity, top-right for portrait
+            GhostWatermark(isPortrait = true)
             AspectLabel("9:16")
         }
-        Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
+        // 16:9 preview
+        Box(Modifier.weight(1f).fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
             AndroidView(
                 factory = { ctx ->
                     TextureView(ctx).apply {
@@ -202,6 +206,35 @@ private fun PreviewPanels(
                         }
                     }
                 },
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (showGuides) RuleOfThirdsGrid()
+            // Ghost watermark overlay on preview — 30% opacity, bottom-right for landscape
+            GhostWatermark(isPortrait = false)
+            AspectLabel("16:9")
+        }
+    }
+}
+
+/**
+ * Ghost watermark overlay on the live preview. 30% opacity so the user can see
+ * where the watermark will appear on the saved video without it being intrusive.
+ * Position matches the saved-video watermark: top-right for portrait, bottom-right for landscape.
+ */
+@Composable
+private fun GhostWatermark(isPortrait: Boolean) {
+    Box(Modifier.fillMaxSize()) {
+        Text(
+            text = "DualFrame",
+            color = Color.White.copy(alpha = 0.3f),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .align(if (isPortrait) Alignment.TopEnd else Alignment.BottomEnd)
+                .padding(8.dp),
+        )
+    }
+}
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
