@@ -14,7 +14,6 @@ import androidx.camera.video.Quality
 import com.dualframe.camera.CameraManager
 import com.dualframe.data.AppSettings
 import com.dualframe.data.AppStatus
-import com.dualframe.data.FrameRate
 import com.dualframe.data.SettingsStore
 import com.dualframe.data.UiState
 import com.dualframe.data.VideoQuality
@@ -79,7 +78,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val success = cameraManager.bindCamera(
                 lifecycleOwner = lifecycleOwner,
-                targetFps = settings.frameRate.fps,
                 quality = settings.videoQuality.toCameraXQuality(),
                 onError = { msg -> setError(msg) },
             )
@@ -106,46 +104,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     private fun refreshSupportedCapabilities() {
         val supportedCxQualities = cameraManager.getSupportedQualities()
-        val supportedFpsValues = cameraManager.getSupportedFpsValues()
-
-        // Map CameraX Quality → our VideoQuality enum
         val supportedQualities = VideoQuality.entries.filter { vq ->
             vq.toCameraXQuality() in supportedCxQualities
         }.ifEmpty { listOf(VideoQuality.FHD) }
 
-        // Determine which frame rates the sensor supports.
-        // Conservative: for UHD, we exclude 60fps even if sensor claims it,
-        // because most encoders can't sustain UHD@60fps. This is noted in the UI
-        // as the option being disabled rather than silently falling back.
-        val currentQuality = _uiState.value.settings.videoQuality
-        val supportedRates = FrameRate.entries.filter { fr ->
-            when (fr) {
-                FrameRate.AUTO -> true // always available
-                else -> {
-                    val sensorSupports = fr.fps in supportedFpsValues
-                    // UHD + 60fps is unreliable on nearly all devices
-                    val encoderLikely = !(currentQuality == VideoQuality.UHD && fr.fps >= 60)
-                    sensorSupports && encoderLikely
-                }
-            }
-        }.ifEmpty { listOf(FrameRate.AUTO) }
-
-        // Auto-correct current settings if they became unsupported
         var settings = _uiState.value.settings
         if (settings.videoQuality !in supportedQualities) {
             settings = settings.copy(videoQuality = supportedQualities.first())
             Log.i(TAG, "Auto-corrected quality to ${settings.videoQuality}")
-        }
-        if (settings.frameRate !in supportedRates) {
-            settings = settings.copy(frameRate = FrameRate.AUTO)
-            Log.i(TAG, "Auto-corrected frame rate to AUTO")
         }
 
         _uiState.update {
             it.copy(
                 settings = settings,
                 supportedQualities = supportedQualities,
-                supportedFrameRates = supportedRates,
             )
         }
         SettingsStore.save(getApplication(), settings)
@@ -159,19 +131,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         SettingsStore.save(getApplication(), newSettings)
         Log.i(TAG, "Settings updated: $newSettings")
 
-        // If quality changed, refresh fps options (some fps may now be unsupported)
+        // If quality changed, refresh supported options and rebind camera
         if (newSettings.videoQuality != oldSettings.videoQuality) {
             refreshSupportedCapabilities()
-        }
-
-        // If quality or fps changed and not recording, rebind camera immediately
-        val currentSettings = _uiState.value.settings // may have been auto-corrected
-        if (currentSettings.frameRate != oldSettings.frameRate ||
-            currentSettings.videoQuality != oldSettings.videoQuality
-        ) {
+            val currentSettings = _uiState.value.settings
             viewModelScope.launch {
-                val success = cameraManager.rebindWithSettings(
-                    newFps = currentSettings.frameRate.fps,
+                val success = cameraManager.rebindWithQuality(
                     newQuality = currentSettings.videoQuality.toCameraXQuality(),
                     onError = { msg -> setError(msg) },
                 )
@@ -288,7 +253,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             val settings = _uiState.value.settings
                             Log.i(TAG, "=== MASTER FILE DIAGNOSTICS ===")
                             Log.i(TAG, "  Requested quality: ${settings.videoQuality}")
-                            Log.i(TAG, "  Requested fps: ${settings.frameRate}")
+                            Log.i(TAG, "  Fps policy: AUTO (internal)")
                             Log.i(TAG, "  Master raw: ${meta?.rawWidth}x${meta?.rawHeight}")
                             Log.i(TAG, "  Master display: ${meta?.displayWidth}x${meta?.displayHeight}")
                             Log.i(TAG, "  Master rotation: ${meta?.rotation}")

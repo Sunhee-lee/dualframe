@@ -2,10 +2,7 @@ package com.dualframe.camera
 
 import android.content.Context
 import android.graphics.SurfaceTexture
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraManager as Camera2Manager
 import android.util.Log
-import android.util.Range
 import android.view.Surface
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
@@ -59,31 +56,22 @@ class CameraManager(private val context: Context) {
     val renderer = DualPreviewRenderer()
 
     private var boundLifecycleOwner: LifecycleOwner? = null
-    private var boundTargetFps: Int = 0
     private var boundQuality: Quality = Quality.FHD
 
     // ── Camera binding (always 2 use cases) ───────────────────────────
 
-    /**
-     * Initialize the renderer and bind camera.
-     * The renderer creates a SurfaceTexture; we provide it to CameraX as the Preview surface.
-     */
     suspend fun bindCamera(
         lifecycleOwner: LifecycleOwner,
-        targetFps: Int = 0,
         quality: Quality = Quality.FHD,
         onError: (String) -> Unit,
     ): Boolean {
         boundLifecycleOwner = lifecycleOwner
-        boundTargetFps = targetFps
         boundQuality = quality
-
-        return bindInternal(lifecycleOwner, targetFps, quality, onError)
+        return bindInternal(lifecycleOwner, quality, onError)
     }
 
     private suspend fun bindInternal(
         lifecycleOwner: LifecycleOwner,
-        targetFps: Int,
         quality: Quality,
         onError: (String) -> Unit,
     ): Boolean {
@@ -92,7 +80,7 @@ class CameraManager(private val context: Context) {
             cameraProvider = provider
             provider.unbindAll()
 
-            logDiagnostics("bindInternal", quality, targetFps)
+            logDiagnostics("bindInternal", quality)
 
             // Build Preview with custom SurfaceProvider that feeds the GL renderer
             preview = Preview.Builder().build().also { previewUseCase ->
@@ -116,11 +104,10 @@ class CameraManager(private val context: Context) {
                 .setTargetVideoEncodingBitRate(targetBitrate)
                 .build()
 
-            val builder = VideoCapture.Builder(recorder)
-            if (targetFps > 0) {
-                builder.setTargetFrameRate(Range(targetFps, targetFps))
-            }
-            videoCapture = builder.build()
+            // No setTargetFrameRate — CameraX picks the optimal fps automatically.
+            // This is a stability-first policy: the camera HAL chooses the best
+            // frame rate for the selected quality, typically 30fps.
+            videoCapture = VideoCapture.withOutput(recorder)
 
             // Mirror for front camera
             renderer.mirrorHorizontally = _useFrontCamera.value
@@ -180,20 +167,18 @@ class CameraManager(private val context: Context) {
         val owner = boundLifecycleOwner ?: return false
         _useFrontCamera.value = !_useFrontCamera.value
         Log.i(TAG, "Switching to ${if (_useFrontCamera.value) "front" else "back"} camera")
-        return bindInternal(owner, boundTargetFps, boundQuality, onError)
+        return bindInternal(owner, boundQuality, onError)
     }
 
-    suspend fun rebindWithSettings(
-        newFps: Int,
+    suspend fun rebindWithQuality(
         newQuality: Quality,
         onError: (String) -> Unit,
     ): Boolean {
-        if (newFps == boundTargetFps && newQuality == boundQuality) return true
+        if (newQuality == boundQuality) return true
         if (isRecording) return true
         val owner = boundLifecycleOwner ?: return false
-        boundTargetFps = newFps
         boundQuality = newQuality
-        return bindInternal(owner, newFps, newQuality, onError)
+        return bindInternal(owner, newQuality, onError)
     }
 
     // ── Recording ─────────────────────────────────────────────────────
@@ -256,11 +241,10 @@ class CameraManager(private val context: Context) {
         if (_useFrontCamera.value) CameraSelector.DEFAULT_FRONT_CAMERA
         else CameraSelector.DEFAULT_BACK_CAMERA
 
-    private fun logDiagnostics(ctx: String, quality: Quality, targetFps: Int) {
+    private fun logDiagnostics(ctx: String, quality: Quality) {
         val camera = if (_useFrontCamera.value) "FRONT" else "REAR"
-        Log.i(TAG, "=== $ctx === Camera=$camera, Quality=$quality, Fps=${if (targetFps == 0) "AUTO" else targetFps}")
+        Log.i(TAG, "=== $ctx === Camera=$camera, Quality=$quality, Fps=AUTO (internal)")
         Log.i(TAG, "  Supported qualities: ${getSupportedQualities()}")
-        Log.i(TAG, "  Supported fps: ${getSupportedFpsValues()}")
     }
 
     // ── Capability queries ──────────────────────────────────────────────
@@ -276,25 +260,6 @@ class CameraManager(private val context: Context) {
             Log.w(TAG, "Cannot query supported qualities", e)
             listOf(Quality.FHD, Quality.HD)
         }
-    }
-
-    fun getSupportedFpsValues(): Set<Int> {
-        try {
-            val cm = context.getSystemService(Context.CAMERA_SERVICE) as Camera2Manager
-            val facing = if (_useFrontCamera.value) CameraCharacteristics.LENS_FACING_FRONT
-            else CameraCharacteristics.LENS_FACING_BACK
-            for (id in cm.cameraIdList) {
-                val chars = cm.getCameraCharacteristics(id)
-                if (chars.get(CameraCharacteristics.LENS_FACING) == facing) {
-                    val ranges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
-                        ?: continue
-                    return ranges.map { it.upper }.toSet()
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Cannot query fps capabilities", e)
-        }
-        return setOf(30)
     }
 
     private suspend fun getCameraProvider(): ProcessCameraProvider =

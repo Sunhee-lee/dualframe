@@ -26,7 +26,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dualframe.data.AppSettings
-import com.dualframe.data.FrameRate
 import com.dualframe.data.VideoQuality
 
 /**
@@ -38,7 +37,6 @@ import com.dualframe.data.VideoQuality
 fun SettingsSheet(
     settings: AppSettings,
     supportedQualities: List<VideoQuality>,
-    supportedFrameRates: List<FrameRate>,
     onSettingsChange: (AppSettings) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -83,22 +81,6 @@ fun SettingsSheet(
                     val selected = VideoQuality.entries[index]
                     if (selected in supportedQualities) {
                         onSettingsChange(settings.copy(videoQuality = selected))
-                    }
-                },
-            )
-
-            SettingDivider()
-
-            // ── Frame Rate (capability-aware) ──
-            SettingSectionTitle("Frame Rate")
-            RadioGroupWithEnabled(
-                options = FrameRate.entries.map { it.label },
-                enabledMask = FrameRate.entries.map { it in supportedFrameRates },
-                selectedIndex = FrameRate.entries.indexOf(settings.frameRate),
-                onSelected = { index ->
-                    val selected = FrameRate.entries[index]
-                    if (selected in supportedFrameRates) {
-                        onSettingsChange(settings.copy(frameRate = selected))
                     }
                 },
             )

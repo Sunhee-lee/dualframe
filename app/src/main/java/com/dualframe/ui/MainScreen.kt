@@ -71,7 +71,6 @@ fun MainScreen(
         SettingsSheet(
             settings = state.settings,
             supportedQualities = state.supportedQualities,
-            supportedFrameRates = state.supportedFrameRates,
             onSettingsChange = { viewModel.updateSettings(it) },
             onDismiss = { showSettings = false },
         )
