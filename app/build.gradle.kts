@@ -63,11 +63,9 @@ dependencies {
 
     // CameraX — camera preview + video recording
     val cameraxVersion = "1.4.1"
-    implementation("androidx.camera:camera-core:$cameraxVersion")
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-video:$cameraxVersion")
-    implementation("androidx.camera:camera-view:$cameraxVersion")
 
     // Media3 Transformer — post-recording crop/export
     val media3Version = "1.5.1"
