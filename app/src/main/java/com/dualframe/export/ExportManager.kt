@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Crop
+import androidx.media3.effect.Presentation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.Effects
@@ -24,14 +25,14 @@ import kotlinx.coroutines.withContext
 /**
  * Exports the master recording into two aspect ratios: 16:9 and 9:16.
  *
- * Orientation-native logic:
- * - The master file's actual display aspect ratio determines which output is "native"
- *   (passthrough / minimal crop) and which is "cropped" (heavy center-crop).
- * - Portrait master (aspect < 1): 9:16 is native, 16:9 is derived.
- * - Landscape master (aspect >= 1): 16:9 is native, 9:16 is derived.
+ * Quality-preserving strategy:
+ * - Native output (matches master framing): file copy, no re-encode, no quality loss.
+ * - Derived output (different aspect): Transformer center-crop with explicit resolution
+ *   preservation via Presentation.createForHeight() to prevent default downscaling.
  *
- * The crop math reads real video metadata (width, height, rotation) and computes
- * center-crop coordinates in Media3's normalized [-1, 1] space.
+ * Media3 Transformer, when effects are applied, may default to a lower output resolution
+ * (often 720p). We counter this by explicitly requesting the output height to match
+ * the cropped region's actual pixel dimensions.
  */
 @UnstableApi
 class ExportManager(private val context: Context) {
@@ -44,7 +45,6 @@ class ExportManager(private val context: Context) {
 
     /**
      * Determine whether the master file is natively portrait or landscape.
-     * Returns true if portrait (display aspect < 1), false if landscape.
      */
     fun isMasterPortrait(masterFile: File): Boolean {
         val metadata = VideoMetadata.fromFile(masterFile)
@@ -56,15 +56,51 @@ class ExportManager(private val context: Context) {
     }
 
     /**
-     * Export the master file to a specific target aspect ratio.
+     * "Export" the native framing by copying the master file directly.
+     * No re-encode, no crop, no quality loss. This preserves the exact recorded resolution.
      *
-     * @param masterFile The recorded master video
-     * @param targetAspect Desired output W/H ratio (e.g., 16/9 or 9/16)
-     * @param fileSuffix Suffix for the output filename (e.g., "16x9" or "9x16")
-     * @param onProgress Progress callback 0f..1f
-     * @return The exported file, or null on failure
+     * If the master aspect doesn't exactly match the target (e.g., camera records at
+     * a slightly non-standard ratio), the copy still preserves full quality — the tiny
+     * aspect difference is negligible for playback.
      */
-    suspend fun exportToAspect(
+    suspend fun exportNativeCopy(
+        masterFile: File,
+        fileSuffix: String,
+        onProgress: (Float) -> Unit,
+    ): File? = withContext(Dispatchers.IO) {
+        val outputFile = FileStorage.createExportFile(context, fileSuffix)
+        try {
+            onProgress(0.1f)
+            masterFile.inputStream().use { input ->
+                outputFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            onProgress(1f)
+            Log.i(TAG, "Native copy complete: ${outputFile.absolutePath} " +
+                "(${outputFile.length() / 1024}KB, no re-encode)")
+            outputFile
+        } catch (e: Exception) {
+            Log.e(TAG, "Native copy failed", e)
+            outputFile.delete()
+            null
+        }
+    }
+
+    /**
+     * Export the master file to a different aspect ratio via center-crop.
+     * Uses Transformer with explicit resolution preservation.
+     *
+     * The key to avoiding quality loss: after computing the crop region's pixel
+     * dimensions, we set Presentation.createForHeight() to match. This prevents
+     * Transformer from applying its default downscale.
+     *
+     * Example for portrait 1080x1920 master → 16:9 crop:
+     *   Crop keeps full width (1080px) and 31.6% of height (607px).
+     *   We set Presentation height to 607 → output is 1080x607 at full quality.
+     *   Without this, Transformer would default to ~720p → ~1280x720.
+     */
+    suspend fun exportCropped(
         masterFile: File,
         targetAspect: Float,
         fileSuffix: String,
@@ -74,40 +110,32 @@ class ExportManager(private val context: Context) {
         try {
             val metadata = VideoMetadata.fromFile(masterFile)
             if (metadata == null) {
-                Log.e(TAG, "Cannot read metadata, using fallback crop")
+                Log.e(TAG, "Cannot read metadata for crop")
             }
-            runTransform(
+            runCropTransform(
                 inputFile = masterFile,
                 outputFile = outputFile,
                 targetAspectRatio = targetAspect,
                 sourceMetadata = metadata,
                 onProgress = onProgress,
             )
-            Log.i(TAG, "$fileSuffix export complete: ${outputFile.absolutePath}")
+            Log.i(TAG, "$fileSuffix crop export complete: ${outputFile.absolutePath}")
             outputFile
         } catch (e: Exception) {
-            Log.e(TAG, "$fileSuffix export failed", e)
+            Log.e(TAG, "$fileSuffix crop export failed", e)
             outputFile.delete()
             null
         }
     }
 
     /**
-     * Center-crop + re-encode to the target aspect ratio via Media3 Transformer.
+     * Center-crop + re-encode with explicit resolution preservation.
      *
-     * How it works:
-     * 1. Transformer applies the file's rotation metadata, producing a display-oriented frame.
-     * 2. The Crop effect selects a centered sub-rectangle matching the target aspect ratio.
-     * 3. Transformer re-encodes the cropped region into a new file.
-     *
-     * The output resolution is the size of the cropped region, NOT the original.
-     * Example: 1080x1920 portrait source → 16:9 crop → output is 1080x607 (not 1920x1080).
-     * The output is a crop-only transform; no upscaling is applied.
-     *
-     * When target aspect matches source aspect (within tolerance), the Crop is a
-     * full-frame passthrough — output matches source resolution.
+     * Transformer applies rotation metadata first, then the Crop effect.
+     * We compute the exact pixel dimensions of the cropped output and use
+     * Presentation to lock that resolution, preventing default downscaling.
      */
-    private suspend fun runTransform(
+    private suspend fun runCropTransform(
         inputFile: File,
         outputFile: File,
         targetAspectRatio: Float,
@@ -115,34 +143,41 @@ class ExportManager(private val context: Context) {
         onProgress: (Float) -> Unit,
     ) = suspendCancellableCoroutine { cont ->
 
-        val sourceAspect = sourceMetadata?.displayAspectRatio
-            ?: ASPECT_16x9 // fallback only if metadata unreadable
+        val sourceAspect = sourceMetadata?.displayAspectRatio ?: ASPECT_16x9
+        val displayW = sourceMetadata?.displayWidth ?: 1920
+        val displayH = sourceMetadata?.displayHeight ?: 1080
 
-        Log.i(TAG, "Crop: source aspect=${"%.3f".format(sourceAspect)}, " +
-            "target aspect=${"%.3f".format(targetAspectRatio)}")
+        Log.i(TAG, "Crop transform: source=${displayW}x${displayH} " +
+            "(aspect=${"%.3f".format(sourceAspect)}), target aspect=${"%.3f".format(targetAspectRatio)}")
 
         val cropLeft: Float
         val cropRight: Float
         val cropBottom: Float
         val cropTop: Float
+        val outputW: Int
+        val outputH: Int
 
         val aspectTolerance = 0.01f
         if (kotlin.math.abs(targetAspectRatio - sourceAspect) < aspectTolerance) {
-            // Source already matches target — passthrough
             cropLeft = -1f; cropRight = 1f; cropBottom = -1f; cropTop = 1f
-            Log.i(TAG, "No crop needed — native framing matches target")
+            outputW = displayW; outputH = displayH
+            Log.i(TAG, "No crop needed — output ${outputW}x${outputH}")
         } else if (targetAspectRatio > sourceAspect) {
-            // Target is wider → crop height
+            // Target wider → crop height, keep full width
             val keepFraction = sourceAspect / targetAspectRatio
             cropLeft = -1f; cropRight = 1f
             cropBottom = -keepFraction; cropTop = keepFraction
-            Log.i(TAG, "Cropping height: keep ${"%.1f".format(keepFraction * 100)}%")
+            outputW = displayW
+            outputH = (displayH * keepFraction).toInt()
+            Log.i(TAG, "Cropping height: ${displayW}x${displayH} → ${outputW}x${outputH}")
         } else {
-            // Target is taller → crop width
+            // Target taller → crop width, keep full height
             val keepFraction = targetAspectRatio / sourceAspect
             cropLeft = -keepFraction; cropRight = keepFraction
             cropBottom = -1f; cropTop = 1f
-            Log.i(TAG, "Cropping width: keep ${"%.1f".format(keepFraction * 100)}%")
+            outputW = (displayW * keepFraction).toInt()
+            outputH = displayH
+            Log.i(TAG, "Cropping width: ${displayW}x${displayH} → ${outputW}x${outputH}")
         }
 
         require(cropLeft >= -1f && cropRight <= 1f && cropBottom >= -1f && cropTop <= 1f) {
@@ -150,9 +185,15 @@ class ExportManager(private val context: Context) {
         }
 
         val cropEffect = Crop(cropLeft, cropRight, cropBottom, cropTop)
+
+        // Presentation locks the output to the exact cropped pixel dimensions.
+        // Without this, Transformer defaults to ~720p when effects are present.
+        // We use the output height and let Presentation compute width from aspect.
+        val presentation = Presentation.createForHeight(outputH.coerceAtLeast(2))
+
         val mediaItem = MediaItem.fromUri(inputFile.toURI().toString())
         val editedMediaItem = EditedMediaItem.Builder(mediaItem)
-            .setEffects(Effects(listOf(), listOf(cropEffect)))
+            .setEffects(Effects(listOf(), listOf(cropEffect, presentation)))
             .build()
 
         lateinit var transformer: Transformer

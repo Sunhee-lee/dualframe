@@ -306,14 +306,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // ── Export pipeline ───────────────────────────────────────────────
 
     /**
-     * Orientation-native export pipeline.
+     * Quality-preserving export pipeline.
      *
-     * Determines the master file's actual display orientation, then:
-     * 1. Exports the "native" framing first (matches master → passthrough / minimal crop)
-     * 2. Exports the "cropped" framing second (heavy center-crop to the other aspect)
+     * Step 1 — Native output: direct file copy of the master. No re-encode,
+     *   no Transformer, no quality loss. Resolution matches exactly what CameraX recorded.
+     * Step 2 — Derived output: Transformer center-crop to the other aspect ratio,
+     *   with Presentation.createForHeight() to preserve pixel dimensions and prevent
+     *   Transformer's default downscale to ~720p.
      *
-     * Portrait master (phone held upright) → 9:16 native, 16:9 cropped
-     * Landscape master (rare, phone sideways) → 16:9 native, 9:16 cropped
+     * Portrait master → 9:16 copy + 16:9 crop
+     * Landscape master → 16:9 copy + 9:16 crop
      */
     private fun startExportPipeline() {
         val file = masterFile ?: run {
@@ -327,8 +329,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 exportManager.isMasterPortrait(file)
             }
 
-            // Determine export order: native first, then derived
-            val nativeAspect: Float
             val nativeSuffix: String
             val nativeLabel: String
             val croppedAspect: Float
@@ -336,14 +336,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val croppedLabel: String
 
             if (isPortrait) {
-                nativeAspect = ExportManager.ASPECT_9x16
                 nativeSuffix = "9x16"
                 nativeLabel = "9:16"
                 croppedAspect = ExportManager.ASPECT_16x9
                 croppedSuffix = "16x9"
                 croppedLabel = "16:9"
             } else {
-                nativeAspect = ExportManager.ASPECT_16x9
                 nativeSuffix = "16x9"
                 nativeLabel = "16:9"
                 croppedAspect = ExportManager.ASPECT_9x16
@@ -351,10 +349,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 croppedLabel = "9:16"
             }
 
-            // ── Step 1: Export native framing (passthrough / minimal crop) ──
+            // ── Step 1: Native output — direct file copy, zero quality loss ──
+            // The master file already has the native framing. Copying preserves
+            // the exact recorded resolution, bitrate, and codec without re-encoding.
             _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_NATIVE, exportProgress = 0f) }
 
-            val nativeFile = exportManager.exportToAspect(file, nativeAspect, nativeSuffix) { progress ->
+            val nativeFile = exportManager.exportNativeCopy(file, nativeSuffix) { progress ->
                 _uiState.update { it.copy(exportProgress = progress) }
             }
             if (nativeFile == null) {
@@ -371,17 +371,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val nativeRes = nativeMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
             val nativeFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(nativeFile) }
 
-            // Store native URI under the correct aspect key
+            Log.i(TAG, "Native output: $nativeLabel $nativeRes $nativeFps (direct copy, no re-encode)")
             if (isPortrait) {
                 _uiState.update { it.copy(portrait9x16Uri = nativeUri) }
             } else {
                 _uiState.update { it.copy(landscape16x9Uri = nativeUri) }
             }
 
-            // ── Step 2: Export cropped/derived framing ──
+            // ── Step 2: Derived output — center-crop with resolution preservation ──
+            // Uses Presentation.createForHeight() to prevent Transformer's default downscale.
             _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_CROPPED, exportProgress = 0f) }
 
-            val croppedFile = exportManager.exportToAspect(file, croppedAspect, croppedSuffix) { progress ->
+            val croppedFile = exportManager.exportCropped(file, croppedAspect, croppedSuffix) { progress ->
                 _uiState.update { it.copy(exportProgress = progress) }
             }
             if (croppedFile == null) {
@@ -396,6 +397,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val croppedRes = croppedMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
             val croppedFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(croppedFile) }
 
+            Log.i(TAG, "Derived output: $croppedLabel $croppedRes $croppedFps (crop + re-encode)")
+
             if (isPortrait) {
                 _uiState.update { it.copy(landscape16x9Uri = croppedUri) }
             } else {
@@ -403,11 +406,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             val thumbnail = generateThumbnail(nativeFile)
-
-            // Developer-facing log with native/cropped distinction
-            Log.i(TAG, "Export complete: " +
-                "native=$nativeLabel $nativeRes $nativeFps, " +
-                "derived=$croppedLabel $croppedRes $croppedFps")
 
             // User-facing labels: simple, no technical jargon
             _uiState.update {
