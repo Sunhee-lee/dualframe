@@ -163,72 +163,77 @@ class DualPreviewRenderer {
         st.updateTexImage()
         st.getTransformMatrix(stMatrix)
 
-        // Determine camera preview aspect (after rotation, the preview is typically portrait)
-        // CameraX preview buffers come in landscape from the sensor; the SurfaceTexture
-        // transform matrix handles rotation. The visual aspect after transform is what matters.
-        // We approximate: if width > height, landscape buffer → portrait display after 90° rotation.
-        val visualAspect = if (previewWidth > previewHeight) {
-            previewHeight.toFloat() / previewWidth.toFloat() // portrait after rotation
-        } else {
+        // The SurfaceTexture transform matrix handles rotation, flipping, and scaling.
+        // We do NOT manually compute the "visual aspect" from buffer dimensions because
+        // the ST matrix already encodes the rotation. Instead, each output surface
+        // defines its own target aspect via its physical dimensions. The renderer
+        // scales the quad to fill-center each surface (no black bars, crop overflow).
+        //
+        // The source aspect for fill-center is the raw camera buffer aspect.
+        // The ST matrix rotates the texture coordinates, not the vertex positions,
+        // so the quad still maps to a buffer-aspect-ratio image in clip space.
+        val bufferAspect = if (previewWidth > 0 && previewHeight > 0) {
             previewWidth.toFloat() / previewHeight.toFloat()
+        } else {
+            16f / 9f // safe fallback
         }
 
-        // Render to 9:16 surface
         if (eglSurface9x16 != EGL14.EGL_NO_SURFACE) {
-            renderToSurface(eglSurface9x16, 9f / 16f, visualAspect)
+            renderToSurface(eglSurface9x16, bufferAspect)
         }
-
-        // Render to 16:9 surface
         if (eglSurface16x9 != EGL14.EGL_NO_SURFACE) {
-            renderToSurface(eglSurface16x9, 16f / 9f, visualAspect)
+            renderToSurface(eglSurface16x9, bufferAspect)
         }
     }
 
     /**
-     * Render the camera texture to one output surface with a center-crop to targetAspect.
+     * Render the camera texture to one output surface with fill-center behavior.
      *
-     * Crop strategy: scale the quad beyond the [-1,1] viewport so only the center
-     * portion matching the target aspect is visible. The GPU clips the overflow.
+     * The quad is scaled so the camera image completely fills the output surface.
+     * Any content that doesn't fit is clipped by the GPU (center-crop effect).
      *
-     * For example, to get 16:9 from a 9:16 source:
-     *   scaleX = 1.0 (full width), scaleY = sourceAspect / targetAspect = 0.5625 / 1.778 = 0.316
-     *   → quad Y spans [-0.316, 0.316] in clip space → only center 31.6% of height visible
-     *   Wait, that's wrong — we need to ENLARGE the quad so the crop happens by clipping.
-     *   scaleY = targetAspect / sourceAspect = 1.778 / 0.5625 = 3.16
-     *   → quad Y spans [-3.16, 3.16] → GPU clips to [-1,1] → center strip visible
+     * surfaceAspect = surfaceWidth / surfaceHeight (from the TextureView)
+     * bufferAspect = raw camera buffer width / height (before ST matrix rotation)
+     *
+     * If bufferAspect > surfaceAspect: image is wider than surface → scale Y up to fill height, clip sides
+     * If bufferAspect < surfaceAspect: image is taller than surface → scale X up to fill width, clip top/bottom
      */
-    private fun renderToSurface(eglSurface: EGLSurface, targetAspect: Float, sourceAspect: Float) {
+    private fun renderToSurface(eglSurface: EGLSurface, bufferAspect: Float) {
         if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) return
 
         val surfaceWidth = intArrayOf(0)
         val surfaceHeight = intArrayOf(0)
         EGL14.eglQuerySurface(eglDisplay, eglSurface, EGL14.EGL_WIDTH, surfaceWidth, 0)
         EGL14.eglQuerySurface(eglDisplay, eglSurface, EGL14.EGL_HEIGHT, surfaceHeight, 0)
-        GLES20.glViewport(0, 0, surfaceWidth[0], surfaceHeight[0])
+        val sw = surfaceWidth[0]
+        val sh = surfaceHeight[0]
+        if (sw <= 0 || sh <= 0) return
+        GLES20.glViewport(0, 0, sw, sh)
 
         GLES20.glClearColor(0f, 0f, 0f, 1f)
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
 
         GLES20.glUseProgram(program)
 
-        // Compute MVP matrix for center-crop scaling
+        // Compute MVP matrix for fill-center crop.
+        // The quad spans [-1,1] in both axes. The texture (after ST matrix) renders
+        // the camera at bufferAspect. The surface has surfaceAspect.
+        // To fill-center: enlarge the axis where the image is too small.
+        val surfaceAspect = sw.toFloat() / sh.toFloat()
         val mvp = FloatArray(16).apply { android.opengl.Matrix.setIdentityM(this, 0) }
 
-        // Mirror for front camera: flip X in the MVP matrix
         if (mirrorHorizontally) {
             android.opengl.Matrix.scaleM(mvp, 0, -1f, 1f, 1f)
         }
 
-        if (sourceAspect > 0f && targetAspect > 0f) {
-            if (targetAspect > sourceAspect) {
-                // Target wider → enlarge Y so height gets clipped (show center horizontal strip)
-                val scaleY = targetAspect / sourceAspect
-                android.opengl.Matrix.scaleM(mvp, 0, 1f, scaleY, 1f)
-            } else if (targetAspect < sourceAspect) {
-                // Target taller → enlarge X so width gets clipped (show center vertical strip)
-                val scaleX = sourceAspect / targetAspect
-                android.opengl.Matrix.scaleM(mvp, 0, scaleX, 1f, 1f)
-            }
+        if (bufferAspect > surfaceAspect) {
+            // Image wider than surface → enlarge X so sides get clipped
+            val scaleX = bufferAspect / surfaceAspect
+            android.opengl.Matrix.scaleM(mvp, 0, scaleX, 1f, 1f)
+        } else if (bufferAspect < surfaceAspect) {
+            // Image taller than surface → enlarge Y so top/bottom get clipped
+            val scaleY = surfaceAspect / bufferAspect
+            android.opengl.Matrix.scaleM(mvp, 0, 1f, scaleY, 1f)
         }
 
         // Set uniforms

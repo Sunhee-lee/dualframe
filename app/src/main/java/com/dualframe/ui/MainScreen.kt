@@ -20,6 +20,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Cameraswitch
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -95,7 +99,12 @@ fun MainScreen(
                     viewModel.toggleRecording(hasAudioPermission)
                 }
                 IconButton({ showSettings = true }, Modifier.padding(start = 8.dp)) {
-                    Text("⚙", fontSize = 22.sp, color = Color(0xFFAAAAAA))
+                    Icon(
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = "Settings",
+                        tint = Color(0xFFCCCCCC),
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
             }
             ResultActions(state, viewModel, context)
@@ -114,7 +123,12 @@ private fun Header(state: UiState, canSwitch: Boolean, onSwitch: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (state.appStatus != AppStatus.RECORDING) { StatusChip(state.appStatus); Spacer(Modifier.width(4.dp)) }
             IconButton(onSwitch, enabled = canSwitch) {
-                Text("🔄", fontSize = 18.sp, color = if (canSwitch) Color.White else Color(0xFF555555))
+                Icon(
+                    imageVector = Icons.Outlined.Cameraswitch,
+                    contentDescription = "Switch camera",
+                    tint = if (canSwitch) Color.White else Color(0xFF555555),
+                    modifier = Modifier.size(22.dp),
+                )
             }
         }
     }
