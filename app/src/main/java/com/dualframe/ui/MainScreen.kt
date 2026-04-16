@@ -275,7 +275,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
         // Action buttons stacked vertically on the right
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            ResultButton("Save Both (with Ads)", state.appStatus != AppStatus.SAVING) {
+            ResultButton("Save Both", state.appStatus != AppStatus.SAVING) {
                 viewModel.saveBothWithWatermark()
             }
             ResultButton("Remove Watermark", state.appStatus != AppStatus.SAVING) {

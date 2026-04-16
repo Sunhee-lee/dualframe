@@ -37,6 +37,11 @@ object WatermarkHelper {
      * Copy the source file with a text watermark overlay.
      * Returns the watermarked output file, or null on failure.
      */
+    /**
+     * Copy the source file with a text watermark overlay.
+     * For portrait videos (height > width after rotation), the watermark is placed
+     * near the top ~20% area. For landscape, it stays at bottom-right.
+     */
     suspend fun applyWatermark(
         context: Context,
         sourceFile: File,
@@ -45,7 +50,26 @@ object WatermarkHelper {
         try {
             val mediaItem = MediaItem.fromUri(sourceFile.toURI().toString())
 
-            // Simple text watermark — positioned bottom-right, semi-transparent
+            // Determine if the source is portrait to adjust watermark position.
+            // Portrait videos get the watermark near top-center (~20% from top),
+            // landscape videos keep it at bottom-right.
+            val metadata = VideoMetadata.fromFile(sourceFile)
+            val isPortrait = metadata != null && metadata.displayHeight > metadata.displayWidth
+
+            val overlayAnchorX: Float
+            val overlayAnchorY: Float
+            if (isPortrait) {
+                // Top-center area, ~20% from top. In Media3 overlay coordinates:
+                // X=0 is center, Y=1 is top, Y=-1 is bottom.
+                // 20% from top → Y = 1 - 0.4 = 0.6
+                overlayAnchorX = 0f
+                overlayAnchorY = 0.6f
+            } else {
+                // Bottom-right for landscape
+                overlayAnchorX = 0.8f
+                overlayAnchorY = -0.8f
+            }
+
             val textOverlay = TextOverlay.createStaticTextOverlay(
                 android.text.SpannableString("DualFrame").apply {
                     setSpan(
@@ -60,8 +84,8 @@ object WatermarkHelper {
                     )
                 },
                 OverlaySettings.Builder()
-                    .setOverlayFrameAnchor(0.8f, -0.8f) // bottom-right area
-                    .setBackgroundFrameAnchor(0.8f, -0.8f)
+                    .setOverlayFrameAnchor(overlayAnchorX, overlayAnchorY)
+                    .setBackgroundFrameAnchor(overlayAnchorX, overlayAnchorY)
                     .build(),
             )
 

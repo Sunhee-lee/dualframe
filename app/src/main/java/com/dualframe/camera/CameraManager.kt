@@ -82,8 +82,11 @@ class CameraManager(private val context: Context) {
 
             logDiagnostics("bindInternal", quality)
 
-            // Build Preview with custom SurfaceProvider that feeds the GL renderer
-            preview = Preview.Builder().build().also { previewUseCase ->
+            // Build Preview with 16:9 target to match VideoCapture's typical output ratio.
+            // This ensures the preview FOV matches the saved recording — no surprise crops.
+            preview = Preview.Builder()
+                .setTargetAspectRatio(androidx.camera.core.AspectRatio.RATIO_16_9)
+                .build().also { previewUseCase ->
                 previewUseCase.surfaceProvider = Preview.SurfaceProvider { request ->
                     onSurfaceRequested(request)
                 }

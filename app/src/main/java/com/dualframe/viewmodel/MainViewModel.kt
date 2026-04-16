@@ -482,9 +482,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(showRemoveWatermarkDialog = false) }
     }
 
+    /**
+     * Build intent to open the saved video in the system's default viewer.
+     * Uses the saved content:// URI with FLAG_GRANT_READ_URI_PERMISSION.
+     * Falls back to generic gallery if no saved URI is available.
+     */
     fun buildOpenGalleryIntent(): Intent {
-        return Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*")
+        val savedUri = _uiState.value.savedNativeUri ?: _uiState.value.savedCroppedUri
+        return if (savedUri != null) {
+            Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(savedUri, "video/*")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        } else {
+            Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*")
+            }
         }
     }
 
