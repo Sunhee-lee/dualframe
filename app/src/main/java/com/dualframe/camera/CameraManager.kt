@@ -118,13 +118,15 @@ class CameraManager(private val context: Context) {
                 .setQualitySelector(qualitySelector)
                 .build()
 
-            // Apply target frame rate to VideoCapture. CameraX will negotiate the closest
-            // supported fps range with the camera HAL. If the requested fps isn't supported
-            // (e.g., 60fps on a front camera), CameraX silently falls back to the camera's
-            // default — no crash, just a lower fps in the output file.
-            videoCapture = VideoCapture.Builder(recorder)
-                .setTargetFrameRate(Range(targetFps, targetFps))
-                .build()
+            // Apply target frame rate to VideoCapture if a specific fps was requested.
+            // AUTO (fps=0) skips setTargetFrameRate, letting CameraX pick the best default.
+            // For explicit fps, CameraX negotiates with the camera HAL and silently falls
+            // back if the requested rate isn't supported — no crash, just a lower fps.
+            val videoCaptureBuilder = VideoCapture.Builder(recorder)
+            if (targetFps > 0) {
+                videoCaptureBuilder.setTargetFrameRate(Range(targetFps, targetFps))
+            }
+            videoCapture = videoCaptureBuilder.build()
 
             // 3. Build ImageAnalysis for secondary preview
             imageAnalysis = ImageAnalysis.Builder()
@@ -185,6 +187,23 @@ class CameraManager(private val context: Context) {
         Log.i(TAG, "Switching camera to ${if (_useFrontCamera.value) "front" else "back"}")
 
         return bindCameraInternal(owner, view, boundTargetFps, onError)
+    }
+
+    /**
+     * Rebind with a new target fps. Only rebinds if the fps actually changed
+     * and the camera is not currently recording. Called by ViewModel when the
+     * user changes frame rate in settings while preview is live.
+     */
+    suspend fun rebindWithFps(newFps: Int, onError: (String) -> Unit): Boolean {
+        if (newFps == boundTargetFps) return true // No change — skip rebind
+        if (isRecording) return true // Don't interrupt recording; will apply on next bind
+
+        val owner = boundLifecycleOwner ?: return false
+        val view = boundPreviewView ?: return false
+
+        boundTargetFps = newFps
+        Log.i(TAG, "Rebinding camera with new target fps: $newFps")
+        return bindCameraInternal(owner, view, newFps, onError)
     }
 
     // ── Frame processing ──────────────────────────────────────────────

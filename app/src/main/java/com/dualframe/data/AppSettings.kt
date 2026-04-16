@@ -10,12 +10,13 @@ import androidx.core.content.edit
 data class AppSettings(
     val audioEnabled: Boolean = true,
     val countdownSeconds: Int = 0, // 0 = off, 3, 5, 10
-    val frameRate: FrameRate = FrameRate.FPS_30,
+    val frameRate: FrameRate = FrameRate.AUTO,
     val keepScreenAwake: Boolean = true,
     val showGuides: Boolean = true,
 )
 
 enum class FrameRate(val fps: Int, val label: String) {
+    AUTO(0, "Auto"),
     FPS_24(24, "24 fps"),
     FPS_30(30, "30 fps"),
     FPS_60(60, "60 fps"),
@@ -36,9 +37,9 @@ object SettingsStore {
             audioEnabled = prefs.getBoolean(KEY_AUDIO, true),
             countdownSeconds = prefs.getInt(KEY_COUNTDOWN, 0),
             frameRate = try {
-                FrameRate.valueOf(prefs.getString(KEY_FRAME_RATE, "FPS_30") ?: "FPS_30")
+                FrameRate.valueOf(prefs.getString(KEY_FRAME_RATE, "AUTO") ?: "AUTO")
             } catch (_: Exception) {
-                FrameRate.FPS_30
+                FrameRate.AUTO
             },
             keepScreenAwake = prefs.getBoolean(KEY_SCREEN_AWAKE, true),
             showGuides = prefs.getBoolean(KEY_GUIDES, true),

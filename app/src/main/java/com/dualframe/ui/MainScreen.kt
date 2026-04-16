@@ -124,11 +124,12 @@ fun MainScreen(
             modifier = Modifier.weight(1f),
         )
 
-        // ── Controls area ──
+        // ── Controls area — raised above gesture/nav zone ──
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = 16.dp)
+                .padding(top = 8.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ExportStatusStub(state)
@@ -160,8 +161,6 @@ fun MainScreen(
 
             ResultActions(state, viewModel, context)
             ErrorArea(state, onDismiss = { viewModel.clearError() })
-
-            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

@@ -94,9 +94,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // ── Settings ──────────────────────────────────────────────────────
 
     fun updateSettings(newSettings: AppSettings) {
+        val oldSettings = _uiState.value.settings
         _uiState.update { it.copy(settings = newSettings) }
         SettingsStore.save(getApplication(), newSettings)
         Log.i(TAG, "Settings updated: $newSettings")
+
+        // If frame rate changed and we're not recording, rebind camera immediately
+        // so the new fps takes effect without requiring an app restart.
+        // During recording, the new fps will apply on the next recording session.
+        if (newSettings.frameRate != oldSettings.frameRate) {
+            viewModelScope.launch {
+                val success = cameraManager.rebindWithFps(
+                    newFps = newSettings.frameRate.fps,
+                    onError = { msg -> setError(msg) },
+                )
+                _uiState.update { it.copy(cameraReady = success) }
+            }
+        }
     }
 
     // ── Recording ─────────────────────────────────────────────────────
