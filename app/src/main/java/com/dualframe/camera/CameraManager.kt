@@ -46,7 +46,10 @@ class CameraManager(private val context: Context) {
 
     companion object {
         private const val TAG = "CameraManager"
-        private val ANALYSIS_RESOLUTION = Size(640, 480)
+        // Normal preview: 640x480 for smooth secondary preview
+        private val ANALYSIS_RESOLUTION_NORMAL = Size(640, 480)
+        // Recording mode: 320x240 to reduce CPU/memory pressure during recording
+        private val ANALYSIS_RESOLUTION_RECORDING = Size(320, 240)
     }
 
     private var cameraProvider: ProcessCameraProvider? = null
@@ -54,6 +57,13 @@ class CameraManager(private val context: Context) {
     private var activeRecording: Recording? = null
     private var preview: Preview? = null
     private var imageAnalysis: ImageAnalysis? = null
+
+    // Recording-mode throttling state. When true, the analyzer skips frames
+    // and uses lower resolution to reduce CPU pressure during recording.
+    @Volatile
+    private var isInRecordingMode = false
+    @Volatile
+    private var frameCounter = 0L
 
     // Currently selected camera lens facing
     private val _useFrontCamera = MutableStateFlow(false)
@@ -121,9 +131,22 @@ class CameraManager(private val context: Context) {
                 quality,
                 FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
             )
+
+            // Target encoding bitrate — higher than CameraX defaults for better output quality.
+            // These are practical targets; the encoder may cap to its actual max.
+            // UHD default ~20Mbps → we request 40Mbps for sharper 4K.
+            // FHD default ~8Mbps → we request 16Mbps for cleaner 1080p.
+            // HD default ~4Mbps → we request 8Mbps for better 720p.
+            val targetBitrate = when (quality) {
+                Quality.UHD -> 40_000_000
+                Quality.FHD -> 16_000_000
+                else -> 8_000_000
+            }
             val recorder = Recorder.Builder()
                 .setQualitySelector(qualitySelector)
+                .setTargetVideoEncodingBitRate(targetBitrate)
                 .build()
+            Log.i(TAG, "Recorder configured: quality=$quality, target bitrate=${targetBitrate / 1_000_000}Mbps")
 
             // Apply target frame rate to VideoCapture if a specific fps was requested.
             // AUTO (fps=0) skips setTargetFrameRate, letting CameraX pick the best default.
@@ -136,8 +159,10 @@ class CameraManager(private val context: Context) {
             videoCapture = videoCaptureBuilder.build()
 
             // 3. Build ImageAnalysis for secondary preview
+            // ImageAnalysis resolution is set to the normal size. During recording,
+            // frame throttling in the analyzer reduces CPU cost without rebinding.
             imageAnalysis = ImageAnalysis.Builder()
-                .setTargetResolution(ANALYSIS_RESOLUTION)
+                .setTargetResolution(ANALYSIS_RESOLUTION_NORMAL)
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
@@ -284,34 +309,76 @@ class CameraManager(private val context: Context) {
         return setOf(30) // safe fallback
     }
 
+    // ── Recording mode ─────────────────────────────────────────────────
+
+    /**
+     * Enter quality-priority recording mode.
+     * The secondary preview continues updating but at lower cost:
+     * - Skips every other frame (halves CPU work)
+     * - Downscales before processing (reduces bitmap allocation size)
+     * This avoids rebinding use cases mid-recording which would interrupt capture.
+     */
+    fun enterRecordingMode() {
+        isInRecordingMode = true
+        frameCounter = 0
+        Log.i(TAG, "Entered recording mode — secondary preview throttled")
+    }
+
+    /** Exit recording mode. Restores normal secondary preview refresh rate. */
+    fun exitRecordingMode() {
+        isInRecordingMode = false
+        Log.i(TAG, "Exited recording mode — secondary preview restored")
+    }
+
     // ── Frame processing ──────────────────────────────────────────────
 
     private fun processSecondPreviewFrame(imageProxy: ImageProxy) {
         try {
+            frameCounter++
+
+            // During recording, skip every other frame to reduce CPU pressure.
+            // The secondary preview updates at ~15fps instead of ~30fps.
+            if (isInRecordingMode && frameCounter % 2 != 0L) {
+                return // frame skipped — imageProxy.close() in finally block
+            }
+
             val bitmap = imageProxyToBitmap(imageProxy)
             if (bitmap != null) {
-                val rotated = rotateBitmap(bitmap, imageProxy.imageInfo.rotationDegrees)
+                // During recording, downscale the bitmap before processing
+                // to reduce allocation size and crop/mirror work.
+                val source = if (isInRecordingMode) downscaleBitmap(bitmap) else bitmap
+
+                val rotated = rotateBitmap(source, imageProxy.imageInfo.rotationDegrees)
                 val cropped = centerCrop(rotated, 9f / 16f)
 
-                // Mirror horizontally for front camera so the 9:16 preview matches
-                // the native PreviewView which CameraX mirrors automatically.
+                // Mirror horizontally for front camera
                 val output = if (_useFrontCamera.value) mirrorBitmap(cropped) else cropped
 
                 // Emit the new frame. We do NOT recycle the previous bitmap because
-                // Compose may still be drawing it on the main thread. At 640x480 ARGB_8888
-                // (~1.2MB per frame), GC handles the turnover without issue.
+                // Compose may still be drawing it on the main thread.
                 _secondPreviewBitmap.value = output
 
                 // Recycle intermediates that are NOT the emitted bitmap
                 if (cropped !== output) cropped.recycle()
-                if (rotated !== bitmap && rotated !== cropped) rotated.recycle()
-                if (bitmap !== rotated && bitmap !== cropped) bitmap.recycle()
+                if (rotated !== source && rotated !== cropped) rotated.recycle()
+                if (source !== rotated && source !== cropped && source !== output) source.recycle()
+                if (bitmap !== source) bitmap.recycle()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Frame processing error", e)
         } finally {
             imageProxy.close()
         }
+    }
+
+    /**
+     * Downscale a bitmap to half resolution during recording mode.
+     * Reduces memory allocation from ~1.2MB to ~300KB per processed frame.
+     */
+    private fun downscaleBitmap(bitmap: Bitmap): Bitmap {
+        val halfW = (bitmap.width / 2).coerceAtLeast(1)
+        val halfH = (bitmap.height / 2).coerceAtLeast(1)
+        return Bitmap.createScaledBitmap(bitmap, halfW, halfH, false)
     }
 
     private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap? {

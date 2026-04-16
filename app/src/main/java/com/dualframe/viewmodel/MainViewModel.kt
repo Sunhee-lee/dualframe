@@ -258,11 +258,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         masterFile = file
         _uiState.update { it.copy(appStatus = AppStatus.RECORDING, recordingDurationSeconds = 0) }
+        cameraManager.enterRecordingMode() // Throttle secondary preview for quality priority
         startTimer()
     }
 
     private fun stopRecording() {
         cameraManager.stopRecording()
+        cameraManager.exitRecordingMode() // Restore normal secondary preview
         stopTimer()
     }
 
