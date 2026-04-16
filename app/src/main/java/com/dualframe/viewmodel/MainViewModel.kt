@@ -99,8 +99,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             refreshSupportedCapabilities()
         }
     }
-        }
-    }
 
     /**
      * Query the current camera's supported quality/fps and update UiState.

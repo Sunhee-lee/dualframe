@@ -126,7 +126,7 @@ private fun RecIndicator(seconds: Int) {
     Row(Modifier.background(Color(0x44FF1744), RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF1744)))
         Spacer(Modifier.width(6.dp))
-        Text(formatDuration(seconds), Color.White, 13.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+        Text(text = formatDuration(seconds), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
     }
 }
 
@@ -141,7 +141,7 @@ private fun StatusChip(status: AppStatus) {
         AppStatus.EXPORT_COMPLETE -> "Done" to Color(0xFF66BB6A)
         AppStatus.ERROR -> "Error" to Color(0xFFCF6679)
     }
-    Text(text, color, 11.sp, fontWeight = FontWeight.Bold,
+    Text(text = text, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold,
         modifier = Modifier.background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 
@@ -194,7 +194,7 @@ private fun PreviewPanels(
 @Composable
 private fun AspectLabel(text: String) {
     Box(Modifier.fillMaxSize()) {
-        Text(text, Color.White, 12.sp, fontWeight = FontWeight.Bold,
+        Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.TopStart).padding(6.dp)
                 .background(Color(0xAA000000), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
     }
