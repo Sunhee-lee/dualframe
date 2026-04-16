@@ -29,10 +29,16 @@ import com.dualframe.data.AppSettings
 import com.dualframe.data.FrameRate
 import com.dualframe.data.VideoQuality
 
+/**
+ * Settings bottom sheet with capability-aware options.
+ * Unsupported quality/fps options are shown but disabled (greyed out).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSheet(
     settings: AppSettings,
+    supportedQualities: List<VideoQuality>,
+    supportedFrameRates: List<FrameRate>,
     onSettingsChange: (AppSettings) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -67,13 +73,33 @@ fun SettingsSheet(
 
             SettingDivider()
 
-            // ── Video Quality ──
+            // ── Video Quality (capability-aware) ──
             SettingSectionTitle("Video Quality")
-            RadioGroup(
+            RadioGroupWithEnabled(
                 options = VideoQuality.entries.map { it.label },
+                enabledMask = VideoQuality.entries.map { it in supportedQualities },
                 selectedIndex = VideoQuality.entries.indexOf(settings.videoQuality),
                 onSelected = { index ->
-                    onSettingsChange(settings.copy(videoQuality = VideoQuality.entries[index]))
+                    val selected = VideoQuality.entries[index]
+                    if (selected in supportedQualities) {
+                        onSettingsChange(settings.copy(videoQuality = selected))
+                    }
+                },
+            )
+
+            SettingDivider()
+
+            // ── Frame Rate (capability-aware) ──
+            SettingSectionTitle("Frame Rate")
+            RadioGroupWithEnabled(
+                options = FrameRate.entries.map { it.label },
+                enabledMask = FrameRate.entries.map { it in supportedFrameRates },
+                selectedIndex = FrameRate.entries.indexOf(settings.frameRate),
+                onSelected = { index ->
+                    val selected = FrameRate.entries[index]
+                    if (selected in supportedFrameRates) {
+                        onSettingsChange(settings.copy(frameRate = selected))
+                    }
                 },
             )
 
@@ -81,29 +107,15 @@ fun SettingsSheet(
 
             // ── Countdown ──
             SettingSectionTitle("Countdown")
-            RadioGroup(
+            RadioGroupWithEnabled(
                 options = listOf("Off", "3 seconds", "5 seconds", "10 seconds"),
+                enabledMask = listOf(true, true, true, true),
                 selectedIndex = when (settings.countdownSeconds) {
-                    3 -> 1
-                    5 -> 2
-                    10 -> 3
-                    else -> 0
+                    3 -> 1; 5 -> 2; 10 -> 3; else -> 0
                 },
                 onSelected = { index ->
                     val seconds = when (index) { 1 -> 3; 2 -> 5; 3 -> 10; else -> 0 }
                     onSettingsChange(settings.copy(countdownSeconds = seconds))
-                },
-            )
-
-            SettingDivider()
-
-            // ── Frame Rate ──
-            SettingSectionTitle("Frame Rate")
-            RadioGroup(
-                options = FrameRate.entries.map { it.label },
-                selectedIndex = FrameRate.entries.indexOf(settings.frameRate),
-                onSelected = { index ->
-                    onSettingsChange(settings.copy(frameRate = FrameRate.entries[index]))
                 },
             )
 
@@ -146,19 +158,26 @@ private fun SettingDivider() {
     )
 }
 
+/**
+ * Radio group where individual options can be disabled.
+ * Disabled options appear greyed out and are not selectable.
+ */
 @Composable
-private fun RadioGroup(
+private fun RadioGroupWithEnabled(
     options: List<String>,
+    enabledMask: List<Boolean>,
     selectedIndex: Int,
     onSelected: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.selectableGroup()) {
         options.forEachIndexed { index, label ->
+            val enabled = enabledMask.getOrElse(index) { true }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .selectable(
                         selected = index == selectedIndex,
+                        enabled = enabled,
                         onClick = { onSelected(index) },
                         role = Role.RadioButton,
                     )
@@ -168,9 +187,14 @@ private fun RadioGroup(
                 RadioButton(
                     selected = index == selectedIndex,
                     onClick = null,
+                    enabled = enabled,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(label, color = Color.White, fontSize = 14.sp)
+                Text(
+                    text = label,
+                    color = if (enabled) Color.White else Color(0xFF555555),
+                    fontSize = 14.sp,
+                )
             }
         }
     }

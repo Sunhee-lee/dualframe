@@ -3,6 +3,8 @@ package com.dualframe.camera
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager as Camera2Manager
 import android.util.Log
 import android.util.Range
 import android.util.Size
@@ -213,6 +215,73 @@ class CameraManager(private val context: Context) {
         boundQuality = newQuality
         Log.i(TAG, "Rebinding camera: quality=$newQuality, fps=$newFps")
         return bindCameraInternal(owner, view, newFps, newQuality, onError)
+    }
+
+    // ── Capability queries ──────────────────────────────────────────────
+
+    /**
+     * Query which CameraX Quality levels the current camera supports for video.
+     * Uses CameraX QualitySelector.getSupportedQualities() which checks both the
+     * camera hardware and the encoder capabilities.
+     *
+     * Returns the subset of [Quality.UHD, Quality.FHD, Quality.HD] that is supported.
+     * Must be called after getCameraProvider() has been resolved.
+     */
+    fun getSupportedQualities(): List<Quality> {
+        val provider = cameraProvider ?: return listOf(Quality.FHD, Quality.HD) // safe fallback
+        val selector = if (_useFrontCamera.value) {
+            CameraSelector.DEFAULT_FRONT_CAMERA
+        } else {
+            CameraSelector.DEFAULT_BACK_CAMERA
+        }
+        val supported = try {
+            QualitySelector.getSupportedQualities(provider.getCameraInfo(selector))
+        } catch (e: Exception) {
+            Log.w(TAG, "Cannot query supported qualities", e)
+            return listOf(Quality.FHD, Quality.HD)
+        }
+        // Filter to the three we care about
+        val result = listOf(Quality.UHD, Quality.FHD, Quality.HD).filter { it in supported }
+        Log.i(TAG, "Supported qualities for ${if (_useFrontCamera.value) "front" else "back"}: $result")
+        return result.ifEmpty { listOf(Quality.FHD, Quality.HD) }
+    }
+
+    /**
+     * Query the maximum supported fps for the current camera.
+     * Uses Camera2 CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES to determine what
+     * the hardware can actually deliver.
+     *
+     * CameraX doesn't expose per-quality fps limits directly, so we use the
+     * Camera2 interop. This gives us the full set of ranges the sensor supports.
+     * We check if 60fps, 30fps, 24fps appear as upper bounds in any range.
+     *
+     * Limitation: this returns sensor-level capabilities, not per-quality limits.
+     * UHD+60fps may still not work even if 60fps is listed (the encoder may limit it).
+     * We handle this conservatively in the ViewModel.
+     */
+    fun getSupportedFpsValues(): Set<Int> {
+        try {
+            val cm = context.getSystemService(Context.CAMERA_SERVICE) as Camera2Manager
+            val facing = if (_useFrontCamera.value) {
+                CameraCharacteristics.LENS_FACING_FRONT
+            } else {
+                CameraCharacteristics.LENS_FACING_BACK
+            }
+            for (id in cm.cameraIdList) {
+                val chars = cm.getCameraCharacteristics(id)
+                if (chars.get(CameraCharacteristics.LENS_FACING) == facing) {
+                    val ranges = chars.get(
+                        CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES
+                    ) ?: continue
+                    val maxFps = ranges.map { it.upper }.toSet()
+                    Log.i(TAG, "Camera $id fps ranges: ${ranges.toList()}, max values: $maxFps")
+                    return maxFps
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Cannot query fps capabilities", e)
+        }
+        return setOf(30) // safe fallback
     }
 
     // ── Frame processing ──────────────────────────────────────────────

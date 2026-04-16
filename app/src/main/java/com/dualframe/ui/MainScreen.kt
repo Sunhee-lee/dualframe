@@ -97,6 +97,8 @@ fun MainScreen(
     if (showSettings) {
         SettingsSheet(
             settings = state.settings,
+            supportedQualities = state.supportedQualities,
+            supportedFrameRates = state.supportedFrameRates,
             onSettingsChange = { viewModel.updateSettings(it) },
             onDismiss = { showSettings = false },
         )
@@ -129,7 +131,7 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .padding(top = 8.dp, bottom = 24.dp),
+                .padding(top = 8.dp, bottom = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ExportStatusStub(state)
@@ -260,8 +262,8 @@ private fun StatusChip(status: AppStatus) {
 // ── Preview Panels ────────────────────────────────────────────────────
 
 /**
- * Two separate live preview regions. The 9:16 panel gets 3x the vertical weight
- * so it dominates the screen. The 16:9 panel stays visible but compact.
+ * Two separate live preview regions. The 9:16 panel gets 2x the vertical weight
+ * for clear visibility. The 16:9 panel stays visible at 1x weight.
  */
 @Composable
 private fun PreviewPanels(
@@ -277,10 +279,10 @@ private fun PreviewPanels(
             .padding(horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // ── 9:16 Portrait Preview (top, large — weight 3) ──
+        // ── 9:16 Portrait Preview (top — weight 2) ──
         Box(
             modifier = Modifier
-                .weight(3f)
+                .weight(2f)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color.Black),

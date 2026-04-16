@@ -25,6 +25,9 @@ data class UiState(
     val croppedExportInfo: String? = null, // e.g., "16:9 (cropped)"
     // Settings
     val settings: AppSettings = AppSettings(),
+    // Capability-driven: which quality/fps options are available on the current camera
+    val supportedQualities: List<VideoQuality> = VideoQuality.entries,
+    val supportedFrameRates: List<FrameRate> = FrameRate.entries,
 )
 
 enum class AppStatus {
