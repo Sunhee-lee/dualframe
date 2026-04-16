@@ -71,10 +71,10 @@ dependencies {
     val media3Version = "1.5.1"
     implementation("androidx.media3:media3-transformer:$media3Version")
     implementation("androidx.media3:media3-effect:$media3Version")
-    implementation("androidx.media3:media3-common:$media3Version")
+    // media3-common is pulled transitively by media3-transformer
 
-    // AdMob
-    implementation("com.google.android.gms:play-services-ads:23.6.0")
+    // AdMob — lite variant (~5MB vs ~20MB dex, sufficient for rewarded ads)
+    implementation("com.google.android.gms:play-services-ads-lite:23.6.0")
 
     // Google Play Billing
     implementation("com.android.billingclient:billing-ktx:7.1.1")
