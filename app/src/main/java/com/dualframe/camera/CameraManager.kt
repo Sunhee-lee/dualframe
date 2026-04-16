@@ -170,13 +170,14 @@ class CameraManager(private val context: Context) {
                 val rotated = rotateBitmap(bitmap, imageProxy.imageInfo.rotationDegrees)
                 val cropped = centerCrop(rotated, 9f / 16f)
 
-                // Recycle the previous frame bitmap to prevent memory leak.
-                // At ~15-30fps this would otherwise leak ~1.2MB/frame of native memory.
-                val previous = _secondPreviewBitmap.value
+                // Emit the new frame. We do NOT recycle the previous bitmap because
+                // Compose may still be drawing it on the main thread. At 640x480 ARGB_8888
+                // (~1.2MB per frame), GC handles the turnover without issue.
+                // Manual recycle() here caused SIGSEGV / "trying to use a recycled bitmap"
+                // crashes due to the cross-thread race between analyzer and UI threads.
                 _secondPreviewBitmap.value = cropped
-                previous?.recycle()
 
-                // Recycle intermediates that are distinct from the emitted bitmap
+                // Recycle intermediates that are NOT the emitted bitmap
                 if (rotated !== bitmap && rotated !== cropped) rotated.recycle()
                 if (bitmap !== rotated && bitmap !== cropped) bitmap.recycle()
             }
