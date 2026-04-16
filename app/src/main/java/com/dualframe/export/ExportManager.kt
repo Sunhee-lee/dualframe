@@ -93,15 +93,19 @@ class ExportManager(private val context: Context) {
     }
 
     /**
-     * Core transform: center-crop the source to the target aspect ratio.
+     * Center-crop + re-encode to the target aspect ratio via Media3 Transformer.
      *
-     * Transformer applies the file's rotation metadata BEFORE the Crop effect,
-     * so the Crop operates on the display-oriented frame.
+     * How it works:
+     * 1. Transformer applies the file's rotation metadata, producing a display-oriented frame.
+     * 2. The Crop effect selects a centered sub-rectangle matching the target aspect ratio.
+     * 3. Transformer re-encodes the cropped region into a new file.
      *
-     * For a source with display dimensions W×H (display aspect = W/H):
-     *   - target wider than source → crop top/bottom (keep full width)
-     *   - target taller than source → crop left/right (keep full height)
-     *   - aspects match → passthrough (no crop)
+     * The output resolution is the size of the cropped region, NOT the original.
+     * Example: 1080x1920 portrait source → 16:9 crop → output is 1080x607 (not 1920x1080).
+     * The output is a crop-only transform; no upscaling is applied.
+     *
+     * When target aspect matches source aspect (within tolerance), the Crop is a
+     * full-frame passthrough — output matches source resolution.
      */
     private suspend fun runTransform(
         inputFile: File,

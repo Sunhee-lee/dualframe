@@ -415,12 +415,12 @@ private fun ResultActions(
         Spacer(modifier = Modifier.height(4.dp))
     }
 
-    // Export result info — shows which output was native vs cropped, with resolution
+    // Output info — actual resolution and fps from exported files
     state.nativeExportInfo?.let {
-        Text(it, color = Color(0xFF66BB6A), fontSize = 10.sp)
+        Text(it, color = Color(0xFFAAAAAA), fontSize = 10.sp)
     }
     state.croppedExportInfo?.let {
-        Text(it, color = Color(0xFF888888), fontSize = 10.sp)
+        Text(it, color = Color(0xFFAAAAAA), fontSize = 10.sp)
     }
     Spacer(modifier = Modifier.height(4.dp))
 

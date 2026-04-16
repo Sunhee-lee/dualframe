@@ -305,10 +305,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val nativeName = nativeFile.nameWithoutExtension + ".mp4"
             val nativeUri = FileStorage.saveToMediaStore(getApplication(), nativeFile, nativeName)
 
-            // Read verified metadata from the native export
-            val nativeFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(nativeFile) }
+            // Read verified metadata from the native export (actual resolution + fps)
             val nativeMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(nativeFile) }
-            val nativeRes = nativeMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: "?"
+            val nativeRes = nativeMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
+            val nativeFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(nativeFile) }
 
             // Store native URI under the correct aspect key
             if (isPortrait) {
@@ -332,7 +332,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val croppedName = croppedFile.nameWithoutExtension + ".mp4"
             val croppedUri = FileStorage.saveToMediaStore(getApplication(), croppedFile, croppedName)
             val croppedMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(croppedFile) }
-            val croppedRes = croppedMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: "?"
+            val croppedRes = croppedMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
+            val croppedFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(croppedFile) }
 
             if (isPortrait) {
                 _uiState.update { it.copy(landscape16x9Uri = croppedUri) }
@@ -340,19 +341,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(portrait9x16Uri = croppedUri) }
             }
 
-            // Thumbnail from the native export (primary output)
             val thumbnail = generateThumbnail(nativeFile)
 
-            Log.i(TAG, "Export complete: native=$nativeLabel ${nativeRes} $nativeFps, " +
-                "cropped=$croppedLabel ${croppedRes}")
+            // Developer-facing log with native/cropped distinction
+            Log.i(TAG, "Export complete: " +
+                "native=$nativeLabel $nativeRes $nativeFps, " +
+                "derived=$croppedLabel $croppedRes $croppedFps")
 
+            // User-facing labels: simple, no technical jargon
             _uiState.update {
                 it.copy(
                     appStatus = AppStatus.EXPORT_COMPLETE,
                     exportProgress = 1f,
                     thumbnailBitmap = thumbnail,
-                    nativeExportInfo = "$nativeLabel (native) $nativeRes — $nativeFps",
-                    croppedExportInfo = "$croppedLabel (cropped) $croppedRes",
+                    nativeExportInfo = buildOutputLine(nativeLabel, nativeRes, nativeFps),
+                    croppedExportInfo = buildOutputLine(croppedLabel, croppedRes, croppedFps),
                 )
             }
         }
@@ -436,4 +439,12 @@ private fun VideoQuality.toCameraXQuality(): Quality = when (this) {
     VideoQuality.UHD -> Quality.UHD
     VideoQuality.FHD -> Quality.FHD
     VideoQuality.HD -> Quality.HD
+}
+
+/** Build a clean user-facing output line like "9:16 · 1080x1920 · 30.0 fps". */
+private fun buildOutputLine(label: String, resolution: String, fps: String): String {
+    val parts = mutableListOf(label)
+    if (resolution.isNotEmpty()) parts.add(resolution)
+    if (fps != "unknown") parts.add(fps)
+    return parts.joinToString(" · ")
 }
