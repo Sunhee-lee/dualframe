@@ -26,11 +26,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dualframe.data.AppSettings
+import com.dualframe.data.FrameRate
 
-/**
- * Settings bottom sheet. Shown when the user taps the settings icon.
- * All settings map directly to AppSettings fields and are persisted immediately.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSheet(
@@ -60,7 +57,7 @@ fun SettingsSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Audio Recording ──
+            // ── Audio ──
             SwitchSetting(
                 label = "Audio Recording",
                 checked = settings.audioEnabled,
@@ -72,15 +69,28 @@ fun SettingsSheet(
             // ── Countdown ──
             SettingSectionTitle("Countdown")
             RadioGroup(
-                options = listOf("Off", "3 seconds", "5 seconds"),
+                options = listOf("Off", "3 seconds", "5 seconds", "10 seconds"),
                 selectedIndex = when (settings.countdownSeconds) {
                     3 -> 1
                     5 -> 2
+                    10 -> 3
                     else -> 0
                 },
                 onSelected = { index ->
-                    val seconds = when (index) { 1 -> 3; 2 -> 5; else -> 0 }
+                    val seconds = when (index) { 1 -> 3; 2 -> 5; 3 -> 10; else -> 0 }
                     onSettingsChange(settings.copy(countdownSeconds = seconds))
+                },
+            )
+
+            SettingDivider()
+
+            // ── Frame Rate ──
+            SettingSectionTitle("Frame Rate")
+            RadioGroup(
+                options = FrameRate.entries.map { it.label },
+                selectedIndex = FrameRate.entries.indexOf(settings.frameRate),
+                onSelected = { index ->
+                    onSettingsChange(settings.copy(frameRate = FrameRate.entries[index]))
                 },
             )
 
@@ -95,7 +105,7 @@ fun SettingsSheet(
 
             SettingDivider()
 
-            // ── Guide Display ──
+            // ── Show Guides ──
             SwitchSetting(
                 label = "Show Crop Guides",
                 checked = settings.showGuides,

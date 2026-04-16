@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.util.Log
+import android.util.Range
 import android.util.Size
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -69,26 +70,30 @@ class CameraManager(private val context: Context) {
     // Stored for rebinding on camera switch
     private var boundLifecycleOwner: LifecycleOwner? = null
     private var boundPreviewView: PreviewView? = null
+    private var boundTargetFps: Int = 30
 
     /**
      * Bind camera with preview, recording, and secondary analysis feed.
+     * @param targetFps Desired recording frame rate (24, 30, 60). Falls back if unsupported.
      * @return true if camera was bound successfully, false on total failure
      */
     suspend fun bindCamera(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
+        targetFps: Int = 30,
         onError: (String) -> Unit,
     ): Boolean {
-        // Store for rebinding on camera switch
         boundLifecycleOwner = lifecycleOwner
         boundPreviewView = previewView
+        boundTargetFps = targetFps
 
-        return bindCameraInternal(lifecycleOwner, previewView, onError)
+        return bindCameraInternal(lifecycleOwner, previewView, targetFps, onError)
     }
 
     private suspend fun bindCameraInternal(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
+        targetFps: Int,
         onError: (String) -> Unit,
     ): Boolean {
         try {
@@ -112,7 +117,14 @@ class CameraManager(private val context: Context) {
             val recorder = Recorder.Builder()
                 .setQualitySelector(qualitySelector)
                 .build()
-            videoCapture = VideoCapture.withOutput(recorder)
+
+            // Apply target frame rate to VideoCapture. CameraX will negotiate the closest
+            // supported fps range with the camera HAL. If the requested fps isn't supported
+            // (e.g., 60fps on a front camera), CameraX silently falls back to the camera's
+            // default — no crash, just a lower fps in the output file.
+            videoCapture = VideoCapture.Builder(recorder)
+                .setTargetFrameRate(Range(targetFps, targetFps))
+                .build()
 
             // 3. Build ImageAnalysis for secondary preview
             imageAnalysis = ImageAnalysis.Builder()
@@ -172,7 +184,7 @@ class CameraManager(private val context: Context) {
         _secondPreviewBitmap.value = null // Clear stale frame from previous camera
         Log.i(TAG, "Switching camera to ${if (_useFrontCamera.value) "front" else "back"}")
 
-        return bindCameraInternal(owner, view, onError)
+        return bindCameraInternal(owner, view, boundTargetFps, onError)
     }
 
     // ── Frame processing ──────────────────────────────────────────────

@@ -72,6 +72,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val success = cameraManager.bindCamera(
                 lifecycleOwner = lifecycleOwner,
                 previewView = previewView,
+                targetFps = _uiState.value.settings.frameRate.fps,
                 onError = { msg -> setError(msg) },
             )
             _uiState.update { it.copy(cameraReady = success) }

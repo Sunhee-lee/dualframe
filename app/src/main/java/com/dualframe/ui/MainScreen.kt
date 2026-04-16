@@ -79,7 +79,6 @@ fun MainScreen(
 
     val secondBitmap by viewModel.cameraManager.secondPreviewBitmap.collectAsState()
     val dualAvailable by viewModel.cameraManager.dualPreviewAvailable.collectAsState()
-    val isFrontCamera by viewModel.cameraManager.useFrontCamera.collectAsState()
 
     val previewView = remember {
         PreviewView(context).apply {
@@ -112,10 +111,8 @@ fun MainScreen(
         // ── Header ──
         Header(
             state = state,
-            isFrontCamera = isFrontCamera,
             canSwitchCamera = state.cameraReady && state.appStatus != AppStatus.RECORDING,
             onCameraSwitch = { viewModel.switchCamera() },
-            onSettingsTap = { showSettings = true },
         )
 
         // ── Preview panels (9:16 top = large, 16:9 bottom = smaller) ──
@@ -136,12 +133,30 @@ fun MainScreen(
         ) {
             ExportStatusStub(state)
 
-            RecordControls(
-                appStatus = state.appStatus,
-                cameraReady = state.cameraReady,
-                countdownRemaining = state.countdownRemaining,
-                onRecordTap = { viewModel.toggleRecording(hasAudioPermission) },
-            )
+            // Record button row with settings button to its right
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                // Spacer for symmetry
+                Spacer(modifier = Modifier.width(48.dp))
+
+                RecordControls(
+                    appStatus = state.appStatus,
+                    cameraReady = state.cameraReady,
+                    countdownRemaining = state.countdownRemaining,
+                    onRecordTap = { viewModel.toggleRecording(hasAudioPermission) },
+                )
+
+                // Settings button — positioned next to record button
+                IconButton(
+                    onClick = { showSettings = true },
+                    modifier = Modifier.padding(start = 8.dp),
+                ) {
+                    Text("⚙", fontSize = 22.sp, color = Color(0xFFAAAAAA))
+                }
+            }
 
             ResultActions(state, viewModel, context)
             ErrorArea(state, onDismiss = { viewModel.clearError() })
@@ -156,10 +171,8 @@ fun MainScreen(
 @Composable
 private fun Header(
     state: UiState,
-    isFrontCamera: Boolean,
     canSwitchCamera: Boolean,
     onCameraSwitch: () -> Unit,
-    onSettingsTap: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -193,11 +206,6 @@ private fun Header(
                     fontSize = 18.sp,
                     color = if (canSwitchCamera) Color.White else Color(0xFF555555),
                 )
-            }
-
-            // Settings button
-            IconButton(onClick = onSettingsTap) {
-                Text("⚙", fontSize = 18.sp)
             }
         }
     }
