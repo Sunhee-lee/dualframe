@@ -22,43 +22,55 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 
 /**
- * Handles post-recording export of the master file into 16:9 and 9:16 crops.
+ * Exports the master recording into two aspect ratios: 16:9 and 9:16.
  *
- * Key improvement over v1: reads actual video metadata (width, height, rotation)
- * from the master file instead of assuming a fixed 16:9 source. This ensures correct
- * center-crop calculations for any camera output resolution/orientation.
+ * Orientation-native logic:
+ * - The master file's actual display aspect ratio determines which output is "native"
+ *   (passthrough / minimal crop) and which is "cropped" (heavy center-crop).
+ * - Portrait master (aspect < 1): 9:16 is native, 16:9 is derived.
+ * - Landscape master (aspect >= 1): 16:9 is native, 9:16 is derived.
  *
- * Media3 Transformer Crop effect uses normalized coordinates [-1, 1]:
- *   - left=-1 is left edge, right=1 is right edge
- *   - bottom=-1 is bottom edge, top=1 is top edge
- *   - Values closer to 0 = more cropping from that edge
- *
- * IMPORTANT: Transformer reads the rotation metadata from the file and applies it
- * BEFORE the Crop effect. So the Crop operates on the already-rotated (display)
- * frame. Our crop coordinates should be calculated based on the display dimensions,
- * not the raw buffer dimensions.
+ * The crop math reads real video metadata (width, height, rotation) and computes
+ * center-crop coordinates in Media3's normalized [-1, 1] space.
  */
 @UnstableApi
 class ExportManager(private val context: Context) {
 
     companion object {
         private const val TAG = "ExportManager"
-        private const val TARGET_LANDSCAPE = 16f / 9f  // 1.778
-        private const val TARGET_PORTRAIT = 9f / 16f    // 0.5625
+        const val ASPECT_16x9 = 16f / 9f  // 1.778
+        const val ASPECT_9x16 = 9f / 16f  // 0.5625
     }
 
     /**
-     * Export the master file to a 16:9 landscape version.
+     * Determine whether the master file is natively portrait or landscape.
+     * Returns true if portrait (display aspect < 1), false if landscape.
+     */
+    fun isMasterPortrait(masterFile: File): Boolean {
+        val metadata = VideoMetadata.fromFile(masterFile)
+        val aspect = metadata?.displayAspectRatio ?: ASPECT_16x9
+        val isPortrait = aspect < 1f
+        Log.i(TAG, "Master orientation: ${if (isPortrait) "portrait" else "landscape"} " +
+            "(display aspect=${"%.3f".format(aspect)})")
+        return isPortrait
+    }
+
+    /**
+     * Export the master file to a specific target aspect ratio.
      *
-     * @param masterFile The recorded master video file
+     * @param masterFile The recorded master video
+     * @param targetAspect Desired output W/H ratio (e.g., 16/9 or 9/16)
+     * @param fileSuffix Suffix for the output filename (e.g., "16x9" or "9x16")
      * @param onProgress Progress callback 0f..1f
      * @return The exported file, or null on failure
      */
-    suspend fun exportLandscape(
+    suspend fun exportToAspect(
         masterFile: File,
+        targetAspect: Float,
+        fileSuffix: String,
         onProgress: (Float) -> Unit,
     ): File? = withContext(Dispatchers.Main) {
-        val outputFile = FileStorage.createExportFile(context, "16x9")
+        val outputFile = FileStorage.createExportFile(context, fileSuffix)
         try {
             val metadata = VideoMetadata.fromFile(masterFile)
             if (metadata == null) {
@@ -67,47 +79,14 @@ class ExportManager(private val context: Context) {
             runTransform(
                 inputFile = masterFile,
                 outputFile = outputFile,
-                targetAspectRatio = TARGET_LANDSCAPE,
+                targetAspectRatio = targetAspect,
                 sourceMetadata = metadata,
                 onProgress = onProgress,
             )
-            Log.i(TAG, "16:9 export complete: ${outputFile.absolutePath}")
+            Log.i(TAG, "$fileSuffix export complete: ${outputFile.absolutePath}")
             outputFile
         } catch (e: Exception) {
-            Log.e(TAG, "16:9 export failed", e)
-            outputFile.delete()
-            null
-        }
-    }
-
-    /**
-     * Export the master file to a 9:16 portrait version.
-     *
-     * @param masterFile The recorded master video file
-     * @param onProgress Progress callback 0f..1f
-     * @return The exported file, or null on failure
-     */
-    suspend fun exportPortrait(
-        masterFile: File,
-        onProgress: (Float) -> Unit,
-    ): File? = withContext(Dispatchers.Main) {
-        val outputFile = FileStorage.createExportFile(context, "9x16")
-        try {
-            val metadata = VideoMetadata.fromFile(masterFile)
-            if (metadata == null) {
-                Log.e(TAG, "Cannot read metadata, using fallback crop")
-            }
-            runTransform(
-                inputFile = masterFile,
-                outputFile = outputFile,
-                targetAspectRatio = TARGET_PORTRAIT,
-                sourceMetadata = metadata,
-                onProgress = onProgress,
-            )
-            Log.i(TAG, "9:16 export complete: ${outputFile.absolutePath}")
-            outputFile
-        } catch (e: Exception) {
-            Log.e(TAG, "9:16 export failed", e)
+            Log.e(TAG, "$fileSuffix export failed", e)
             outputFile.delete()
             null
         }
@@ -116,33 +95,13 @@ class ExportManager(private val context: Context) {
     /**
      * Core transform: center-crop the source to the target aspect ratio.
      *
-     * Crop coordinate math (explained):
-     *
-     * The Crop effect works AFTER Transformer applies the rotation metadata.
-     * So the frame the Crop sees is in display orientation (post-rotation).
+     * Transformer applies the file's rotation metadata BEFORE the Crop effect,
+     * so the Crop operates on the display-oriented frame.
      *
      * For a source with display dimensions W×H (display aspect = W/H):
-     *
-     * Case 1: target aspect > source aspect (target is wider relative to source)
-     *   → We need to crop top and bottom (reduce height)
-     *   → Keep full width: left=-1, right=1
-     *   → Height fraction to keep = sourceAspect / targetAspect
-     *   → In normalized coords: bottom = -fraction, top = fraction
-     *
-     * Case 2: target aspect < source aspect (target is taller relative to source)
-     *   → We need to crop left and right (reduce width)
-     *   → Keep full height: bottom=-1, top=1
-     *   → Width fraction to keep = targetAspect / sourceAspect
-     *   → In normalized coords: left = -fraction, right = fraction
-     *
-     * Case 3: target ≈ source (within tolerance)
-     *   → No crop needed, pass through
-     *
-     * @param inputFile Source video
-     * @param outputFile Destination file
-     * @param targetAspectRatio Desired output W/H ratio
-     * @param sourceMetadata Actual video metadata (null = fallback to 16:9 assumption)
-     * @param onProgress Progress callback
+     *   - target wider than source → crop top/bottom (keep full width)
+     *   - target taller than source → crop left/right (keep full height)
+     *   - aspects match → passthrough (no crop)
      */
     private suspend fun runTransform(
         inputFile: File,
@@ -152,10 +111,11 @@ class ExportManager(private val context: Context) {
         onProgress: (Float) -> Unit,
     ) = suspendCancellableCoroutine { cont ->
 
-        // Use actual display aspect from metadata, or fallback to 16:9
-        val sourceAspect = sourceMetadata?.displayAspectRatio ?: (16f / 9f)
+        val sourceAspect = sourceMetadata?.displayAspectRatio
+            ?: ASPECT_16x9 // fallback only if metadata unreadable
 
-        Log.i(TAG, "Crop: source aspect=$sourceAspect, target aspect=$targetAspectRatio")
+        Log.i(TAG, "Crop: source aspect=${"%.3f".format(sourceAspect)}, " +
+            "target aspect=${"%.3f".format(targetAspectRatio)}")
 
         val cropLeft: Float
         val cropRight: Float
@@ -164,51 +124,34 @@ class ExportManager(private val context: Context) {
 
         val aspectTolerance = 0.01f
         if (kotlin.math.abs(targetAspectRatio - sourceAspect) < aspectTolerance) {
-            // Source already matches target — no crop
-            cropLeft = -1f
-            cropRight = 1f
-            cropBottom = -1f
-            cropTop = 1f
-            Log.i(TAG, "No crop needed, aspects match within tolerance")
+            // Source already matches target — passthrough
+            cropLeft = -1f; cropRight = 1f; cropBottom = -1f; cropTop = 1f
+            Log.i(TAG, "No crop needed — native framing matches target")
         } else if (targetAspectRatio > sourceAspect) {
-            // Target is wider → crop height (top/bottom)
+            // Target is wider → crop height
             val keepFraction = sourceAspect / targetAspectRatio
-            cropLeft = -1f
-            cropRight = 1f
-            cropBottom = -keepFraction
-            cropTop = keepFraction
+            cropLeft = -1f; cropRight = 1f
+            cropBottom = -keepFraction; cropTop = keepFraction
             Log.i(TAG, "Cropping height: keep ${"%.1f".format(keepFraction * 100)}%")
         } else {
-            // Target is taller → crop width (left/right)
+            // Target is taller → crop width
             val keepFraction = targetAspectRatio / sourceAspect
-            cropLeft = -keepFraction
-            cropRight = keepFraction
-            cropBottom = -1f
-            cropTop = 1f
+            cropLeft = -keepFraction; cropRight = keepFraction
+            cropBottom = -1f; cropTop = 1f
             Log.i(TAG, "Cropping width: keep ${"%.1f".format(keepFraction * 100)}%")
         }
 
-        // Validate crop bounds are within [-1, 1]
         require(cropLeft >= -1f && cropRight <= 1f && cropBottom >= -1f && cropTop <= 1f) {
-            "Crop out of bounds: left=$cropLeft right=$cropRight bottom=$cropBottom top=$cropTop"
+            "Crop out of bounds: L=$cropLeft R=$cropRight B=$cropBottom T=$cropTop"
         }
 
         val cropEffect = Crop(cropLeft, cropRight, cropBottom, cropTop)
-
         val mediaItem = MediaItem.fromUri(inputFile.toURI().toString())
         val editedMediaItem = EditedMediaItem.Builder(mediaItem)
-            .setEffects(
-                Effects(
-                    /* audioProcessors = */ listOf(),
-                    /* videoEffects = */ listOf(cropEffect),
-                )
-            )
+            .setEffects(Effects(listOf(), listOf(cropEffect)))
             .build()
 
-        // Progress polling requires a reference to the Transformer, and the Transformer
-        // listener needs to stop the poll. Use lateinit to break the circular dependency.
         lateinit var transformer: Transformer
-
         val handler = android.os.Handler(android.os.Looper.getMainLooper())
         val progressHolder = ProgressHolder()
         val pollRunnable = object : Runnable {
@@ -229,7 +172,6 @@ class ExportManager(private val context: Context) {
                     onProgress(1f)
                     if (cont.isActive) cont.resume(Unit)
                 }
-
                 override fun onError(
                     composition: Composition,
                     exportResult: ExportResult,

@@ -241,8 +241,8 @@ private fun StatusChip(status: AppStatus) {
         AppStatus.IDLE -> "Ready" to Color(0xFF888888)
         AppStatus.COUNTDOWN -> "Countdown" to Color(0xFFFFA726)
         AppStatus.RECORDING -> "REC" to Color(0xFFFF1744)
-        AppStatus.EXPORTING_16x9 -> "Export 16:9" to Color(0xFFFFA726)
-        AppStatus.EXPORTING_9x16 -> "Export 9:16" to Color(0xFFFFA726)
+        AppStatus.EXPORTING_NATIVE -> "Exporting..." to Color(0xFFFFA726)
+        AppStatus.EXPORTING_CROPPED -> "Exporting..." to Color(0xFFFFA726)
         AppStatus.EXPORT_COMPLETE -> "Done" to Color(0xFF66BB6A)
         AppStatus.ERROR -> "Error" to Color(0xFFCF6679)
     }
@@ -362,11 +362,11 @@ private fun RuleOfThirdsGrid() {
 
 @Composable
 private fun ExportStatusStub(state: UiState) {
-    val isExporting = state.appStatus == AppStatus.EXPORTING_16x9 ||
-        state.appStatus == AppStatus.EXPORTING_9x16
+    val isExporting = state.appStatus == AppStatus.EXPORTING_NATIVE ||
+        state.appStatus == AppStatus.EXPORTING_CROPPED
     if (!isExporting) return
 
-    val label = if (state.appStatus == AppStatus.EXPORTING_16x9) "Exporting 16:9..." else "Exporting 9:16..."
+    val label = if (state.appStatus == AppStatus.EXPORTING_NATIVE) "Exporting native..." else "Exporting cropped..."
     Column(
         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -415,11 +415,14 @@ private fun ResultActions(
         Spacer(modifier = Modifier.height(4.dp))
     }
 
-    // Actual fps info from verified file metadata
-    state.actualFpsInfo?.let { fps ->
-        Text("Output: $fps", color = Color(0xFF888888), fontSize = 10.sp)
-        Spacer(modifier = Modifier.height(4.dp))
+    // Export result info — shows which output was native vs cropped, with resolution
+    state.nativeExportInfo?.let {
+        Text(it, color = Color(0xFF66BB6A), fontSize = 10.sp)
     }
+    state.croppedExportInfo?.let {
+        Text(it, color = Color(0xFF888888), fontSize = 10.sp)
+    }
+    Spacer(modifier = Modifier.height(4.dp))
 
     // X dismiss button — returns to idle without deleting files
     androidx.compose.material3.TextButton(

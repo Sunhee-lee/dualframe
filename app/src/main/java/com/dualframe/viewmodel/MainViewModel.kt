@@ -151,9 +151,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 countdownRemaining = seconds,
                 landscape16x9Uri = null,
                 portrait9x16Uri = null,
-                landscape16x9Name = null,
-                portrait9x16Name = null,
                 thumbnailBitmap = null,
+                nativeExportInfo = null,
+                croppedExportInfo = null,
             )
         }
 
@@ -180,10 +180,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 landscape16x9Uri = null,
                 portrait9x16Uri = null,
-                landscape16x9Name = null,
-                portrait9x16Name = null,
                 thumbnailBitmap = null,
-                actualFpsInfo = null,
+                nativeExportInfo = null,
+                croppedExportInfo = null,
             )
         }
 
@@ -245,6 +244,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── Export pipeline ───────────────────────────────────────────────
 
+    /**
+     * Orientation-native export pipeline.
+     *
+     * Determines the master file's actual display orientation, then:
+     * 1. Exports the "native" framing first (matches master → passthrough / minimal crop)
+     * 2. Exports the "cropped" framing second (heavy center-crop to the other aspect)
+     *
+     * Portrait master (phone held upright) → 9:16 native, 16:9 cropped
+     * Landscape master (rare, phone sideways) → 16:9 native, 9:16 cropped
+     */
     private fun startExportPipeline() {
         val file = masterFile ?: run {
             setError("No master file to export")
@@ -252,68 +261,98 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
-            // Step 1: Export 16:9 landscape
-            _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_16x9, exportProgress = 0f) }
-
-            val landscape = exportManager.exportLandscape(file) { progress ->
-                _uiState.update { it.copy(exportProgress = progress) }
+            // Detect native orientation from the actual master file
+            val isPortrait = withContext(Dispatchers.IO) {
+                exportManager.isMasterPortrait(file)
             }
 
-            if (landscape == null) {
-                setError("16:9 export failed")
+            // Determine export order: native first, then derived
+            val nativeAspect: Float
+            val nativeSuffix: String
+            val nativeLabel: String
+            val croppedAspect: Float
+            val croppedSuffix: String
+            val croppedLabel: String
+
+            if (isPortrait) {
+                nativeAspect = ExportManager.ASPECT_9x16
+                nativeSuffix = "9x16"
+                nativeLabel = "9:16"
+                croppedAspect = ExportManager.ASPECT_16x9
+                croppedSuffix = "16x9"
+                croppedLabel = "16:9"
+            } else {
+                nativeAspect = ExportManager.ASPECT_16x9
+                nativeSuffix = "16x9"
+                nativeLabel = "16:9"
+                croppedAspect = ExportManager.ASPECT_9x16
+                croppedSuffix = "9x16"
+                croppedLabel = "9:16"
+            }
+
+            // ── Step 1: Export native framing (passthrough / minimal crop) ──
+            _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_NATIVE, exportProgress = 0f) }
+
+            val nativeFile = exportManager.exportToAspect(file, nativeAspect, nativeSuffix) { progress ->
+                _uiState.update { it.copy(exportProgress = progress) }
+            }
+            if (nativeFile == null) {
+                setError("$nativeLabel export failed")
                 _uiState.update { it.copy(appStatus = AppStatus.ERROR) }
                 return@launch
             }
 
-            // Save 16:9 to gallery
-            val landscapeName = landscape.nameWithoutExtension + ".mp4"
-            val landscapeUri = FileStorage.saveToMediaStore(
-                getApplication(), landscape, landscapeName
-            )
-            _uiState.update {
-                it.copy(
-                    landscape16x9Uri = landscapeUri,
-                    landscape16x9Name = landscapeName,
-                )
+            val nativeName = nativeFile.nameWithoutExtension + ".mp4"
+            val nativeUri = FileStorage.saveToMediaStore(getApplication(), nativeFile, nativeName)
+
+            // Read verified metadata from the native export
+            val nativeFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(nativeFile) }
+            val nativeMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(nativeFile) }
+            val nativeRes = nativeMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: "?"
+
+            // Store native URI under the correct aspect key
+            if (isPortrait) {
+                _uiState.update { it.copy(portrait9x16Uri = nativeUri) }
+            } else {
+                _uiState.update { it.copy(landscape16x9Uri = nativeUri) }
             }
 
-            // Step 2: Export 9:16 portrait
-            _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_9x16, exportProgress = 0f) }
+            // ── Step 2: Export cropped/derived framing ──
+            _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_CROPPED, exportProgress = 0f) }
 
-            val portrait = exportManager.exportPortrait(file) { progress ->
+            val croppedFile = exportManager.exportToAspect(file, croppedAspect, croppedSuffix) { progress ->
                 _uiState.update { it.copy(exportProgress = progress) }
             }
-
-            if (portrait == null) {
-                setError("9:16 export failed")
+            if (croppedFile == null) {
+                setError("$croppedLabel export failed")
                 _uiState.update { it.copy(appStatus = AppStatus.ERROR) }
                 return@launch
             }
 
-            // Save 9:16 to gallery
-            val portraitName = portrait.nameWithoutExtension + ".mp4"
-            val portraitUri = FileStorage.saveToMediaStore(
-                getApplication(), portrait, portraitName
-            )
+            val croppedName = croppedFile.nameWithoutExtension + ".mp4"
+            val croppedUri = FileStorage.saveToMediaStore(getApplication(), croppedFile, croppedName)
+            val croppedMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(croppedFile) }
+            val croppedRes = croppedMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: "?"
 
-            // Generate thumbnail from the portrait export
-            val thumbnail = generateThumbnail(portrait)
-
-            // Verify actual fps of the exported file. This confirms whether the
-            // requested fps was honored by the hardware, rather than just assuming.
-            val actualFps = withContext(Dispatchers.IO) {
-                VideoMetadata.readActualFps(portrait)
+            if (isPortrait) {
+                _uiState.update { it.copy(landscape16x9Uri = croppedUri) }
+            } else {
+                _uiState.update { it.copy(portrait9x16Uri = croppedUri) }
             }
-            Log.i(TAG, "Export pipeline complete. Actual output fps: $actualFps")
+
+            // Thumbnail from the native export (primary output)
+            val thumbnail = generateThumbnail(nativeFile)
+
+            Log.i(TAG, "Export complete: native=$nativeLabel ${nativeRes} $nativeFps, " +
+                "cropped=$croppedLabel ${croppedRes}")
 
             _uiState.update {
                 it.copy(
                     appStatus = AppStatus.EXPORT_COMPLETE,
-                    portrait9x16Uri = portraitUri,
-                    portrait9x16Name = portraitName,
                     exportProgress = 1f,
                     thumbnailBitmap = thumbnail,
-                    actualFpsInfo = actualFps,
+                    nativeExportInfo = "$nativeLabel (native) $nativeRes — $nativeFps",
+                    croppedExportInfo = "$croppedLabel (cropped) $croppedRes",
                 )
             }
         }

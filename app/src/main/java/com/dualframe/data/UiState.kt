@@ -17,14 +17,12 @@ data class UiState(
     // Content URIs for exported files (for open/share intents)
     val landscape16x9Uri: Uri? = null,
     val portrait9x16Uri: Uri? = null,
-    // Display names for the saved files
-    val landscape16x9Name: String? = null,
-    val portrait9x16Name: String? = null,
     val cameraReady: Boolean = false,
     // Thumbnail of latest export result
     val thumbnailBitmap: Bitmap? = null,
-    // Actual fps info from the exported file (verified, not just requested)
-    val actualFpsInfo: String? = null,
+    // Export result info lines — truthful about which was native vs cropped
+    val nativeExportInfo: String? = null,  // e.g., "9:16 (native) — 30.0 fps"
+    val croppedExportInfo: String? = null, // e.g., "16:9 (cropped)"
     // Settings
     val settings: AppSettings = AppSettings(),
 )
@@ -33,8 +31,8 @@ enum class AppStatus {
     IDLE,
     COUNTDOWN,
     RECORDING,
-    EXPORTING_16x9,
-    EXPORTING_9x16,
+    EXPORTING_NATIVE,  // first export: passthrough or minimal crop of native framing
+    EXPORTING_CROPPED, // second export: center-crop to the other aspect ratio
     EXPORT_COMPLETE,
     ERROR,
 }
