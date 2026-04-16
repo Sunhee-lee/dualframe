@@ -52,19 +52,19 @@ import com.dualframe.viewmodel.MainViewModel
 /**
  * Main screen — top-level scaffold.
  *
- * Layout (portrait):
+ * Layout (portrait, full-screen immersive):
  * ┌─────────────────────────────┐
- * │ DualFrame  ● REC 01:23  [⚙]│  ← header with rec indicator
- * │      ┌─────────────┐       │
- * │      │ [9:16]      │       │  ← pill label, rule-of-thirds grid
- * │      │             │       │
- * │      └─────────────┘       │
+ * │ DualFrame ● REC 01:23 🔄 ⚙│  ← header
  * │ ┌─────────────────────────┐│
- * │ │ [16:9]                  ││  ← pill label, rule-of-thirds grid
+ * │ │ [9:16]                  ││  ← large 9:16 preview (weight 3)
+ * │ │                         ││
+ * │ │                         ││
+ * │ └─────────────────────────┘│
+ * │ ┌─────────────────────────┐│
+ * │ │ [16:9]                  ││  ← smaller 16:9 preview (weight 1)
  * │ └─────────────────────────┘│
  * │        ● Record ●          │
- * │   [export progress]        │
- * │   [Open] [Share] [Folder]  │
+ * │   [Open] [Share]            │
  * └─────────────────────────────┘
  */
 @UnstableApi
@@ -79,6 +79,7 @@ fun MainScreen(
 
     val secondBitmap by viewModel.cameraManager.secondPreviewBitmap.collectAsState()
     val dualAvailable by viewModel.cameraManager.dualPreviewAvailable.collectAsState()
+    val isFrontCamera by viewModel.cameraManager.useFrontCamera.collectAsState()
 
     val previewView = remember {
         PreviewView(context).apply {
@@ -108,13 +109,16 @@ fun MainScreen(
             .background(Color(0xFF0A0A0A)),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // ── Header with recording indicator ──
+        // ── Header ──
         Header(
             state = state,
+            isFrontCamera = isFrontCamera,
+            canSwitchCamera = state.cameraReady && state.appStatus != AppStatus.RECORDING,
+            onCameraSwitch = { viewModel.switchCamera() },
             onSettingsTap = { showSettings = true },
         )
 
-        // ── Preview panels ──
+        // ── Preview panels (9:16 top = large, 16:9 bottom = smaller) ──
         PreviewPanels(
             previewView = previewView,
             secondBitmap = secondBitmap,
@@ -139,7 +143,7 @@ fun MainScreen(
                 onRecordTap = { viewModel.toggleRecording(hasAudioPermission) },
             )
 
-            ResultActionsStub(state, viewModel, context)
+            ResultActions(state, viewModel, context)
             ErrorArea(state, onDismiss = { viewModel.clearError() })
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -149,16 +153,18 @@ fun MainScreen(
 
 // ── Header ────────────────────────────────────────────────────────────
 
-/**
- * Header bar: app title on left, recording indicator in center (when recording),
- * status chip + settings on right.
- */
 @Composable
-private fun Header(state: UiState, onSettingsTap: () -> Unit) {
+private fun Header(
+    state: UiState,
+    isFrontCamera: Boolean,
+    canSwitchCamera: Boolean,
+    onCameraSwitch: () -> Unit,
+    onSettingsTap: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -169,7 +175,7 @@ private fun Header(state: UiState, onSettingsTap: () -> Unit) {
             fontWeight = FontWeight.Bold,
         )
 
-        // Recording indicator — single REC dot + timer in the header
+        // Recording indicator — single REC dot + timer
         if (state.appStatus == AppStatus.RECORDING) {
             RecIndicator(state.recordingDurationSeconds)
         }
@@ -177,19 +183,26 @@ private fun Header(state: UiState, onSettingsTap: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (state.appStatus != AppStatus.RECORDING) {
                 StatusChip(state.appStatus)
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(4.dp))
             }
+
+            // Camera switch button
+            IconButton(onClick = onCameraSwitch, enabled = canSwitchCamera) {
+                Text(
+                    text = "🔄",
+                    fontSize = 18.sp,
+                    color = if (canSwitchCamera) Color.White else Color(0xFF555555),
+                )
+            }
+
+            // Settings button
             IconButton(onClick = onSettingsTap) {
-                Text("⚙", fontSize = 20.sp)
+                Text("⚙", fontSize = 18.sp)
             }
         }
     }
 }
 
-/**
- * Professional-style REC indicator: red dot + timer.
- * Placed once in the header — not duplicated on panels.
- */
 @Composable
 private fun RecIndicator(seconds: Int) {
     Row(
@@ -220,7 +233,7 @@ private fun StatusChip(status: AppStatus) {
     val (text, color) = when (status) {
         AppStatus.IDLE -> "Ready" to Color(0xFF888888)
         AppStatus.COUNTDOWN -> "Countdown" to Color(0xFFFFA726)
-        AppStatus.RECORDING -> "REC" to Color(0xFFFF1744) // shown via RecIndicator instead
+        AppStatus.RECORDING -> "REC" to Color(0xFFFF1744)
         AppStatus.EXPORTING_16x9 -> "Export 16:9" to Color(0xFFFFA726)
         AppStatus.EXPORTING_9x16 -> "Export 9:16" to Color(0xFFFFA726)
         AppStatus.EXPORT_COMPLETE -> "Done" to Color(0xFF66BB6A)
@@ -229,23 +242,19 @@ private fun StatusChip(status: AppStatus) {
     Text(
         text = text,
         color = color,
-        fontSize = 12.sp,
+        fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
             .background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 3.dp),
+            .padding(horizontal = 8.dp, vertical = 3.dp),
     )
 }
 
 // ── Preview Panels ────────────────────────────────────────────────────
 
 /**
- * Two separate live preview regions from one rear camera source.
- *
- * Each panel has:
- * - White-on-dark pill label at top-left ("9:16" / "16:9")
- * - Optional rule-of-thirds composition grid (controlled by showGuides)
- * - No colored borders, no recording-state color changes
+ * Two separate live preview regions. The 9:16 panel gets 3x the vertical weight
+ * so it dominates the screen. The 16:9 panel stays visible but compact.
  */
 @Composable
 private fun PreviewPanels(
@@ -259,14 +268,13 @@ private fun PreviewPanels(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // ── 9:16 Portrait Preview (top) ──
+        // ── 9:16 Portrait Preview (top, large — weight 3) ──
         Box(
             modifier = Modifier
-                .width(140.dp)
-                .aspectRatio(9f / 16f)
+                .weight(3f)
+                .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color.Black),
         ) {
@@ -275,22 +283,22 @@ private fun PreviewPanels(
                     bitmap = secondBitmap.asImageBitmap(),
                     contentDescription = "9:16 live preview",
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Fit,
                 )
             } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("9:16", color = Color(0xFF555555), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("9:16", color = Color(0xFF555555), fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
             }
             if (showGuides) RuleOfThirdsGrid()
             AspectLabel("9:16")
         }
 
-        // ── 16:9 Landscape Preview (bottom) ──
+        // ── 16:9 Landscape Preview (bottom, compact — weight 1) ──
         Box(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color.Black),
         ) {
@@ -304,10 +312,6 @@ private fun PreviewPanels(
     }
 }
 
-/**
- * White pill label pinned to top-left of the preview panel.
- * Semi-transparent dark background for readability on any video content.
- */
 @Composable
 private fun AspectLabel(text: String) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -325,11 +329,6 @@ private fun AspectLabel(text: String) {
     }
 }
 
-/**
- * Rule-of-thirds composition guide grid.
- * Two vertical + two horizontal lines dividing the frame into 9 cells.
- * Semi-transparent white, subtle enough not to distract.
- */
 @Composable
 private fun RuleOfThirdsGrid() {
     val lineColor = Color.White.copy(alpha = 0.3f)
@@ -338,15 +337,11 @@ private fun RuleOfThirdsGrid() {
         val h = size.height
         val strokeWidth = 1f
 
-        // Two vertical lines at 1/3 and 2/3
         drawLine(lineColor, Offset(w / 3f, 0f), Offset(w / 3f, h), strokeWidth)
         drawLine(lineColor, Offset(2f * w / 3f, 0f), Offset(2f * w / 3f, h), strokeWidth)
-
-        // Two horizontal lines at 1/3 and 2/3
         drawLine(lineColor, Offset(0f, h / 3f), Offset(w, h / 3f), strokeWidth)
         drawLine(lineColor, Offset(0f, 2f * h / 3f), Offset(w, 2f * h / 3f), strokeWidth)
 
-        // Center crosshair — very subtle
         val crossLen = 12f
         val cx = w / 2f
         val cy = h / 2f
@@ -356,7 +351,7 @@ private fun RuleOfThirdsGrid() {
     }
 }
 
-// ── Stubs for features built in next steps ────────────────────────────
+// ── Export Status ──────────────────────────────────────────────────────
 
 @Composable
 private fun ExportStatusStub(state: UiState) {
@@ -383,8 +378,10 @@ private fun ExportStatusStub(state: UiState) {
     }
 }
 
+// ── Post-export actions (Open + Share only) ───────────────────────────
+
 @Composable
-private fun ResultActionsStub(
+private fun ResultActions(
     state: UiState,
     viewModel: MainViewModel,
     context: android.content.Context,
@@ -411,6 +408,7 @@ private fun ResultActionsStub(
         Spacer(modifier = Modifier.height(6.dp))
     }
 
+    // Open + Share only (Folder button removed)
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -420,11 +418,8 @@ private fun ResultActionsStub(
         }
         ActionTextButton("Share") {
             viewModel.buildShareIntent()?.let {
-                context.startActivity(Intent.createChooser(it, "Share video"))
+                context.startActivity(android.content.Intent.createChooser(it, "Share video"))
             }
-        }
-        ActionTextButton("Folder") {
-            try { context.startActivity(viewModel.buildShowFolderIntent()) } catch (_: Exception) { }
         }
     }
 
@@ -473,5 +468,3 @@ private fun ErrorArea(state: UiState, onDismiss: () -> Unit) {
         }
     }
 }
-
-private typealias Intent = android.content.Intent

@@ -33,26 +33,16 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 /**
  * Manages the CameraX pipeline: preview + secondary analysis feed + video recording.
  *
- * Architecture for dual live preview:
- * - CameraX Preview use case → PreviewView (shown in the 16:9 container, native live rendering)
- * - CameraX ImageAnalysis use case → captures frames, rotates, center-crops to 9:16 → emits Bitmap
- *   (shown in the 9:16 container as an Image composable)
- * - CameraX VideoCapture use case → records the master file
- *
- * This gives us two truly separate live video regions from one camera source without
- * custom OpenGL rendering. ImageAnalysis runs at a lower resolution (VGA) for performance,
- * which is fine since the 9:16 preview container is small.
- *
- * Fallback: If a device can't bind all 3 use cases, we drop ImageAnalysis and fall back
- * to single-preview + overlay mode. This is logged but the app remains functional.
+ * Supports front/back camera switching. Only one camera is active at a time.
+ * Both cameras use the same dual-preview architecture:
+ * - Preview use case → PreviewView (16:9 container)
+ * - ImageAnalysis use case → bitmap frames cropped to 9:16
+ * - VideoCapture use case → master recording
  */
 class CameraManager(private val context: Context) {
 
     companion object {
         private const val TAG = "CameraManager"
-
-        // Resolution for the ImageAnalysis second preview.
-        // Low enough for performance, high enough for a clean preview display.
         private val ANALYSIS_RESOLUTION = Size(640, 480)
     }
 
@@ -61,6 +51,10 @@ class CameraManager(private val context: Context) {
     private var activeRecording: Recording? = null
     private var preview: Preview? = null
     private var imageAnalysis: ImageAnalysis? = null
+
+    // Currently selected camera lens facing
+    private val _useFrontCamera = MutableStateFlow(false)
+    val useFrontCamera: StateFlow<Boolean> = _useFrontCamera.asStateFlow()
 
     // Emits cropped 9:16 bitmaps for the secondary preview
     private val _secondPreviewBitmap = MutableStateFlow<Bitmap?>(null)
@@ -72,17 +66,27 @@ class CameraManager(private val context: Context) {
 
     private val analysisExecutor = Executors.newSingleThreadExecutor()
 
+    // Stored for rebinding on camera switch
+    private var boundLifecycleOwner: LifecycleOwner? = null
+    private var boundPreviewView: PreviewView? = null
+
     /**
      * Bind camera with preview, recording, and secondary analysis feed.
-     *
-     * @param lifecycleOwner Activity lifecycle
-     * @param previewView The PreviewView for the primary live preview
-     * @param onError Called if camera setup fails entirely
-     */
-    /**
      * @return true if camera was bound successfully, false on total failure
      */
     suspend fun bindCamera(
+        lifecycleOwner: LifecycleOwner,
+        previewView: PreviewView,
+        onError: (String) -> Unit,
+    ): Boolean {
+        // Store for rebinding on camera switch
+        boundLifecycleOwner = lifecycleOwner
+        boundPreviewView = previewView
+
+        return bindCameraInternal(lifecycleOwner, previewView, onError)
+    }
+
+    private suspend fun bindCameraInternal(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
         onError: (String) -> Unit,
@@ -97,15 +101,13 @@ class CameraManager(private val context: Context) {
                 it.surfaceProvider = previewView.surfaceProvider
             }
 
-            // 2. Build Recorder — intentionally conservative quality selection.
-            //    FHD first, HD fallback. UHD is excluded because binding 3 use cases
-            //    (Preview + ImageAnalysis + VideoCapture) already puts pressure on the
-            //    camera HAL and codec pipeline. UHD on top of that causes frame drops,
-            //    encoder stalls, or outright binding failures on many mid-range devices.
-            //    FHD provides excellent crop headroom for both 16:9 and 9:16 exports.
+            // 2. Build Recorder — prefer UHD for maximum crop headroom, with safe fallback.
+            //    UHD (4K) gives the best export quality when center-cropping to 16:9 and 9:16.
+            //    If UHD causes binding failures or isn't supported, CameraX falls back to FHD/HD.
+            //    This is safer than hard-requiring UHD, which would crash on mid-range devices.
             val qualitySelector = QualitySelector.fromOrderedList(
-                listOf(Quality.FHD, Quality.HD),
-                FallbackStrategy.higherQualityOrLowerThan(Quality.HD)
+                listOf(Quality.UHD, Quality.FHD, Quality.HD),
+                FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
             )
             val recorder = Recorder.Builder()
                 .setQualitySelector(qualitySelector)
@@ -124,7 +126,11 @@ class CameraManager(private val context: Context) {
                     }
                 }
 
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+            val cameraSelector = if (_useFrontCamera.value) {
+                CameraSelector.DEFAULT_FRONT_CAMERA
+            } else {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            }
 
             // Try binding all 3 use cases. If that fails, drop ImageAnalysis.
             try {
@@ -155,14 +161,22 @@ class CameraManager(private val context: Context) {
     }
 
     /**
-     * Process each ImageAnalysis frame into a 9:16 cropped bitmap for the secondary preview.
-     *
-     * Steps:
-     * 1. Convert ImageProxy to Bitmap (RGBA_8888 format, efficient on modern devices)
-     * 2. Rotate to match display orientation
-     * 3. Center-crop to 9:16 aspect ratio
-     * 4. Emit via StateFlow
+     * Switch between front and back camera. Rebinds all use cases.
+     * Safe to call while idle — must NOT be called during recording.
      */
+    suspend fun switchCamera(onError: (String) -> Unit): Boolean {
+        val owner = boundLifecycleOwner ?: return false
+        val view = boundPreviewView ?: return false
+
+        _useFrontCamera.value = !_useFrontCamera.value
+        _secondPreviewBitmap.value = null // Clear stale frame from previous camera
+        Log.i(TAG, "Switching camera to ${if (_useFrontCamera.value) "front" else "back"}")
+
+        return bindCameraInternal(owner, view, onError)
+    }
+
+    // ── Frame processing ──────────────────────────────────────────────
+
     private fun processSecondPreviewFrame(imageProxy: ImageProxy) {
         try {
             val bitmap = imageProxyToBitmap(imageProxy)
@@ -173,8 +187,6 @@ class CameraManager(private val context: Context) {
                 // Emit the new frame. We do NOT recycle the previous bitmap because
                 // Compose may still be drawing it on the main thread. At 640x480 ARGB_8888
                 // (~1.2MB per frame), GC handles the turnover without issue.
-                // Manual recycle() here caused SIGSEGV / "trying to use a recycled bitmap"
-                // crashes due to the cross-thread race between analyzer and UI threads.
                 _secondPreviewBitmap.value = cropped
 
                 // Recycle intermediates that are NOT the emitted bitmap
@@ -188,7 +200,6 @@ class CameraManager(private val context: Context) {
         }
     }
 
-    /** Convert ImageProxy (RGBA_8888) to Bitmap. */
     private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap? {
         val plane = imageProxy.planes.firstOrNull() ?: return null
         val buffer = plane.buffer
@@ -197,7 +208,6 @@ class CameraManager(private val context: Context) {
         val width = imageProxy.width
         val height = imageProxy.height
 
-        // Handle row padding if present
         val rowPadding = rowStride - pixelStride * width
         val bitmapWidth = width + rowPadding / pixelStride
 
@@ -205,7 +215,6 @@ class CameraManager(private val context: Context) {
         buffer.rewind()
         bitmap.copyPixelsFromBuffer(buffer)
 
-        // Trim padding if any
         return if (bitmapWidth != width) {
             val trimmed = Bitmap.createBitmap(bitmap, 0, 0, width, height)
             bitmap.recycle()
@@ -215,17 +224,12 @@ class CameraManager(private val context: Context) {
         }
     }
 
-    /** Rotate a bitmap by the given degrees. Returns the original if rotation is 0. */
     private fun rotateBitmap(bitmap: Bitmap, degrees: Int): Bitmap {
         if (degrees == 0) return bitmap
         val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
-    /**
-     * Center-crop a bitmap to the target aspect ratio.
-     * Returns a new bitmap of the cropped region, or the original if already matching.
-     */
     private fun centerCrop(bitmap: Bitmap, targetAspect: Float): Bitmap {
         val srcW = bitmap.width.toFloat()
         val srcH = bitmap.height.toFloat()
@@ -234,11 +238,9 @@ class CameraManager(private val context: Context) {
         val cropW: Int
         val cropH: Int
         if (targetAspect > srcAspect) {
-            // Target wider → full width, crop height
             cropW = bitmap.width
             cropH = (srcW / targetAspect).toInt()
         } else {
-            // Target taller → full height, crop width
             cropH = bitmap.height
             cropW = (srcH * targetAspect).toInt()
         }
@@ -253,14 +255,6 @@ class CameraManager(private val context: Context) {
 
     // ── Recording ─────────────────────────────────────────────────────
 
-    /**
-     * Start recording to a master file.
-     *
-     * @param audioEnabled Whether audio recording is enabled (requires RECORD_AUDIO permission)
-     * @param hasAudioPermission Whether the RECORD_AUDIO permission was granted
-     * @param onEvent Callback for recording lifecycle events
-     * @return The master File, or null on failure
-     */
     fun startRecording(
         audioEnabled: Boolean,
         hasAudioPermission: Boolean,
@@ -308,6 +302,8 @@ class CameraManager(private val context: Context) {
         cameraProvider?.unbindAll()
         cameraProvider = null
         analysisExecutor.shutdown()
+        boundLifecycleOwner = null
+        boundPreviewView = null
         Log.i(TAG, "Camera released")
     }
 

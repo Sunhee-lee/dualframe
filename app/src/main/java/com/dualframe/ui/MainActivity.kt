@@ -28,6 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.util.UnstableApi
 import com.dualframe.ui.theme.DualFrameTheme
@@ -51,6 +54,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Immersive full-screen: hide status bar + navigation bar.
+        // Uses the modern WindowInsetsController approach (no deprecated flags).
+        // BEHAVIOR_SHOW_TRANSIENT_BARS_BY_GESTURE keeps gesture nav working.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val insetsController = WindowInsetsControllerCompat(window, window.decorView)
+        insetsController.hide(WindowInsetsCompat.Type.systemBars())
+        insetsController.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_GESTURE
+
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
         hasCameraPermission = ContextCompat.checkSelfPermission(
@@ -71,7 +83,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             DualFrameTheme {
-                // Keep screen awake based on settings
                 val uiState by viewModel.uiState.collectAsState()
                 KeepScreenAwakeEffect(uiState.settings.keepScreenAwake)
 
@@ -93,10 +104,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Toggle FLAG_KEEP_SCREEN_ON based on the setting.
-     * Using a composable effect so it reacts to settings changes in real time.
-     */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Re-apply immersive mode when focus returns (e.g., after permission dialog)
+        if (hasFocus) {
+            val insetsController = WindowInsetsControllerCompat(window, window.decorView)
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+            insetsController.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_GESTURE
+        }
+    }
+
     @Composable
     private fun KeepScreenAwakeEffect(enabled: Boolean) {
         LaunchedEffect(enabled) {

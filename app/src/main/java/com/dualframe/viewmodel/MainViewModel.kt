@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
-import android.net.Uri
 import android.util.Log
 import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
@@ -73,6 +72,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val success = cameraManager.bindCamera(
                 lifecycleOwner = lifecycleOwner,
                 previewView = previewView,
+                onError = { msg -> setError(msg) },
+            )
+            _uiState.update { it.copy(cameraReady = success) }
+        }
+    }
+
+    /** Switch front/back camera. Only allowed when not recording. */
+    fun switchCamera() {
+        if (cameraManager.isRecording) return
+        _uiState.update { it.copy(cameraReady = false) }
+        viewModelScope.launch {
+            val success = cameraManager.switchCamera(
                 onError = { msg -> setError(msg) },
             )
             _uiState.update { it.copy(cameraReady = success) }
@@ -312,21 +323,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             type = "video/mp4"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
-
-    /**
-     * Build an intent to show the folder containing exported files.
-     *
-     * Android doesn't reliably support opening a specific folder in Files/Gallery across
-     * all OEMs. The most practical approach is to open the Videos collection in the
-     * default media app, which surfaces our files since they're saved to MediaStore.
-     */
-    fun buildShowFolderIntent(): Intent {
-        return Intent(Intent.ACTION_VIEW).apply {
-            // Opens the default video gallery/collection.
-            // Must use setDataAndType — setting data and type separately clears the other.
-            setDataAndType(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*")
         }
     }
 
