@@ -75,9 +75,6 @@ dependencies {
     implementation("androidx.media3:media3-effect:$media3Version")
     implementation("androidx.media3:media3-common:$media3Version")
 
-    // Guava (required by Media3 OverlayEffect ImmutableList)
-    implementation("com.google.guava:guava:33.0.0-android")
-
     // AdMob
     implementation("com.google.android.gms:play-services-ads:23.6.0")
 
