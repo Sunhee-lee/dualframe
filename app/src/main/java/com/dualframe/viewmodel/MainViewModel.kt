@@ -245,38 +245,74 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
 
-        val file = cameraManager.startRecording(
-            audioEnabled = settings.audioEnabled,
-            hasAudioPermission = hasAudioPermission,
-            onEvent = ::onRecordingEvent,
-        )
+        // Rebind with 2 use cases (drop ImageAnalysis) BEFORE starting recording.
+        // This is the critical quality fix: with 3 use cases, CameraX downgrades
+        // VideoCapture to 720p. With only 2, FHD/UHD is preserved.
+        viewModelScope.launch {
+            val rebound = cameraManager.enterRecordingMode()
+            if (!rebound) {
+                setError("Failed to prepare recording mode")
+                return@launch
+            }
 
-        if (file == null) {
-            setError("Failed to start recording")
-            return
+            val file = cameraManager.startRecording(
+                audioEnabled = settings.audioEnabled,
+                hasAudioPermission = hasAudioPermission,
+                onEvent = ::onRecordingEvent,
+            )
+
+            if (file == null) {
+                setError("Failed to start recording")
+                cameraManager.exitRecordingMode()
+                return@launch
+            }
+
+            masterFile = file
+            _uiState.update { it.copy(appStatus = AppStatus.RECORDING, recordingDurationSeconds = 0) }
+            startTimer()
         }
-
-        masterFile = file
-        _uiState.update { it.copy(appStatus = AppStatus.RECORDING, recordingDurationSeconds = 0) }
-        cameraManager.enterRecordingMode() // Throttle secondary preview for quality priority
-        startTimer()
     }
 
     private fun stopRecording() {
         cameraManager.stopRecording()
-        cameraManager.exitRecordingMode() // Restore normal secondary preview
         stopTimer()
+        // Restore 3 use cases (dual preview) after recording stops.
+        // Done in onRecordingEvent.Finalize to ensure recording has fully completed.
     }
 
     private fun onRecordingEvent(event: VideoRecordEvent) {
         when (event) {
             is VideoRecordEvent.Finalize -> {
+                // Restore dual preview by rebinding with ImageAnalysis
+                viewModelScope.launch { cameraManager.exitRecordingMode() }
+
                 if (event.hasError()) {
                     Log.e(TAG, "Recording finalize error: ${event.error}")
                     setError("Recording failed (error ${event.error})")
                     _uiState.update { it.copy(appStatus = AppStatus.ERROR) }
                 } else {
                     Log.i(TAG, "Recording finalized: ${masterFile?.absolutePath}")
+
+                    // === MASTER FILE DIAGNOSTICS ===
+                    // Log the actual recorded resolution BEFORE any export.
+                    // This is the ground truth for whether CameraX honored the quality selection.
+                    masterFile?.let { f ->
+                        viewModelScope.launch {
+                            val meta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(f) }
+                            val fps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(f) }
+                            val settings = _uiState.value.settings
+                            Log.i(TAG, "=== MASTER FILE DIAGNOSTICS ===")
+                            Log.i(TAG, "  Requested quality: ${settings.videoQuality}")
+                            Log.i(TAG, "  Requested fps: ${settings.frameRate}")
+                            Log.i(TAG, "  Master raw: ${meta?.rawWidth}x${meta?.rawHeight}")
+                            Log.i(TAG, "  Master display: ${meta?.displayWidth}x${meta?.displayHeight}")
+                            Log.i(TAG, "  Master rotation: ${meta?.rotation}")
+                            Log.i(TAG, "  Master actual fps: $fps")
+                            Log.i(TAG, "  Master file size: ${f.length() / 1024}KB")
+                            Log.i(TAG, "================================")
+                        }
+                    }
+
                     _uiState.update { it.copy(masterFilePath = masterFile?.absolutePath) }
                     startExportPipeline()
                 }

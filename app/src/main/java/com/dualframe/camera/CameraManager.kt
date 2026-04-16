@@ -36,20 +36,21 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 /**
  * Manages the CameraX pipeline: preview + secondary analysis feed + video recording.
  *
- * Supports front/back camera switching. Only one camera is active at a time.
- * Both cameras use the same dual-preview architecture:
- * - Preview use case → PreviewView (16:9 container)
- * - ImageAnalysis use case → bitmap frames cropped to 9:16
- * - VideoCapture use case → master recording
+ * Quality-priority architecture:
+ * - Idle mode: Preview + VideoCapture + ImageAnalysis (3 use cases, dual live preview)
+ * - Recording mode: Preview + VideoCapture only (2 use cases, full resolution for recorder)
+ *
+ * WHY: CameraX negotiates stream resolution across all bound use cases. With 3 use cases,
+ * the camera HAL typically downgrades VideoCapture to HD (720p) even when FHD/UHD is
+ * requested. Dropping ImageAnalysis during recording lets the HAL allocate full resolution
+ * to the recorder. The secondary preview freezes on the last frame during recording but
+ * the recorded master gets the user's selected quality.
  */
 class CameraManager(private val context: Context) {
 
     companion object {
         private const val TAG = "CameraManager"
-        // Normal preview: 640x480 for smooth secondary preview
         private val ANALYSIS_RESOLUTION_NORMAL = Size(640, 480)
-        // Recording mode: 320x240 to reduce CPU/memory pressure during recording
-        private val ANALYSIS_RESOLUTION_RECORDING = Size(320, 240)
     }
 
     private var cameraProvider: ProcessCameraProvider? = null
@@ -58,39 +59,24 @@ class CameraManager(private val context: Context) {
     private var preview: Preview? = null
     private var imageAnalysis: ImageAnalysis? = null
 
-    // Recording-mode throttling state. When true, the analyzer skips frames
-    // and uses lower resolution to reduce CPU pressure during recording.
-    @Volatile
-    private var isInRecordingMode = false
-    @Volatile
-    private var frameCounter = 0L
-
-    // Currently selected camera lens facing
     private val _useFrontCamera = MutableStateFlow(false)
     val useFrontCamera: StateFlow<Boolean> = _useFrontCamera.asStateFlow()
 
-    // Emits cropped 9:16 bitmaps for the secondary preview
     private val _secondPreviewBitmap = MutableStateFlow<Bitmap?>(null)
     val secondPreviewBitmap: StateFlow<Bitmap?> = _secondPreviewBitmap.asStateFlow()
 
-    // Whether ImageAnalysis was successfully bound (true dual preview available)
     private val _dualPreviewAvailable = MutableStateFlow(false)
     val dualPreviewAvailable: StateFlow<Boolean> = _dualPreviewAvailable.asStateFlow()
 
     private val analysisExecutor = Executors.newSingleThreadExecutor()
 
-    // Stored for rebinding on camera/quality/fps switch
     private var boundLifecycleOwner: LifecycleOwner? = null
     private var boundPreviewView: PreviewView? = null
     private var boundTargetFps: Int = 0
     private var boundQuality: Quality = Quality.FHD
 
-    /**
-     * Bind camera with preview, recording, and secondary analysis feed.
-     * @param targetFps Desired fps (0 = auto). Falls back if unsupported.
-     * @param quality Desired recording quality. Falls back if unsupported.
-     * @return true if camera was bound successfully, false on total failure
-     */
+    // ── Camera binding ────────────────────────────────────────────────
+
     suspend fun bindCamera(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
@@ -102,11 +88,15 @@ class CameraManager(private val context: Context) {
         boundPreviewView = previewView
         boundTargetFps = targetFps
         boundQuality = quality
-
-        return bindCameraInternal(lifecycleOwner, previewView, targetFps, quality, onError)
+        return bindWithAnalysis(lifecycleOwner, previewView, targetFps, quality, onError)
     }
 
-    private suspend fun bindCameraInternal(
+    /**
+     * Bind all 3 use cases: Preview + VideoCapture + ImageAnalysis.
+     * Used during idle/preview mode for dual live preview.
+     * VideoCapture resolution may be reduced by the HAL to accommodate 3 streams.
+     */
+    private suspend fun bindWithAnalysis(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
         targetFps: Int,
@@ -118,49 +108,15 @@ class CameraManager(private val context: Context) {
             cameraProvider = provider
             provider.unbindAll()
 
-            // 1. Build Preview use case
+            logDiagnostics("bindWithAnalysis", quality, targetFps)
+
             preview = Preview.Builder().build().also {
                 it.surfaceProvider = previewView.surfaceProvider
             }
 
-            // 2. Build Recorder — user-selected quality with safe fallback.
-            //    Both quality and fps are preferences: if the exact combo isn't supported
-            //    (e.g., UHD+60fps on a front camera), CameraX negotiates the closest match.
-            //    The fallback chain ensures the app never crashes due to unsupported combos.
-            val qualitySelector = QualitySelector.from(
-                quality,
-                FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
-            )
+            val recorder = buildRecorder(quality)
+            videoCapture = buildVideoCapture(recorder, targetFps)
 
-            // Target encoding bitrate — higher than CameraX defaults for better output quality.
-            // These are practical targets; the encoder may cap to its actual max.
-            // UHD default ~20Mbps → we request 40Mbps for sharper 4K.
-            // FHD default ~8Mbps → we request 16Mbps for cleaner 1080p.
-            // HD default ~4Mbps → we request 8Mbps for better 720p.
-            val targetBitrate = when (quality) {
-                Quality.UHD -> 40_000_000
-                Quality.FHD -> 16_000_000
-                else -> 8_000_000
-            }
-            val recorder = Recorder.Builder()
-                .setQualitySelector(qualitySelector)
-                .setTargetVideoEncodingBitRate(targetBitrate)
-                .build()
-            Log.i(TAG, "Recorder configured: quality=$quality, target bitrate=${targetBitrate / 1_000_000}Mbps")
-
-            // Apply target frame rate to VideoCapture if a specific fps was requested.
-            // AUTO (fps=0) skips setTargetFrameRate, letting CameraX pick the best default.
-            // For explicit fps, CameraX negotiates with the camera HAL and silently falls
-            // back if the requested rate isn't supported — no crash, just a lower fps.
-            val videoCaptureBuilder = VideoCapture.Builder(recorder)
-            if (targetFps > 0) {
-                videoCaptureBuilder.setTargetFrameRate(Range(targetFps, targetFps))
-            }
-            videoCapture = videoCaptureBuilder.build()
-
-            // 3. Build ImageAnalysis for secondary preview
-            // ImageAnalysis resolution is set to the normal size. During recording,
-            // frame throttling in the analyzer reduces CPU cost without rebinding.
             imageAnalysis = ImageAnalysis.Builder()
                 .setTargetResolution(ANALYSIS_RESOLUTION_NORMAL)
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -172,31 +128,22 @@ class CameraManager(private val context: Context) {
                     }
                 }
 
-            val cameraSelector = if (_useFrontCamera.value) {
-                CameraSelector.DEFAULT_FRONT_CAMERA
-            } else {
-                CameraSelector.DEFAULT_BACK_CAMERA
-            }
+            val cameraSelector = currentCameraSelector()
 
-            // Try binding all 3 use cases. If that fails, drop ImageAnalysis.
             try {
                 provider.bindToLifecycle(
                     lifecycleOwner, cameraSelector,
                     preview, videoCapture, imageAnalysis,
                 )
                 _dualPreviewAvailable.value = true
-                Log.i(TAG, "Camera bound: Preview + VideoCapture + ImageAnalysis (dual preview)")
+                Log.i(TAG, "Bound 3 use cases: Preview + VideoCapture + ImageAnalysis")
             } catch (e: Exception) {
-                Log.w(TAG, "Can't bind 3 use cases, falling back to Preview + VideoCapture", e)
+                Log.w(TAG, "Can't bind 3 use cases, dropping ImageAnalysis", e)
                 provider.unbindAll()
                 imageAnalysis = null
                 _dualPreviewAvailable.value = false
-
-                provider.bindToLifecycle(
-                    lifecycleOwner, cameraSelector,
-                    preview, videoCapture,
-                )
-                Log.i(TAG, "Camera bound: Preview + VideoCapture (fallback, no dual preview)")
+                provider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, videoCapture)
+                Log.i(TAG, "Bound 2 use cases: Preview + VideoCapture (no dual preview)")
             }
             return true
         } catch (e: Exception) {
@@ -207,178 +154,163 @@ class CameraManager(private val context: Context) {
     }
 
     /**
-     * Switch between front and back camera. Rebinds all use cases.
-     * Safe to call while idle — must NOT be called during recording.
+     * Rebind with only Preview + VideoCapture (drop ImageAnalysis).
+     * Used when recording starts to give the HAL full resolution for the recorder.
+     *
+     * This is the critical quality fix: with 3 use cases bound, CameraX typically
+     * downgrades VideoCapture to 720p. With only 2, FHD/UHD is preserved.
      */
+    private suspend fun bindForRecording(
+        lifecycleOwner: LifecycleOwner,
+        previewView: PreviewView,
+        targetFps: Int,
+        quality: Quality,
+    ): Boolean {
+        try {
+            val provider = cameraProvider ?: getCameraProvider().also { cameraProvider = it }
+            provider.unbindAll()
+
+            logDiagnostics("bindForRecording (2 use cases)", quality, targetFps)
+
+            preview = Preview.Builder().build().also {
+                it.surfaceProvider = previewView.surfaceProvider
+            }
+
+            val recorder = buildRecorder(quality)
+            videoCapture = buildVideoCapture(recorder, targetFps)
+
+            // No ImageAnalysis — this is intentional to maximize recording resolution.
+            // The secondary preview will show the last captured frame (frozen).
+            imageAnalysis = null
+            _dualPreviewAvailable.value = false
+
+            provider.bindToLifecycle(
+                lifecycleOwner, currentCameraSelector(),
+                preview, videoCapture,
+            )
+            Log.i(TAG, "Recording bind: Preview + VideoCapture only (quality priority)")
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "Recording bind failed", e)
+            return false
+        }
+    }
+
+    private fun buildRecorder(quality: Quality): Recorder {
+        val qualitySelector = QualitySelector.from(
+            quality,
+            FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
+        )
+        // Bitrate targets ~2x CameraX defaults for better output quality.
+        // The encoder may cap to its actual max; these are target requests.
+        val targetBitrate = when (quality) {
+            Quality.UHD -> 40_000_000
+            Quality.FHD -> 16_000_000
+            else -> 8_000_000
+        }
+        return Recorder.Builder()
+            .setQualitySelector(qualitySelector)
+            .setTargetVideoEncodingBitRate(targetBitrate)
+            .build()
+    }
+
+    private fun buildVideoCapture(recorder: Recorder, targetFps: Int): VideoCapture<Recorder> {
+        val builder = VideoCapture.Builder(recorder)
+        if (targetFps > 0) {
+            builder.setTargetFrameRate(Range(targetFps, targetFps))
+        }
+        return builder.build()
+    }
+
+    private fun currentCameraSelector(): CameraSelector =
+        if (_useFrontCamera.value) CameraSelector.DEFAULT_FRONT_CAMERA
+        else CameraSelector.DEFAULT_BACK_CAMERA
+
+    private fun logDiagnostics(context: String, quality: Quality, targetFps: Int) {
+        val camera = if (_useFrontCamera.value) "FRONT" else "REAR"
+        val supported = getSupportedQualities()
+        val fpsValues = getSupportedFpsValues()
+        Log.i(TAG, "=== $context ===")
+        Log.i(TAG, "  Camera: $camera")
+        Log.i(TAG, "  Requested quality: $quality")
+        Log.i(TAG, "  Requested fps: ${if (targetFps == 0) "AUTO" else targetFps}")
+        Log.i(TAG, "  Supported qualities: $supported")
+        Log.i(TAG, "  Supported fps values: $fpsValues")
+    }
+
+    // ── Camera switching ──────────────────────────────────────────────
+
     suspend fun switchCamera(onError: (String) -> Unit): Boolean {
         val owner = boundLifecycleOwner ?: return false
         val view = boundPreviewView ?: return false
 
         _useFrontCamera.value = !_useFrontCamera.value
-        _secondPreviewBitmap.value = null // Clear stale frame from previous camera
-        Log.i(TAG, "Switching camera to ${if (_useFrontCamera.value) "front" else "back"}")
+        _secondPreviewBitmap.value = null
+        Log.i(TAG, "Switching to ${if (_useFrontCamera.value) "front" else "back"} camera")
 
-        return bindCameraInternal(owner, view, boundTargetFps, boundQuality, onError)
+        return bindWithAnalysis(owner, view, boundTargetFps, boundQuality, onError)
     }
 
-    /**
-     * Rebind with new fps and/or quality. Only rebinds if something actually changed
-     * and the camera is not recording. Called by ViewModel on settings changes.
-     */
     suspend fun rebindWithSettings(
         newFps: Int,
         newQuality: Quality,
         onError: (String) -> Unit,
     ): Boolean {
         if (newFps == boundTargetFps && newQuality == boundQuality) return true
-        if (isRecording) return true // Don't interrupt recording; apply on next bind
+        if (isRecording) return true
 
         val owner = boundLifecycleOwner ?: return false
         val view = boundPreviewView ?: return false
 
         boundTargetFps = newFps
         boundQuality = newQuality
-        Log.i(TAG, "Rebinding camera: quality=$newQuality, fps=$newFps")
-        return bindCameraInternal(owner, view, newFps, newQuality, onError)
+        Log.i(TAG, "Rebinding: quality=$newQuality, fps=$newFps")
+        return bindWithAnalysis(owner, view, newFps, newQuality, onError)
     }
 
-    // ── Capability queries ──────────────────────────────────────────────
+    // ── Recording mode transitions ────────────────────────────────────
 
     /**
-     * Query which CameraX Quality levels the current camera supports for video.
-     * Uses CameraX QualitySelector.getSupportedQualities() which checks both the
-     * camera hardware and the encoder capabilities.
-     *
-     * Returns the subset of [Quality.UHD, Quality.FHD, Quality.HD] that is supported.
-     * Must be called after getCameraProvider() has been resolved.
+     * Enter recording mode: rebind with 2 use cases for full-resolution recording.
+     * The secondary preview freezes on the last frame but the master recording
+     * gets the full selected quality (FHD/UHD) instead of being collapsed to HD.
      */
-    fun getSupportedQualities(): List<Quality> {
-        val provider = cameraProvider ?: return listOf(Quality.FHD, Quality.HD) // safe fallback
-        val selector = if (_useFrontCamera.value) {
-            CameraSelector.DEFAULT_FRONT_CAMERA
-        } else {
-            CameraSelector.DEFAULT_BACK_CAMERA
-        }
-        val supported = try {
-            QualitySelector.getSupportedQualities(provider.getCameraInfo(selector))
-        } catch (e: Exception) {
-            Log.w(TAG, "Cannot query supported qualities", e)
-            return listOf(Quality.FHD, Quality.HD)
-        }
-        // Filter to the three we care about
-        val result = listOf(Quality.UHD, Quality.FHD, Quality.HD).filter { it in supported }
-        Log.i(TAG, "Supported qualities for ${if (_useFrontCamera.value) "front" else "back"}: $result")
-        return result.ifEmpty { listOf(Quality.FHD, Quality.HD) }
+    suspend fun enterRecordingMode(): Boolean {
+        val owner = boundLifecycleOwner ?: return false
+        val view = boundPreviewView ?: return false
+        return bindForRecording(owner, view, boundTargetFps, boundQuality)
     }
 
     /**
-     * Query the maximum supported fps for the current camera.
-     * Uses Camera2 CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES to determine what
-     * the hardware can actually deliver.
-     *
-     * CameraX doesn't expose per-quality fps limits directly, so we use the
-     * Camera2 interop. This gives us the full set of ranges the sensor supports.
-     * We check if 60fps, 30fps, 24fps appear as upper bounds in any range.
-     *
-     * Limitation: this returns sensor-level capabilities, not per-quality limits.
-     * UHD+60fps may still not work even if 60fps is listed (the encoder may limit it).
-     * We handle this conservatively in the ViewModel.
+     * Exit recording mode: rebind with 3 use cases to restore dual live preview.
      */
-    fun getSupportedFpsValues(): Set<Int> {
-        try {
-            val cm = context.getSystemService(Context.CAMERA_SERVICE) as Camera2Manager
-            val facing = if (_useFrontCamera.value) {
-                CameraCharacteristics.LENS_FACING_FRONT
-            } else {
-                CameraCharacteristics.LENS_FACING_BACK
-            }
-            for (id in cm.cameraIdList) {
-                val chars = cm.getCameraCharacteristics(id)
-                if (chars.get(CameraCharacteristics.LENS_FACING) == facing) {
-                    val ranges = chars.get(
-                        CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES
-                    ) ?: continue
-                    val maxFps = ranges.map { it.upper }.toSet()
-                    Log.i(TAG, "Camera $id fps ranges: ${ranges.toList()}, max values: $maxFps")
-                    return maxFps
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Cannot query fps capabilities", e)
-        }
-        return setOf(30) // safe fallback
-    }
-
-    // ── Recording mode ─────────────────────────────────────────────────
-
-    /**
-     * Enter quality-priority recording mode.
-     * The secondary preview continues updating but at lower cost:
-     * - Skips every other frame (halves CPU work)
-     * - Downscales before processing (reduces bitmap allocation size)
-     * This avoids rebinding use cases mid-recording which would interrupt capture.
-     */
-    fun enterRecordingMode() {
-        isInRecordingMode = true
-        frameCounter = 0
-        Log.i(TAG, "Entered recording mode — secondary preview throttled")
-    }
-
-    /** Exit recording mode. Restores normal secondary preview refresh rate. */
-    fun exitRecordingMode() {
-        isInRecordingMode = false
-        Log.i(TAG, "Exited recording mode — secondary preview restored")
+    suspend fun exitRecordingMode(): Boolean {
+        val owner = boundLifecycleOwner ?: return false
+        val view = boundPreviewView ?: return false
+        return bindWithAnalysis(owner, view, boundTargetFps, boundQuality) { }
     }
 
     // ── Frame processing ──────────────────────────────────────────────
 
     private fun processSecondPreviewFrame(imageProxy: ImageProxy) {
         try {
-            frameCounter++
-
-            // During recording, skip every other frame to reduce CPU pressure.
-            // The secondary preview updates at ~15fps instead of ~30fps.
-            if (isInRecordingMode && frameCounter % 2 != 0L) {
-                return // frame skipped — imageProxy.close() in finally block
-            }
-
             val bitmap = imageProxyToBitmap(imageProxy)
             if (bitmap != null) {
-                // During recording, downscale the bitmap before processing
-                // to reduce allocation size and crop/mirror work.
-                val source = if (isInRecordingMode) downscaleBitmap(bitmap) else bitmap
-
-                val rotated = rotateBitmap(source, imageProxy.imageInfo.rotationDegrees)
+                val rotated = rotateBitmap(bitmap, imageProxy.imageInfo.rotationDegrees)
                 val cropped = centerCrop(rotated, 9f / 16f)
-
-                // Mirror horizontally for front camera
                 val output = if (_useFrontCamera.value) mirrorBitmap(cropped) else cropped
 
-                // Emit the new frame. We do NOT recycle the previous bitmap because
-                // Compose may still be drawing it on the main thread.
                 _secondPreviewBitmap.value = output
 
-                // Recycle intermediates that are NOT the emitted bitmap
                 if (cropped !== output) cropped.recycle()
-                if (rotated !== source && rotated !== cropped) rotated.recycle()
-                if (source !== rotated && source !== cropped && source !== output) source.recycle()
-                if (bitmap !== source) bitmap.recycle()
+                if (rotated !== bitmap && rotated !== cropped) rotated.recycle()
+                if (bitmap !== rotated && bitmap !== cropped && bitmap !== output) bitmap.recycle()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Frame processing error", e)
         } finally {
             imageProxy.close()
         }
-    }
-
-    /**
-     * Downscale a bitmap to half resolution during recording mode.
-     * Reduces memory allocation from ~1.2MB to ~300KB per processed frame.
-     */
-    private fun downscaleBitmap(bitmap: Bitmap): Bitmap {
-        val halfW = (bitmap.width / 2).coerceAtLeast(1)
-        val halfH = (bitmap.height / 2).coerceAtLeast(1)
-        return Bitmap.createScaledBitmap(bitmap, halfW, halfH, false)
     }
 
     private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap? {
@@ -411,7 +343,6 @@ class CameraManager(private val context: Context) {
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
-    /** Mirror a bitmap horizontally (for front camera consistency with PreviewView). */
     private fun mirrorBitmap(bitmap: Bitmap): Bitmap {
         val matrix = Matrix().apply { preScale(-1f, 1f) }
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
@@ -496,6 +427,45 @@ class CameraManager(private val context: Context) {
 
     val isRecording: Boolean
         get() = activeRecording != null
+
+    // ── Capability queries ──────────────────────────────────────────────
+
+    fun getSupportedQualities(): List<Quality> {
+        val provider = cameraProvider ?: return listOf(Quality.FHD, Quality.HD)
+        val selector = currentCameraSelector()
+        val supported = try {
+            QualitySelector.getSupportedQualities(provider.getCameraInfo(selector))
+        } catch (e: Exception) {
+            Log.w(TAG, "Cannot query supported qualities", e)
+            return listOf(Quality.FHD, Quality.HD)
+        }
+        val result = listOf(Quality.UHD, Quality.FHD, Quality.HD).filter { it in supported }
+        Log.i(TAG, "Supported qualities: $result")
+        return result.ifEmpty { listOf(Quality.FHD, Quality.HD) }
+    }
+
+    fun getSupportedFpsValues(): Set<Int> {
+        try {
+            val cm = context.getSystemService(Context.CAMERA_SERVICE) as Camera2Manager
+            val facing = if (_useFrontCamera.value) {
+                CameraCharacteristics.LENS_FACING_FRONT
+            } else {
+                CameraCharacteristics.LENS_FACING_BACK
+            }
+            for (id in cm.cameraIdList) {
+                val chars = cm.getCameraCharacteristics(id)
+                if (chars.get(CameraCharacteristics.LENS_FACING) == facing) {
+                    val ranges = chars.get(
+                        CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES
+                    ) ?: continue
+                    return ranges.map { it.upper }.toSet()
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Cannot query fps capabilities", e)
+        }
+        return setOf(30)
+    }
 
     private suspend fun getCameraProvider(): ProcessCameraProvider =
         suspendCancellableCoroutine { cont ->
