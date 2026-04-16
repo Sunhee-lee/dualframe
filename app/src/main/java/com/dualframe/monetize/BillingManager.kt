@@ -62,7 +62,6 @@ class BillingManager(private val context: Context) {
                     .enableOneTimeProducts()
                     .build()
             )
-            .enableAutoServiceReconnection()
             .build()
         billingClient = client
 
