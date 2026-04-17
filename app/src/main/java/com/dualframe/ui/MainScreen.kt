@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Cameraswitch
+import androidx.compose.material.icons.outlined.FlashOff
+import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,6 +64,7 @@ fun MainScreen(
     hasAudioPermission: Boolean,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val isFrontCamera by viewModel.cameraManager.useFrontCamera.collectAsState()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val renderer = viewModel.cameraManager.renderer
@@ -85,7 +88,14 @@ fun MainScreen(
         modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Header(state, state.cameraReady && state.appStatus != AppStatus.RECORDING, { viewModel.switchCamera() })
+        Header(
+            state = state,
+            canSwitch = state.cameraReady && state.appStatus != AppStatus.RECORDING,
+            onSwitch = { viewModel.switchCamera() },
+            showFlash = !isFrontCamera && state.cameraReady,
+            flashOn = state.flashOn,
+            onFlashToggle = { viewModel.toggleFlash() },
+        )
 
         PreviewPanels(renderer, state.settings.showGuides, Modifier.weight(1f))
 
@@ -122,12 +132,26 @@ fun MainScreen(
 // ── Header ────────────────────────────────────────────────────────────
 
 @Composable
-private fun Header(state: UiState, canSwitch: Boolean, onSwitch: () -> Unit) {
+private fun Header(
+    state: UiState, canSwitch: Boolean, onSwitch: () -> Unit,
+    showFlash: Boolean, flashOn: Boolean, onFlashToggle: () -> Unit,
+) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
         Text("DualFrame", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
         if (state.appStatus == AppStatus.RECORDING) RecIndicator(state.recordingDurationSeconds)
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (state.appStatus != AppStatus.RECORDING) { StatusChip(state.appStatus); Spacer(Modifier.width(4.dp)) }
+            // Flash icon — rear camera only, hidden for front camera
+            if (showFlash) {
+                IconButton(onClick = onFlashToggle) {
+                    Icon(
+                        imageVector = if (flashOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+                        contentDescription = if (flashOn) "Flash on" else "Flash off",
+                        tint = if (flashOn) Color(0xFFFFD54F) else Color.White,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+            }
             IconButton(onSwitch, enabled = canSwitch) {
                 Icon(
                     imageVector = Icons.Outlined.Cameraswitch,

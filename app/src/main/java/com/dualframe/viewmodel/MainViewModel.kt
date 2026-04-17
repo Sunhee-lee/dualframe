@@ -89,7 +89,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun switchCamera() {
         if (cameraManager.isRecording) return
-        _uiState.update { it.copy(cameraReady = false) }
+        _uiState.update { it.copy(cameraReady = false, flashOn = false) }
         viewModelScope.launch {
             val success = cameraManager.switchCamera(
                 onError = { msg -> setError(msg) },
@@ -97,6 +97,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(cameraReady = success) }
             refreshSupportedCapabilities()
         }
+    }
+
+    fun toggleFlash() {
+        val newState = !_uiState.value.flashOn
+        cameraManager.setTorch(newState)
+        _uiState.update { it.copy(flashOn = newState) }
     }
 
     /**

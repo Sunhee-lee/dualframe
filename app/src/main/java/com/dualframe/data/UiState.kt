@@ -11,6 +11,7 @@ data class UiState(
     val exportProgress: Float = 0f,
     val masterFilePath: String? = null,
     val cameraReady: Boolean = false,
+    val flashOn: Boolean = false,
     // Thumbnail of latest export result
     val thumbnailBitmap: Bitmap? = null,
     // Export result info (shown in result panel)

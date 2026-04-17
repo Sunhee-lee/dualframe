@@ -48,6 +48,7 @@ class CameraManager(private val context: Context) {
     private var videoCapture: VideoCapture<Recorder>? = null
     private var activeRecording: Recording? = null
     private var preview: Preview? = null
+    private var camera: androidx.camera.core.Camera? = null
 
     private val _useFrontCamera = MutableStateFlow(false)
     val useFrontCamera: StateFlow<Boolean> = _useFrontCamera.asStateFlow()
@@ -135,8 +136,8 @@ class CameraManager(private val context: Context) {
                 .setViewPort(viewPort)
                 .build()
 
-            provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
-            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 16:9")
+            camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
+            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 9:16")
 
             return true
         } catch (e: Exception) {
@@ -199,6 +200,19 @@ class CameraManager(private val context: Context) {
         boundQuality = newQuality
         return bindInternal(owner, newQuality, onError)
     }
+
+    // ── Torch (flash) ─────────────────────────────────────────────────
+
+    fun setTorch(enabled: Boolean) {
+        val cam = camera ?: return
+        if (cam.cameraInfo.hasFlashUnit()) {
+            cam.cameraControl.enableTorch(enabled)
+            Log.i(TAG, "Torch ${if (enabled) "ON" else "OFF"}")
+        }
+    }
+
+    fun hasTorch(): Boolean =
+        camera?.cameraInfo?.hasFlashUnit() == true
 
     // ── Recording ─────────────────────────────────────────────────────
 
