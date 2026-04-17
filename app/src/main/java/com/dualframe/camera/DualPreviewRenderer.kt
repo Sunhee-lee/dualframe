@@ -48,6 +48,8 @@ class DualPreviewRenderer {
             }
         """
 
+        // Beauty shader — values must match BeautyParams.kt constants.
+        // GLSL can't read Kotlin values, so keep numbers in sync manually.
         private const val FRAGMENT_SHADER = """
             #extension GL_OES_EGL_image_external : require
             precision mediump float;
@@ -57,25 +59,25 @@ class DualPreviewRenderer {
             void main() {
                 vec4 color = texture2D(sTexture, vTexCoord);
                 if (uBeauty > 0.0) {
-                    // Beauty parameters:
-                    //   smooth=0.18 (blur offset), mix=0.22 (blend ratio)
-                    //   brightness=0.02, gamma=1.06, warmth=0.01, saturation=1.01
-                    float off = 0.18 * 0.01; // 0.0018
+                    // [Blur] preview-only — BeautyParams.BLUR_OFFSET / BLUR_MIX
+                    float off = 0.0018;
                     vec4 s1 = texture2D(sTexture, vTexCoord + vec2(off, 0.0));
                     vec4 s2 = texture2D(sTexture, vTexCoord + vec2(-off, 0.0));
                     vec4 s3 = texture2D(sTexture, vTexCoord + vec2(0.0, off));
                     vec4 s4 = texture2D(sTexture, vTexCoord + vec2(0.0, -off));
                     vec4 blurred = (color + s1 + s2 + s3 + s4) / 5.0;
-                    color.rgb = mix(color.rgb, blurred.rgb, 0.22);
-                    // Brightness (additive)
-                    color.rgb = color.rgb + 0.02;
-                    // Gamma correction
-                    color.rgb = pow(clamp(color.rgb, 0.0, 1.0), vec3(1.0 / 1.06));
-                    // Warmth (slight red lift)
-                    color.r = color.r + 0.01;
-                    // Saturation
+                    color.rgb = mix(color.rgb, blurred.rgb, 0.20);
+                    // [Brightness] BeautyParams.BRIGHTNESS
+                    color.rgb = color.rgb + 0.035;
+                    // [Contrast] BeautyParams.CONTRAST
+                    color.rgb = (color.rgb - 0.5) * (1.0 + 0.06) + 0.5;
+                    // [RGB warmth] BeautyParams.RED/GREEN/BLUE_SCALE
+                    color.r = color.r * 1.025;
+                    color.g = color.g * 1.005;
+                    color.b = color.b * 0.975;
+                    // [Saturation] BeautyParams.SATURATION_BOOST (3% ≈ 1.03 multiplier)
                     float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                    color.rgb = mix(vec3(gray), color.rgb, 1.01);
+                    color.rgb = mix(vec3(gray), color.rgb, 1.03);
                     color.rgb = clamp(color.rgb, 0.0, 1.0);
                 }
                 gl_FragColor = color;

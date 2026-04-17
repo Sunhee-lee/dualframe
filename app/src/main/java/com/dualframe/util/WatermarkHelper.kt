@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Brightness
+import androidx.media3.effect.Contrast
 import androidx.media3.effect.HslAdjustment
 import androidx.media3.effect.OverlayEffect
 import androidx.media3.effect.OverlaySettings
@@ -57,17 +58,21 @@ object WatermarkHelper {
 
             val videoEffects = mutableListOf<androidx.media3.common.Effect>()
 
-            // Beauty effects (saved-file approximation)
+            // Beauty effects — values from BeautyParams.kt
+            // Same parameters as the preview GL shader (minus blur which Media3 can't do).
             if (applyBeauty) {
-                videoEffects.add(Brightness(0.02f))
+                videoEffects.add(Brightness(BeautyParams.BRIGHTNESS))
+                videoEffects.add(Contrast(BeautyParams.CONTRAST))
                 videoEffects.add(
                     RgbAdjustment.Builder()
-                        .setRedScale(1.01f)
+                        .setRedScale(BeautyParams.RED_SCALE)
+                        .setGreenScale(BeautyParams.GREEN_SCALE)
+                        .setBlueScale(BeautyParams.BLUE_SCALE)
                         .build()
                 )
                 videoEffects.add(
                     HslAdjustment.Builder()
-                        .adjustSaturation(1f)
+                        .adjustSaturation(BeautyParams.SATURATION_BOOST)
                         .build()
                 )
             }
