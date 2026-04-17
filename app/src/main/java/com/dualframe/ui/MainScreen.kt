@@ -235,13 +235,6 @@ private fun GhostWatermark(isPortrait: Boolean) {
         )
     }
 }
-                modifier = Modifier.fillMaxSize(),
-            )
-            if (showGuides) RuleOfThirdsGrid()
-            AspectLabel("16:9")
-        }
-    }
-}
 
 @Composable
 private fun AspectLabel(text: String) {
