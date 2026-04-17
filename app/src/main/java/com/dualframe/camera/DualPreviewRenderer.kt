@@ -68,13 +68,13 @@ class DualPreviewRenderer {
                     vec4 blurred = (color + s1 + s2 + s3 + s4) / 5.0;
                     color.rgb = mix(color.rgb, blurred.rgb, 0.20);
                     // [Brightness] BeautyParams.BRIGHTNESS
-                    color.rgb = color.rgb + 0.035;
+                    color.rgb = color.rgb + 0.065;
                     // [Contrast] BeautyParams.CONTRAST
-                    color.rgb = (color.rgb - 0.5) * (1.0 + 0.06) + 0.5;
+                    color.rgb = (color.rgb - 0.5) * (1.0 + 0.08) + 0.5;
                     // [RGB warmth] BeautyParams.RED/GREEN/BLUE_SCALE
-                    color.r = color.r * 1.025;
+                    color.r = color.r * 1.01;
                     color.g = color.g * 1.005;
-                    color.b = color.b * 0.975;
+                    color.b = color.b * 0.99;
                     // [Saturation] BeautyParams.SATURATION_BOOST (3% ≈ 1.03 multiplier)
                     float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
                     color.rgb = mix(vec3(gray), color.rgb, 1.03);
