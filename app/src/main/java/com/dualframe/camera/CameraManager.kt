@@ -82,10 +82,9 @@ class CameraManager(private val context: Context) {
 
             logDiagnostics("bindInternal", quality)
 
-            // Build Preview with 16:9 target to match VideoCapture's typical output ratio.
-            // This ensures the preview FOV matches the saved recording — no surprise crops.
+            // Build Preview — no explicit aspect ratio target. The ViewPort (9:16 portrait)
+            // drives the crop rect for both Preview and VideoCapture via UseCaseGroup.
             preview = Preview.Builder()
-                .setTargetAspectRatio(androidx.camera.core.AspectRatio.RATIO_16_9)
                 .build().also { previewUseCase ->
                 previewUseCase.surfaceProvider = Preview.SurfaceProvider { request ->
                     onSurfaceRequested(request)
@@ -118,10 +117,11 @@ class CameraManager(private val context: Context) {
             val cameraSelector = currentCameraSelector()
 
             // Bind via UseCaseGroup + ViewPort so Preview and VideoCapture share
-            // the same crop rect. This guarantees the preview framing matches the
-            // saved recording exactly — no surprise crop differences.
+            // the same crop rect. ViewPort is 9:16 PORTRAIT because the master
+            // recording must be the full portrait frame (e.g., 2160x3840).
+            // The 16:9 landscape version is derived by cropping from this portrait master.
             val viewPort = androidx.camera.core.ViewPort.Builder(
-                android.util.Rational(16, 9),
+                android.util.Rational(9, 16),
                 android.view.Surface.ROTATION_0,
             )
                 .setScaleType(androidx.camera.core.ViewPort.FILL_CENTER)
