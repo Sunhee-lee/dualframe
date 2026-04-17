@@ -116,6 +116,8 @@ class CameraManager(private val context: Context) {
 
             // Mirror for front camera — controlled by user setting
             renderer.mirrorHorizontally = _useFrontCamera.value && mirrorEnabled
+            // Beauty effect — only active for front camera
+            // (beautyEnabled is set from ViewModel settings, preserved across rebinds)
 
             val cameraSelector = currentCameraSelector()
 

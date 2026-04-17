@@ -127,6 +127,15 @@ fun SettingsSheet(
                 checked = settings.mirrorFrontCamera,
                 onCheckedChange = { onSettingsChange(settings.copy(mirrorFrontCamera = it)) },
             )
+
+            SettingDivider()
+
+            // ── Front Camera Effect ──
+            SwitchSetting(
+                label = "Front Camera Effect",
+                checked = settings.frontCameraEffect,
+                onCheckedChange = { onSettingsChange(settings.copy(frontCameraEffect = it)) },
+            )
         }
     }
 }
@@ -136,7 +145,7 @@ private fun SettingSectionTitle(title: String) {
     Text(
         text = title,
         color = Color(0xFFBBBBBB),
-        fontSize = 13.sp,
+        fontSize = 15.sp,
         modifier = Modifier.padding(bottom = 4.dp),
     )
 }
@@ -184,7 +193,7 @@ private fun RadioGroupWithEnabled(
                 Text(
                     text = label,
                     color = if (enabled) Color.White else Color(0xFF555555),
-                    fontSize = 14.sp,
+                    fontSize = 16.sp,
                 )
             }
         }
@@ -204,7 +213,7 @@ private fun SwitchSetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, color = Color.White, fontSize = 14.sp)
+        Text(label, color = Color.White, fontSize = 16.sp)
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

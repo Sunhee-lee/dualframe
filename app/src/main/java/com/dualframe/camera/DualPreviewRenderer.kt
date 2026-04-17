@@ -52,9 +52,25 @@ class DualPreviewRenderer {
             #extension GL_OES_EGL_image_external : require
             precision mediump float;
             uniform samplerExternalOES sTexture;
+            uniform float uBeauty;
             varying vec2 vTexCoord;
             void main() {
-                gl_FragColor = texture2D(sTexture, vTexCoord);
+                vec4 color = texture2D(sTexture, vTexCoord);
+                if (uBeauty > 0.0) {
+                    // Very subtle softening: sample 4 nearby pixels and blend
+                    float off = 0.001;
+                    vec4 s1 = texture2D(sTexture, vTexCoord + vec2(off, 0.0));
+                    vec4 s2 = texture2D(sTexture, vTexCoord + vec2(-off, 0.0));
+                    vec4 s3 = texture2D(sTexture, vTexCoord + vec2(0.0, off));
+                    vec4 s4 = texture2D(sTexture, vTexCoord + vec2(0.0, -off));
+                    vec4 blurred = (color + s1 + s2 + s3 + s4) / 5.0;
+                    color = mix(color, blurred, 0.35 * uBeauty);
+                    // Slight brightness lift
+                    color.rgb = color.rgb * (1.0 + 0.06 * uBeauty);
+                    // Subtle warm tone shift
+                    color.r = color.r * (1.0 + 0.02 * uBeauty);
+                }
+                gl_FragColor = color;
             }
         """
 
@@ -89,12 +105,15 @@ class DualPreviewRenderer {
 
     // Mirror for front camera
     var mirrorHorizontally = false
+    // Beauty effect for front camera (soft blur + brightness + warm tone)
+    var beautyEnabled = false
 
     private val stMatrix = FloatArray(16)
     private var vertexBuffer: FloatBuffer? = null
 
     private var uSTMatrixHandle = 0
     private var uMVPMatrixHandle = 0
+    private var uBeautyHandle = 0
     private var aPositionHandle = 0
     private var aTexCoordHandle = 0
 
@@ -257,6 +276,7 @@ class DualPreviewRenderer {
         // Set uniforms
         GLES20.glUniformMatrix4fv(uSTMatrixHandle, 1, false, stMatrix, 0)
         GLES20.glUniformMatrix4fv(uMVPMatrixHandle, 1, false, mvp, 0)
+        GLES20.glUniform1f(uBeautyHandle, if (beautyEnabled) 1.0f else 0.0f)
 
         // Bind texture
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
@@ -330,6 +350,7 @@ class DualPreviewRenderer {
 
         uSTMatrixHandle = GLES20.glGetUniformLocation(program, "uSTMatrix")
         uMVPMatrixHandle = GLES20.glGetUniformLocation(program, "uMVPMatrix")
+        uBeautyHandle = GLES20.glGetUniformLocation(program, "uBeauty")
         aPositionHandle = GLES20.glGetAttribLocation(program, "aPosition")
         aTexCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
 

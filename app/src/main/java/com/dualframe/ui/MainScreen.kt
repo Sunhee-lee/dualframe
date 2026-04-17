@@ -347,7 +347,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
             ResultButton("Remove Watermark", state.appStatus != AppStatus.SAVING) {
                 viewModel.showRemoveWatermarkDialog()
             }
-            ResultButton("Open Saved Media", true) {
+            ResultButton("View Saved", true) {
                 try { context.startActivity(viewModel.buildOpenGalleryIntent()) } catch (_: Exception) {}
             }
             ResultButton("Retake", true) {
@@ -371,7 +371,7 @@ private fun ResultButton(label: String, enabled: Boolean, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().height(38.dp),
         shape = RoundedCornerShape(8.dp),
     ) {
-        Text(label, fontSize = 14.sp, maxLines = 1)
+        Text(label, fontSize = 16.sp, maxLines = 1)
     }
 }
 
@@ -407,7 +407,7 @@ private fun RemoveWatermarkDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                 ) {
-                    Text("Watch a short ad to remove watermark", fontSize = 13.sp)
+                    Text("Watch Ad", fontSize = 16.sp)
                 }
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
@@ -428,7 +428,7 @@ private fun RemoveWatermarkDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                 ) {
-                    Text("Go PRO - No Watermarks Forever", fontSize = 13.sp)
+                    Text("Go Pro", fontSize = 16.sp)
                 }
             }
         },

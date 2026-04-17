@@ -139,6 +139,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 cameraManager.useFrontCamera.value && newSettings.mirrorFrontCamera
         }
 
+        // Front camera beauty effect — only when front camera is active
+        if (newSettings.frontCameraEffect != oldSettings.frontCameraEffect) {
+            cameraManager.renderer.beautyEnabled =
+                cameraManager.useFrontCamera.value && newSettings.frontCameraEffect
+        }
+
         // If quality changed, refresh supported options and rebind camera
         if (newSettings.videoQuality != oldSettings.videoQuality) {
             refreshSupportedCapabilities()
