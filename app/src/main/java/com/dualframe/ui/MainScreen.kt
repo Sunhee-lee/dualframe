@@ -109,13 +109,16 @@ fun MainScreen(
                 RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
                     viewModel.toggleRecording(hasAudioPermission)
                 }
-                IconButton({ showSettings = true }, Modifier.padding(start = 8.dp)) {
-                    Icon(
-                        imageVector = Icons.Outlined.Settings,
-                        contentDescription = "Settings",
-                        tint = Color(0xFFCCCCCC),
-                        modifier = Modifier.size(22.dp),
-                    )
+                // Hide settings icon during recording
+                if (state.appStatus != AppStatus.RECORDING) {
+                    IconButton({ showSettings = true }, Modifier.padding(start = 8.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "Settings",
+                            tint = Color(0xFFCCCCCC),
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
             }
             ResultActions(state, viewModel, context)
@@ -346,18 +349,33 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
     if (state.appStatus != AppStatus.EXPORT_COMPLETE && state.appStatus != AppStatus.SAVING) return
     Spacer(Modifier.height(8.dp))
 
-    // Thumbnail LEFT, buttons RIGHT
+    // Thumbnail LEFT (with status below it), buttons RIGHT
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
-        // Thumbnail on the left
-        state.thumbnailBitmap?.let { bmp ->
-            Box(
-                Modifier.width(72.dp).aspectRatio(9f / 16f)
-                    .clip(RoundedCornerShape(6.dp)).background(Color.Black),
-            ) {
-                Image(bmp.asImageBitmap(), "Result", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        // Thumbnail + save status stacked
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            state.thumbnailBitmap?.let { bmp ->
+                Box(
+                    Modifier.width(72.dp).aspectRatio(9f / 16f)
+                        .clip(RoundedCornerShape(6.dp)).background(Color.Black),
+                ) {
+                    Image(bmp.asImageBitmap(), "Result", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                }
+            }
+            // Save progress bar
+            if (state.appStatus == AppStatus.SAVING) {
+                Spacer(Modifier.height(4.dp))
+                androidx.compose.material3.LinearProgressIndicator(
+                    modifier = Modifier.width(72.dp).height(3.dp).clip(RoundedCornerShape(2.dp)),
+                    color = Color(0xFF66BB6A), trackColor = Color(0xFF333333),
+                )
+            }
+            // "Saved" text under thumbnail
+            state.saveMessage?.let {
+                Spacer(Modifier.height(3.dp))
+                Text(it, color = Color(0xFF66BB6A), fontSize = 11.sp)
             }
         }
 
@@ -378,12 +396,6 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 viewModel.resetToIdle()
             }
         }
-    }
-
-    // Save result
-    state.saveMessage?.let {
-        Spacer(Modifier.height(4.dp))
-        Text(it, color = Color(0xFF66BB6A), fontSize = 12.sp)
     }
 }
 
