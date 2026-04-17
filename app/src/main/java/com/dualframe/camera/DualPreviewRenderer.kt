@@ -233,10 +233,6 @@ class DualPreviewRenderer {
         val surfaceAspect = sw.toFloat() / sh.toFloat()
         val mvp = FloatArray(16).apply { android.opengl.Matrix.setIdentityM(this, 0) }
 
-        if (mirrorHorizontally) {
-            android.opengl.Matrix.scaleM(mvp, 0, -1f, 1f, 1f)
-        }
-
         // Fill-center: scale uniformly until the smaller dimension fills.
         // The ratio between visual and surface aspects determines which axis overflows.
         if (visualAspect > surfaceAspect) {
@@ -251,6 +247,12 @@ class DualPreviewRenderer {
             android.opengl.Matrix.scaleM(mvp, 0, 1f, scale, 1f)
         }
         // If equal, identity — no scaling needed, perfect fit.
+
+        // Front camera mirror: applied AFTER fill-center scaling so the
+        // scale factor doesn't interact with the flip direction.
+        if (mirrorHorizontally) {
+            android.opengl.Matrix.scaleM(mvp, 0, -1f, 1f, 1f)
+        }
 
         // Set uniforms
         GLES20.glUniformMatrix4fv(uSTMatrixHandle, 1, false, stMatrix, 0)
