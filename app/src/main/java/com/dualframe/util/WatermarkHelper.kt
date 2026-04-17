@@ -10,6 +10,7 @@ import androidx.media3.effect.HslAdjustment
 import androidx.media3.effect.OverlayEffect
 import androidx.media3.effect.OverlaySettings
 import androidx.media3.effect.RgbAdjustment
+import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.effect.TextOverlay
 import androidx.media3.effect.TextureOverlay
 import androidx.media3.transformer.Composition
@@ -49,6 +50,7 @@ object WatermarkHelper {
         outputFile: File,
         applyWatermark: Boolean,
         applyBeauty: Boolean,
+        mirrorHorizontally: Boolean = false,
     ): File? = withContext(Dispatchers.Main) {
         try {
             val mediaItem = MediaItem.fromUri(sourceFile.toURI().toString())
@@ -57,6 +59,15 @@ object WatermarkHelper {
             val isPortrait = metadata != null && metadata.displayHeight > metadata.displayWidth
 
             val videoEffects = mutableListOf<androidx.media3.common.Effect>()
+
+            // Horizontal mirror — flips saved selfie to match preview direction
+            if (mirrorHorizontally) {
+                videoEffects.add(
+                    ScaleAndRotateTransformation.Builder()
+                        .setScale(-1f, 1f)
+                        .build()
+                )
+            }
 
             // Beauty effects — values from BeautyParams.kt
             // Same parameters as the preview GL shader (minus blur which Media3 can't do).

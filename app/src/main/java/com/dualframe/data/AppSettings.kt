@@ -8,7 +8,7 @@ data class AppSettings(
     val audioEnabled: Boolean = true,
     val countdownSeconds: Int = 0,
     val videoQuality: VideoQuality = VideoQuality.FHD,
-    val mirrorFrontCamera: Boolean = true,
+    val saveSelfieUnmirrored: Boolean = true,
     val frontCameraEffect: Boolean = true,
     val keepScreenAwake: Boolean = true,
     val showGuides: Boolean = true,
@@ -41,7 +41,7 @@ object SettingsStore {
             } catch (_: Exception) {
                 VideoQuality.FHD
             },
-            mirrorFrontCamera = prefs.getBoolean(KEY_MIRROR_FRONT, true),
+            saveSelfieUnmirrored = prefs.getBoolean(KEY_MIRROR_FRONT, true),
             frontCameraEffect = prefs.getBoolean(KEY_FRONT_EFFECT, true),
             keepScreenAwake = prefs.getBoolean(KEY_SCREEN_AWAKE, true),
             showGuides = prefs.getBoolean(KEY_GUIDES, true),
@@ -53,7 +53,7 @@ object SettingsStore {
             putBoolean(KEY_AUDIO, settings.audioEnabled)
             putInt(KEY_COUNTDOWN, settings.countdownSeconds)
             putString(KEY_QUALITY, settings.videoQuality.name)
-            putBoolean(KEY_MIRROR_FRONT, settings.mirrorFrontCamera)
+            putBoolean(KEY_MIRROR_FRONT, settings.saveSelfieUnmirrored)
             putBoolean(KEY_FRONT_EFFECT, settings.frontCameraEffect)
             putBoolean(KEY_SCREEN_AWAKE, settings.keepScreenAwake)
             putBoolean(KEY_GUIDES, settings.showGuides)

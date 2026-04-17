@@ -121,11 +121,11 @@ fun SettingsSheet(
 
             SettingDivider()
 
-            // ── Mirror Front Camera ──
+            // ── Save Selfies Without Mirroring ──
             SwitchSetting(
-                label = "Mirror Front Camera",
-                checked = settings.mirrorFrontCamera,
-                onCheckedChange = { onSettingsChange(settings.copy(mirrorFrontCamera = it)) },
+                label = "Save Selfies Without Mirroring",
+                checked = settings.saveSelfieUnmirrored,
+                onCheckedChange = { onSettingsChange(settings.copy(saveSelfieUnmirrored = it)) },
             )
 
             SettingDivider()
