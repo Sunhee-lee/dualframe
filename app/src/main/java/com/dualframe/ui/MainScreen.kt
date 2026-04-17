@@ -6,6 +6,7 @@ import android.view.TextureView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -172,14 +173,22 @@ private fun PreviewPanels(
     showGuides: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // Architecture:
+    // - Camera is bound via UseCaseGroup+ViewPort in CameraManager → single crop rect.
+    // - Only ONE active preview region; the other is an overlay guide.
+    // - Top = 9:16 active live preview. Bottom = 16:9 overlay guide (not live).
+    // - Two regions are stacked in a Column and don't overlap by construction.
     Column(
         modifier.fillMaxWidth().padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // 9:16 preview — aspectRatio(9/16) constrains width from height (given by weight).
-        // NOT fillMaxWidth — that would make it too wide and push 16:9 off screen.
-        Box(Modifier.weight(2f).aspectRatio(9f / 16f).clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
+        // Top: ACTIVE live preview region, constrained to 9:16.
+        // aspectRatio locks the container so it stays stable across recomposition.
+        Box(
+            Modifier.weight(2f).aspectRatio(9f / 16f)
+                .clip(RoundedCornerShape(8.dp)).background(Color.Black),
+        ) {
             AndroidView(
                 factory = { ctx ->
                     TextureView(ctx).apply {
@@ -194,12 +203,20 @@ private fun PreviewPanels(
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
-            // Ghost watermark overlay on preview — 30% opacity, top-right for portrait
+            // Ghost watermark sized relative to THIS preview's visible rect, not screen.
+            // Portrait uses top-end; slightly bigger (+2sp) than landscape.
             GhostWatermark(isPortrait = true)
             AspectLabel("9:16")
         }
-        // 16:9 preview — fillMaxWidth is fine here since 16:9 is wider than tall
-        Box(Modifier.weight(1f).fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
+
+        // Bottom: 16:9 OVERLAY GUIDE (not a live second preview). Shows the 16:9
+        // crop framing. The actual 16:9 video is recorded via VideoCapture through
+        // the UseCaseGroup, so the framing here is a faithful static guide.
+        Box(
+            Modifier.weight(1f).fillMaxWidth().aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black),
+        ) {
             AndroidView(
                 factory = { ctx ->
                     TextureView(ctx).apply {
@@ -213,8 +230,9 @@ private fun PreviewPanels(
                 },
                 modifier = Modifier.fillMaxSize(),
             )
+            // 16:9 guide border, drawn relative to this container (preview visible rect)
+            GuideBorder()
             if (showGuides) RuleOfThirdsGrid()
-            // Ghost watermark overlay on preview — 30% opacity, bottom-right for landscape
             GhostWatermark(isPortrait = false)
             AspectLabel("16:9")
         }
@@ -222,17 +240,36 @@ private fun PreviewPanels(
 }
 
 /**
+ * Thin semi-transparent border that marks the 16:9 guide region.
+ * Drawn relative to the containing Box (i.e., the visible preview rect),
+ * not the screen, so the frame always matches the on-screen crop.
+ */
+@Composable
+private fun GuideBorder() {
+    Box(
+        Modifier.fillMaxSize()
+            .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(6.dp)),
+    )
+}
+
+/**
  * Ghost watermark overlay on the live preview. 30% opacity so the user can see
  * where the watermark will appear on the saved video without it being intrusive.
  * Position matches the saved-video watermark: top-right for portrait, bottom-right for landscape.
+ */
+/**
+ * Ghost watermark drawn inside each preview's visible rect (not screen-relative).
+ * - 30% opacity for preview
+ * - Portrait uses top-right, landscape uses bottom-right
+ * - Portrait is slightly larger than landscape (13sp vs 11sp)
  */
 @Composable
 private fun GhostWatermark(isPortrait: Boolean) {
     Box(Modifier.fillMaxSize()) {
         Text(
             text = "DualFrame",
-            color = Color.White.copy(alpha = 0.3f), // 30% opacity for preview ghost
-            fontSize = 12.sp, // 20% bigger than previous 10sp
+            color = Color.White.copy(alpha = 0.3f),
+            fontSize = if (isPortrait) 13.sp else 11.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(if (isPortrait) Alignment.TopEnd else Alignment.BottomEnd)

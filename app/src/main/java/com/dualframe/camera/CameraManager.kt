@@ -117,10 +117,24 @@ class CameraManager(private val context: Context) {
 
             val cameraSelector = currentCameraSelector()
 
-            // Always only 2 use cases — Preview + VideoCapture.
-            // No ImageAnalysis. This preserves FHD/UHD recording quality.
-            provider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, videoCapture)
-            Log.i(TAG, "Camera bound: Preview + VideoCapture (2 use cases, GPU dual preview)")
+            // Bind via UseCaseGroup + ViewPort so Preview and VideoCapture share
+            // the same crop rect. This guarantees the preview framing matches the
+            // saved recording exactly — no surprise crop differences.
+            val viewPort = androidx.camera.core.ViewPort.Builder(
+                android.util.Rational(16, 9),
+                android.view.Surface.ROTATION_0,
+            )
+                .setScaleType(androidx.camera.core.ViewPort.FILL_CENTER)
+                .build()
+
+            val useCaseGroup = androidx.camera.core.UseCaseGroup.Builder()
+                .addUseCase(preview!!)
+                .addUseCase(videoCapture!!)
+                .setViewPort(viewPort)
+                .build()
+
+            provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
+            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 16:9")
 
             return true
         } catch (e: Exception) {

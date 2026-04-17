@@ -76,9 +76,9 @@ object WatermarkHelper {
                         0, length,
                         android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                     )
-                    // 20% larger than previous 0.8f → 0.96f
+                    // Portrait slightly bigger than landscape (1.1f vs 0.96f).
                     setSpan(
-                        android.text.style.RelativeSizeSpan(0.96f),
+                        android.text.style.RelativeSizeSpan(if (isPortrait) 1.1f else 0.96f),
                         0, length,
                         android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                     )
