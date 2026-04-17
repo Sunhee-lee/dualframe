@@ -423,14 +423,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val nativeFile = File(nativePath)
             val croppedFile = File(croppedPath)
 
-            // Apply watermark to temp copies, then save those to gallery
+            // Apply watermark + beauty (beauty only if front camera + effect enabled)
+            val beauty = cameraManager.useFrontCamera.value &&
+                _uiState.value.settings.frontCameraEffect
             val wmNative = FileStorage.createExportFile(app, "wm_native")
             val wmCropped = FileStorage.createExportFile(app, "wm_cropped")
 
-            val wmNativeResult = WatermarkHelper.applyWatermark(app, nativeFile, wmNative)
-            val wmCroppedResult = WatermarkHelper.applyWatermark(app, croppedFile, wmCropped)
+            val wmNativeResult = WatermarkHelper.applyEffects(
+                app, nativeFile, wmNative, applyWatermark = true, applyBeauty = beauty,
+            )
+            val wmCroppedResult = WatermarkHelper.applyEffects(
+                app, croppedFile, wmCropped, applyWatermark = true, applyBeauty = beauty,
+            )
 
-            val sourceNative = wmNativeResult ?: nativeFile // fallback to unwatermarked if fails
+            val sourceNative = wmNativeResult ?: nativeFile
             val sourceCropped = wmCroppedResult ?: croppedFile
 
             _uiState.update { it.copy(saveMessage = null) }
@@ -469,11 +475,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val nativeFile = File(nativePath)
             val croppedFile = File(croppedPath)
 
+            // Apply beauty (no watermark) if front camera + effect enabled
+            val beauty = cameraManager.useFrontCamera.value &&
+                _uiState.value.settings.frontCameraEffect
+
+            val sourceNative: File = if (beauty) {
+                val beautified = FileStorage.createExportFile(app, "beauty_native")
+                WatermarkHelper.applyEffects(
+                    app, nativeFile, beautified, applyWatermark = false, applyBeauty = true,
+                ) ?: nativeFile
+            } else nativeFile
+
+            val sourceCropped: File = if (beauty) {
+                val beautified = FileStorage.createExportFile(app, "beauty_cropped")
+                WatermarkHelper.applyEffects(
+                    app, croppedFile, beautified, applyWatermark = false, applyBeauty = true,
+                ) ?: croppedFile
+            } else croppedFile
+
             val uriN = withContext(Dispatchers.IO) {
-                FileStorage.saveToMediaStore(app, nativeFile, nativeFile.name)
+                FileStorage.saveToMediaStore(app, sourceNative, sourceNative.name)
             }
             val uriC = withContext(Dispatchers.IO) {
-                FileStorage.saveToMediaStore(app, croppedFile, croppedFile.name)
+                FileStorage.saveToMediaStore(app, sourceCropped, sourceCropped.name)
             }
 
             _uiState.update {

@@ -64,7 +64,7 @@ fun SettingsSheet(
 
             // ── Audio ──
             SwitchSetting(
-                label = "Audio Recording",
+                label = "Record Audio",
                 checked = settings.audioEnabled,
                 onCheckedChange = { onSettingsChange(settings.copy(audioEnabled = it)) },
             )
@@ -105,7 +105,7 @@ fun SettingsSheet(
 
             // ── Keep Screen Awake ──
             SwitchSetting(
-                label = "Keep Screen Awake",
+                label = "Keep Screen On",
                 checked = settings.keepScreenAwake,
                 onCheckedChange = { onSettingsChange(settings.copy(keepScreenAwake = it)) },
             )
@@ -114,7 +114,7 @@ fun SettingsSheet(
 
             // ── Show Guides ──
             SwitchSetting(
-                label = "Show Crop Guides",
+                label = "Show Frame Guides",
                 checked = settings.showGuides,
                 onCheckedChange = { onSettingsChange(settings.copy(showGuides = it)) },
             )
@@ -132,7 +132,7 @@ fun SettingsSheet(
 
             // ── Front Camera Effect ──
             SwitchSetting(
-                label = "Front Camera Effect",
+                label = "Selfie Effect",
                 checked = settings.frontCameraEffect,
                 onCheckedChange = { onSettingsChange(settings.copy(frontCameraEffect = it)) },
             )

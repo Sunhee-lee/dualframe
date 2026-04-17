@@ -4,8 +4,11 @@ import android.content.Context
 import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.Brightness
+import androidx.media3.effect.HslAdjustment
 import androidx.media3.effect.OverlayEffect
 import androidx.media3.effect.OverlaySettings
+import androidx.media3.effect.RgbAdjustment
 import androidx.media3.effect.TextOverlay
 import androidx.media3.effect.TextureOverlay
 import androidx.media3.transformer.Composition
@@ -23,10 +26,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 
 /**
- * Applies a simple text watermark to a video file using Media3 Transformer.
- * The watermark is a semi-transparent "DualFrame" text overlay.
+ * Applies watermark and/or beauty effects to a video file using Media3 Transformer.
  *
- * Used in the "Save with Ads" flow to mark free-tier exports.
+ * Beauty parameters (saved video, approximated via Media3 built-in effects):
+ *   brightness=0.02, warmth=0.01 (red lift), saturation=1.01
+ * Note: smooth/mix (blur) and gamma are preview-only — Media3 1.5.x has no
+ * built-in blur/gamma effect and implementing a custom GlShaderProgram is out of scope.
  */
 @UnstableApi
 object WatermarkHelper {
@@ -34,77 +39,101 @@ object WatermarkHelper {
     private const val TAG = "WatermarkHelper"
 
     /**
-     * Copy the source file with a text watermark overlay.
-     * Returns the watermarked output file, or null on failure.
+     * Re-encode sourceFile applying optional watermark and/or beauty.
+     * Returns the output file, or null on failure.
      */
-    /**
-     * Copy the source file with a text watermark overlay.
-     * For portrait videos (height > width after rotation), the watermark is placed
-     * near the top ~20% area. For landscape, it stays at bottom-right.
-     */
-    suspend fun applyWatermark(
+    suspend fun applyEffects(
         context: Context,
         sourceFile: File,
         outputFile: File,
+        applyWatermark: Boolean,
+        applyBeauty: Boolean,
     ): File? = withContext(Dispatchers.Main) {
         try {
             val mediaItem = MediaItem.fromUri(sourceFile.toURI().toString())
 
-            // Determine if the source is portrait to adjust watermark position.
-            // Portrait videos get the watermark near top-center (~20% from top),
-            // landscape videos keep it at bottom-right.
             val metadata = VideoMetadata.fromFile(sourceFile)
             val isPortrait = metadata != null && metadata.displayHeight > metadata.displayWidth
 
-            val overlayAnchorX: Float
-            val overlayAnchorY: Float
-            if (isPortrait) {
-                // Top-right for portrait video. Media3 coords: X=1 is right, Y=1 is top.
-                overlayAnchorX = 0.85f
-                overlayAnchorY = 0.85f
-            } else {
-                // Bottom-right for landscape
-                overlayAnchorX = 0.85f
-                overlayAnchorY = -0.85f
+            val videoEffects = mutableListOf<androidx.media3.common.Effect>()
+
+            // Beauty effects (saved-file approximation)
+            if (applyBeauty) {
+                videoEffects.add(Brightness(0.02f))
+                videoEffects.add(
+                    RgbAdjustment.Builder()
+                        .setRedScale(1.01f)
+                        .build()
+                )
+                videoEffects.add(
+                    HslAdjustment.Builder()
+                        .adjustSaturation(1f)
+                        .build()
+                )
             }
 
-            val textOverlay = TextOverlay.createStaticTextOverlay(
-                android.text.SpannableString("DualFrame").apply {
-                    // 70% opacity for saved video watermark (0xB3 = 179/255 ≈ 70%)
-                    setSpan(
-                        android.text.style.ForegroundColorSpan(0xB3FFFFFF.toInt()),
-                        0, length,
-                        android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
-                    )
-                    // Portrait slightly bigger than landscape (1.1f vs 0.96f).
-                    setSpan(
-                        android.text.style.RelativeSizeSpan(if (isPortrait) 1.1f else 0.96f),
-                        0, length,
-                        android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
-                    )
-                },
-                OverlaySettings.Builder()
-                    .setOverlayFrameAnchor(overlayAnchorX, overlayAnchorY)
-                    .setBackgroundFrameAnchor(overlayAnchorX, overlayAnchorY)
-                    .build(),
-            )
+            // Watermark overlay
+            if (applyWatermark) {
+                val overlayAnchorX: Float
+                val overlayAnchorY: Float
+                if (isPortrait) {
+                    overlayAnchorX = 0.85f
+                    overlayAnchorY = 0.85f
+                } else {
+                    overlayAnchorX = 0.85f
+                    overlayAnchorY = -0.85f
+                }
 
-            val overlays: ImmutableList<TextureOverlay> = ImmutableList.of<TextureOverlay>(textOverlay)
-            val overlayEffect = OverlayEffect(overlays)
+                val textOverlay = TextOverlay.createStaticTextOverlay(
+                    android.text.SpannableString("DualFrame").apply {
+                        setSpan(
+                            android.text.style.ForegroundColorSpan(0xB3FFFFFF.toInt()),
+                            0, length,
+                            android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                        )
+                        setSpan(
+                            android.text.style.RelativeSizeSpan(if (isPortrait) 1.1f else 0.96f),
+                            0, length,
+                            android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                        )
+                    },
+                    OverlaySettings.Builder()
+                        .setOverlayFrameAnchor(overlayAnchorX, overlayAnchorY)
+                        .setBackgroundFrameAnchor(overlayAnchorX, overlayAnchorY)
+                        .build(),
+                )
+
+                val overlays: ImmutableList<TextureOverlay> =
+                    ImmutableList.of<TextureOverlay>(textOverlay)
+                videoEffects.add(OverlayEffect(overlays))
+            }
+
+            if (videoEffects.isEmpty()) {
+                Log.w(TAG, "applyEffects called with no effects — skipping")
+                return@withContext null
+            }
 
             val editedMediaItem = EditedMediaItem.Builder(mediaItem)
-                .setEffects(Effects(listOf(), listOf(overlayEffect)))
+                .setEffects(Effects(listOf(), videoEffects.toList()))
                 .build()
 
             runTransformer(context, editedMediaItem, outputFile)
-            Log.i(TAG, "Watermark applied: ${outputFile.absolutePath}")
+            Log.i(TAG, "Effects applied (watermark=$applyWatermark, beauty=$applyBeauty): " +
+                "${outputFile.absolutePath}")
             outputFile
         } catch (e: Exception) {
-            Log.e(TAG, "Watermark failed", e)
+            Log.e(TAG, "applyEffects failed", e)
             outputFile.delete()
             null
         }
     }
+
+    /** Legacy alias — watermark only. */
+    suspend fun applyWatermark(
+        context: Context,
+        sourceFile: File,
+        outputFile: File,
+    ): File? = applyEffects(context, sourceFile, outputFile, applyWatermark = true, applyBeauty = false)
 
     private suspend fun runTransformer(
         context: Context,

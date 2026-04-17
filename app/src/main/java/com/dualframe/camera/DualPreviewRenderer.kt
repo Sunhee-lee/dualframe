@@ -57,18 +57,26 @@ class DualPreviewRenderer {
             void main() {
                 vec4 color = texture2D(sTexture, vTexCoord);
                 if (uBeauty > 0.0) {
-                    // Very subtle softening: sample 4 nearby pixels and blend
-                    float off = 0.001;
+                    // Beauty parameters:
+                    //   smooth=0.18 (blur offset), mix=0.22 (blend ratio)
+                    //   brightness=0.02, gamma=1.06, warmth=0.01, saturation=1.01
+                    float off = 0.18 * 0.01; // 0.0018
                     vec4 s1 = texture2D(sTexture, vTexCoord + vec2(off, 0.0));
                     vec4 s2 = texture2D(sTexture, vTexCoord + vec2(-off, 0.0));
                     vec4 s3 = texture2D(sTexture, vTexCoord + vec2(0.0, off));
                     vec4 s4 = texture2D(sTexture, vTexCoord + vec2(0.0, -off));
                     vec4 blurred = (color + s1 + s2 + s3 + s4) / 5.0;
-                    color = mix(color, blurred, 0.35 * uBeauty);
-                    // Slight brightness lift
-                    color.rgb = color.rgb * (1.0 + 0.06 * uBeauty);
-                    // Subtle warm tone shift
-                    color.r = color.r * (1.0 + 0.02 * uBeauty);
+                    color.rgb = mix(color.rgb, blurred.rgb, 0.22);
+                    // Brightness (additive)
+                    color.rgb = color.rgb + 0.02;
+                    // Gamma correction
+                    color.rgb = pow(clamp(color.rgb, 0.0, 1.0), vec3(1.0 / 1.06));
+                    // Warmth (slight red lift)
+                    color.r = color.r + 0.01;
+                    // Saturation
+                    float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                    color.rgb = mix(vec3(gray), color.rgb, 1.01);
+                    color.rgb = clamp(color.rgb, 0.0, 1.0);
                 }
                 gl_FragColor = color;
             }
