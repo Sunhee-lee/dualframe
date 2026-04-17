@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.subnlab.dualframe"
+    namespace = "com.sunnlab.dualframe"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.subnlab.dualframe"
+        applicationId = "com.sunnlab.dualframe"
         minSdk = 29  // Android 10 — needed for scoped storage + stable CameraX behavior
         targetSdk = 35
         versionCode = 1
