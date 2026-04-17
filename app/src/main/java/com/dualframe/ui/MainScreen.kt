@@ -308,9 +308,7 @@ private fun RuleOfThirdsGrid() {
 private fun ExportStatusStub(state: UiState) {
     val exporting = state.appStatus == AppStatus.EXPORTING_NATIVE || state.appStatus == AppStatus.EXPORTING_CROPPED
     if (!exporting) return
-    val label = if (state.appStatus == AppStatus.EXPORTING_NATIVE) "Exporting native..." else "Exporting cropped..."
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = Color(0xFFFFA726), fontSize = 12.sp)
         Spacer(Modifier.height(4.dp))
         androidx.compose.material3.LinearProgressIndicator(
             progress = { state.exportProgress },
@@ -349,7 +347,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
             ResultButton("Remove Watermark", state.appStatus != AppStatus.SAVING) {
                 viewModel.showRemoveWatermarkDialog()
             }
-            ResultButton("Open Gallery", true) {
+            ResultButton("Open Saved Media", true) {
                 try { context.startActivity(viewModel.buildOpenGalleryIntent()) } catch (_: Exception) {}
             }
             ResultButton("Retake", true) {
@@ -358,16 +356,10 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         }
     }
 
-    // Status messages
+    // Save result
     state.saveMessage?.let {
         Spacer(Modifier.height(4.dp))
-        Text(it, color = Color(0xFF66BB6A), fontSize = 11.sp)
-    }
-    state.nativeExportInfo?.let {
-        Text(it, color = Color(0xFF888888), fontSize = 9.sp)
-    }
-    state.croppedExportInfo?.let {
-        Text(it, color = Color(0xFF888888), fontSize = 9.sp)
+        Text(it, color = Color(0xFF66BB6A), fontSize = 12.sp)
     }
 }
 
@@ -376,10 +368,10 @@ private fun ResultButton(label: String, enabled: Boolean, onClick: () -> Unit) {
     androidx.compose.material3.OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().height(34.dp),
+        modifier = Modifier.fillMaxWidth().height(38.dp),
         shape = RoundedCornerShape(8.dp),
     ) {
-        Text(label, fontSize = 11.sp, maxLines = 1)
+        Text(label, fontSize = 14.sp, maxLines = 1)
     }
 }
 

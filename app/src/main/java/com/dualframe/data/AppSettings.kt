@@ -6,8 +6,9 @@ import androidx.core.content.edit
 
 data class AppSettings(
     val audioEnabled: Boolean = true,
-    val countdownSeconds: Int = 0, // 0 = off, 3, 5, 10
+    val countdownSeconds: Int = 0,
     val videoQuality: VideoQuality = VideoQuality.FHD,
+    val mirrorFrontCamera: Boolean = true,
     val keepScreenAwake: Boolean = true,
     val showGuides: Boolean = true,
 )
@@ -24,6 +25,7 @@ object SettingsStore {
     private const val KEY_AUDIO = "audio_enabled"
     private const val KEY_COUNTDOWN = "countdown_seconds"
     private const val KEY_QUALITY = "video_quality"
+    private const val KEY_MIRROR_FRONT = "mirror_front_camera"
     private const val KEY_SCREEN_AWAKE = "keep_screen_awake"
     private const val KEY_GUIDES = "show_guides"
 
@@ -37,6 +39,7 @@ object SettingsStore {
             } catch (_: Exception) {
                 VideoQuality.FHD
             },
+            mirrorFrontCamera = prefs.getBoolean(KEY_MIRROR_FRONT, true),
             keepScreenAwake = prefs.getBoolean(KEY_SCREEN_AWAKE, true),
             showGuides = prefs.getBoolean(KEY_GUIDES, true),
         )
@@ -47,6 +50,7 @@ object SettingsStore {
             putBoolean(KEY_AUDIO, settings.audioEnabled)
             putInt(KEY_COUNTDOWN, settings.countdownSeconds)
             putString(KEY_QUALITY, settings.videoQuality.name)
+            putBoolean(KEY_MIRROR_FRONT, settings.mirrorFrontCamera)
             putBoolean(KEY_SCREEN_AWAKE, settings.keepScreenAwake)
             putBoolean(KEY_GUIDES, settings.showGuides)
         }

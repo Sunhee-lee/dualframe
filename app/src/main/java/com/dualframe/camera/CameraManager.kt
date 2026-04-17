@@ -57,16 +57,19 @@ class CameraManager(private val context: Context) {
 
     private var boundLifecycleOwner: LifecycleOwner? = null
     private var boundQuality: Quality = Quality.FHD
+    private var mirrorEnabled: Boolean = true
 
     // ── Camera binding (always 2 use cases) ───────────────────────────
 
     suspend fun bindCamera(
         lifecycleOwner: LifecycleOwner,
         quality: Quality = Quality.FHD,
+        mirror: Boolean = true,
         onError: (String) -> Unit,
     ): Boolean {
         boundLifecycleOwner = lifecycleOwner
         boundQuality = quality
+        mirrorEnabled = mirror
         return bindInternal(lifecycleOwner, quality, onError)
     }
 
@@ -111,8 +114,8 @@ class CameraManager(private val context: Context) {
             // frame rate for the selected quality, typically 30fps.
             videoCapture = VideoCapture.withOutput(recorder)
 
-            // Mirror for front camera
-            renderer.mirrorHorizontally = _useFrontCamera.value
+            // Mirror for front camera — controlled by user setting
+            renderer.mirrorHorizontally = _useFrontCamera.value && mirrorEnabled
 
             val cameraSelector = currentCameraSelector()
 

@@ -51,8 +51,8 @@ fun SettingsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp)
-                .padding(bottom = 32.dp),
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(bottom = 24.dp),
         ) {
             Text(
                 text = "Settings",
@@ -60,7 +60,7 @@ fun SettingsSheet(
                 color = Color.White,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // ── Audio ──
             SwitchSetting(
@@ -118,6 +118,15 @@ fun SettingsSheet(
                 checked = settings.showGuides,
                 onCheckedChange = { onSettingsChange(settings.copy(showGuides = it)) },
             )
+
+            SettingDivider()
+
+            // ── Mirror Front Camera ──
+            SwitchSetting(
+                label = "Mirror Front Camera",
+                checked = settings.mirrorFrontCamera,
+                onCheckedChange = { onSettingsChange(settings.copy(mirrorFrontCamera = it)) },
+            )
         }
     }
 }
@@ -135,7 +144,7 @@ private fun SettingSectionTitle(title: String) {
 @Composable
 private fun SettingDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(vertical = 12.dp),
+        modifier = Modifier.padding(vertical = 8.dp),
         color = Color(0xFF333333),
     )
 }

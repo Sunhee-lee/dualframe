@@ -80,6 +80,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val success = cameraManager.bindCamera(
                 lifecycleOwner = lifecycleOwner,
                 quality = settings.videoQuality.toCameraXQuality(),
+                mirror = settings.mirrorFrontCamera,
                 onError = { msg -> setError(msg) },
             )
             _uiState.update { it.copy(cameraReady = success) }
@@ -131,6 +132,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(settings = newSettings) }
         SettingsStore.save(getApplication(), newSettings)
         Log.i(TAG, "Settings updated: $newSettings")
+
+        // Mirror toggle — update renderer immediately
+        if (newSettings.mirrorFrontCamera != oldSettings.mirrorFrontCamera) {
+            cameraManager.renderer.mirrorHorizontally =
+                cameraManager.useFrontCamera.value && newSettings.mirrorFrontCamera
+        }
 
         // If quality changed, refresh supported options and rebind camera
         if (newSettings.videoQuality != oldSettings.videoQuality) {
@@ -403,7 +410,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val nativePath = state.nativeTempPath ?: return
         val croppedPath = state.croppedTempPath ?: return
 
-        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = "Applying watermark...") }
+        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = null) }
 
         viewModelScope.launch {
             val app: android.app.Application = getApplication()
@@ -420,7 +427,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val sourceNative = wmNativeResult ?: nativeFile // fallback to unwatermarked if fails
             val sourceCropped = wmCroppedResult ?: croppedFile
 
-            _uiState.update { it.copy(saveMessage = "Saving to gallery...") }
+            _uiState.update { it.copy(saveMessage = null) }
 
             val uriN = withContext(Dispatchers.IO) {
                 FileStorage.saveToMediaStore(app, sourceNative, sourceNative.name)
@@ -434,7 +441,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appStatus = AppStatus.EXPORT_COMPLETE,
                     savedNativeUri = uriN,
                     savedCroppedUri = uriC,
-                    saveMessage = if (uriN != null && uriC != null) "Saved to gallery" else "Save failed",
+                    saveMessage = if (uriN != null && uriC != null) "Saved" else "Save failed",
                 )
             }
         }
@@ -449,7 +456,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val nativePath = state.nativeTempPath ?: return
         val croppedPath = state.croppedTempPath ?: return
 
-        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = "Saving (no watermark)...") }
+        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = null) }
 
         viewModelScope.launch {
             val app: android.app.Application = getApplication()
@@ -468,7 +475,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appStatus = AppStatus.EXPORT_COMPLETE,
                     savedNativeUri = uriN,
                     savedCroppedUri = uriC,
-                    saveMessage = if (uriN != null && uriC != null) "Saved (no watermark)" else "Save failed",
+                    saveMessage = if (uriN != null && uriC != null) "Saved" else "Save failed",
                 )
             }
         }
