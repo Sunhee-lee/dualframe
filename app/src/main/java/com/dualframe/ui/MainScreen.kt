@@ -172,9 +172,14 @@ private fun PreviewPanels(
     showGuides: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        // 9:16 preview — explicit aspectRatio locks the container so it doesn't shift during recomposition
-        Box(Modifier.weight(2f).fillMaxWidth().aspectRatio(9f / 16f).clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
+    Column(
+        modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        // 9:16 preview — aspectRatio(9/16) constrains width from height (given by weight).
+        // NOT fillMaxWidth — that would make it too wide and push 16:9 off screen.
+        Box(Modifier.weight(2f).aspectRatio(9f / 16f).clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
             AndroidView(
                 factory = { ctx ->
                     TextureView(ctx).apply {
@@ -193,7 +198,7 @@ private fun PreviewPanels(
             GhostWatermark(isPortrait = true)
             AspectLabel("9:16")
         }
-        // 16:9 preview
+        // 16:9 preview — fillMaxWidth is fine here since 16:9 is wider than tall
         Box(Modifier.weight(1f).fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
             AndroidView(
                 factory = { ctx ->
@@ -226,8 +231,8 @@ private fun GhostWatermark(isPortrait: Boolean) {
     Box(Modifier.fillMaxSize()) {
         Text(
             text = "DualFrame",
-            color = Color.White.copy(alpha = 0.3f),
-            fontSize = 10.sp,
+            color = Color.White.copy(alpha = 0.3f), // 30% opacity for preview ghost
+            fontSize = 12.sp, // 20% bigger than previous 10sp
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(if (isPortrait) Alignment.TopEnd else Alignment.BottomEnd)

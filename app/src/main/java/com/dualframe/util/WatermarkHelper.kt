@@ -70,14 +70,15 @@ object WatermarkHelper {
 
             val textOverlay = TextOverlay.createStaticTextOverlay(
                 android.text.SpannableString("DualFrame").apply {
+                    // 70% opacity for saved video watermark (0xB3 = 179/255 ≈ 70%)
                     setSpan(
-                        android.text.style.ForegroundColorSpan(0x88FFFFFF.toInt()),
+                        android.text.style.ForegroundColorSpan(0xB3FFFFFF.toInt()),
                         0, length,
                         android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                     )
-                    // Smaller watermark — reduced from 1.2f to 0.8f
+                    // 20% larger than previous 0.8f → 0.96f
                     setSpan(
-                        android.text.style.RelativeSizeSpan(0.8f),
+                        android.text.style.RelativeSizeSpan(0.96f),
                         0, length,
                         android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                     )
