@@ -386,8 +386,10 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
             ResultButton("Save Both", state.appStatus != AppStatus.SAVING) {
                 viewModel.saveBothWithWatermark()
             }
-            ResultButton("Remove Watermark", state.appStatus != AppStatus.SAVING) {
-                viewModel.showRemoveWatermarkDialog()
+            if (!com.dualframe.monetize.ProEntitlement.isProOwned(context)) {
+                ResultButton("Remove Watermark", state.appStatus != AppStatus.SAVING) {
+                    viewModel.showRemoveWatermarkDialog()
+                }
             }
             ResultButton("View Saved", true) {
                 try { context.startActivity(viewModel.buildOpenGalleryIntent()) } catch (_: Exception) {}
