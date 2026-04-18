@@ -448,17 +448,12 @@ private fun RemoveWatermarkDialog(
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
                         onDismiss()
-                        // Launch billing purchase
                         val activity = context as? android.app.Activity
                         if (activity != null) {
-                            com.dualframe.monetize.BillingManager(context).apply {
-                                connect()
-                                // Note: in production, BillingManager should be a singleton
-                                // managed by ViewModel, not created per-click.
-                                launchPurchase(activity) { success ->
+                            com.dualframe.monetize.BillingManager.getInstance(context)
+                                .launchPurchase(activity) { success ->
                                     if (success) viewModel.saveBothClean()
                                 }
-                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),

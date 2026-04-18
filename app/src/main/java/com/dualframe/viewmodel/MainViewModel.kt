@@ -409,9 +409,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Save both exports to gallery WITH watermark (free-tier path).
      * Watermark is applied via Media3 Transformer text overlay.
      */
+    /**
+     * Save both exports. If PRO is owned, save without watermark.
+     * Otherwise save with watermark.
+     */
     fun saveBothWithWatermark() {
         val state = _uiState.value
         if (state.appStatus != AppStatus.EXPORT_COMPLETE) return
+
+        // PRO users get clean save automatically
+        if (com.dualframe.monetize.ProEntitlement.isProOwned(getApplication())) {
+            saveBothClean()
+            return
+        }
+
         val nativePath = state.nativeTempPath ?: return
         val croppedPath = state.croppedTempPath ?: return
 
