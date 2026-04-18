@@ -100,6 +100,12 @@ object WatermarkHelper {
                     overlayAnchorY = -0.85f
                 }
 
+                // Watermark size scales with video resolution.
+                // Base: 0.7f at FHD (1080p). Smaller for UHD, larger for HD.
+                val baseHeight = metadata?.displayHeight ?: 1920
+                val sizeScale = (1080f / baseHeight.coerceAtLeast(480)).coerceIn(0.5f, 1.2f)
+                val textSize = if (isPortrait) 1.1f * sizeScale else 0.96f * sizeScale
+
                 val textOverlay = TextOverlay.createStaticTextOverlay(
                     android.text.SpannableString("DualFrame").apply {
                         setSpan(
@@ -108,7 +114,7 @@ object WatermarkHelper {
                             android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                         )
                         setSpan(
-                            android.text.style.RelativeSizeSpan(if (isPortrait) 1.1f else 0.96f),
+                            android.text.style.RelativeSizeSpan(textSize),
                             0, length,
                             android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                         )

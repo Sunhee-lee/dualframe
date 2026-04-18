@@ -49,6 +49,29 @@ object AdRewardManager {
         )
     }
 
+    /** Preload using Context (for calling from Application.onCreate). */
+    fun preload(context: android.content.Context) {
+        if (rewardedAd != null || isLoading) return
+        isLoading = true
+        RewardedAd.load(
+            context,
+            REWARDED_TEST_AD_UNIT_ID,
+            AdRequest.Builder().build(),
+            object : RewardedAdLoadCallback() {
+                override fun onAdLoaded(ad: RewardedAd) {
+                    rewardedAd = ad
+                    isLoading = false
+                    Log.i(TAG, "Rewarded ad preloaded")
+                }
+                override fun onAdFailedToLoad(error: LoadAdError) {
+                    rewardedAd = null
+                    isLoading = false
+                    Log.e(TAG, "Rewarded ad preload failed: ${error.message}")
+                }
+            },
+        )
+    }
+
     /**
      * Show the loaded rewarded ad. Calls [onRewarded] only if the user earns the reward.
      * Calls [onFailed] if the ad isn't loaded or an error occurs.
