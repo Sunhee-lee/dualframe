@@ -100,11 +100,15 @@ object WatermarkHelper {
                     overlayAnchorY = -0.85f
                 }
 
-                // Watermark size scales with video resolution.
-                // Base: 0.7f at FHD (1080p). Smaller for UHD, larger for HD.
-                val baseHeight = metadata?.displayHeight ?: 1920
-                val sizeScale = (1080f / baseHeight.coerceAtLeast(480)).coerceIn(0.5f, 1.2f)
-                val textSize = if (isPortrait) 1.1f * sizeScale else 0.96f * sizeScale
+                // Watermark size scales with FINAL output resolution (post-crop).
+                // Base: UHD short edge (2160) = scale 1.0 = full size.
+                // FHD (1080) = 0.5, HD (720) = 0.33. Min 0.25 to stay visible.
+                val finalW = metadata?.displayWidth ?: 1080
+                val finalH = metadata?.displayHeight ?: 1920
+                val shortEdge = minOf(finalW, finalH).toFloat()
+                val scale = (shortEdge / 2160f).coerceIn(0.25f, 1.0f)
+                val baseSize = if (isPortrait) 1.0f else 0.9f
+                val textSize = baseSize * scale
 
                 val textOverlay = TextOverlay.createStaticTextOverlay(
                     android.text.SpannableString("DualFrame").apply {
