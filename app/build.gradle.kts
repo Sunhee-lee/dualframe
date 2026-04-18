@@ -25,6 +25,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Include native debug symbols in AAB so Play Console
+            // can symbolicate native crashes from dependencies (AdMob, Media3).
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
         }
     }
 
