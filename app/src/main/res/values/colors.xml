@@ -4,4 +4,6 @@
     <color name="white">#FFFFFFFF</color>
     <color name="record_red">#FFFF1744</color>
     <color name="dark_surface">#FF1A1A1A</color>
+    <color name="ic_launcher_background">#FF1A1A1A</color>
+    <color name="ic_launcher_foreground">#FFFFFFFF</color>
 </resources>
