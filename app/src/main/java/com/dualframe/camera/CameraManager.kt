@@ -119,12 +119,18 @@ class CameraManager(private val context: Context) {
 
             val cameraSelector = currentCameraSelector()
 
-            // Bind via UseCaseGroup + ViewPort so Preview and VideoCapture share
-            // the same crop rect. ViewPort is 9:16 PORTRAIT because the master
-            // recording must be the full portrait frame (e.g., 2160x3840).
-            // The 16:9 landscape version is derived by cropping from this portrait master.
+            // Bind via UseCaseGroup + ViewPort. ViewPort is 16:9 LANDSCAPE because:
+            // 1. The camera sensor natively outputs 16:9 landscape buffers
+            // 2. Preview receives the raw 16:9 buffer via SurfaceTexture
+            // 3. Making the master 16:9 means the 16:9 preview = 16:9 saved (WYSIWYG)
+            // 4. The 9:16 portrait version is derived by center-cropping the 16:9 master
+            //
+            // Previous 9:16 ViewPort could NOT achieve WYSIWYG because CameraX
+            // does not apply ViewPort crop to the Preview's SurfaceTexture — only
+            // to VideoCapture. So preview always showed the full 16:9 sensor buffer
+            // while the master was cropped to 9:16.
             val viewPort = androidx.camera.core.ViewPort.Builder(
-                android.util.Rational(9, 16),
+                android.util.Rational(16, 9),
                 android.view.Surface.ROTATION_0,
             )
                 .setScaleType(androidx.camera.core.ViewPort.FILL_CENTER)
@@ -137,7 +143,7 @@ class CameraManager(private val context: Context) {
                 .build()
 
             camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
-            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 9:16")
+            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 16:9")
 
             return true
         } catch (e: Exception) {
