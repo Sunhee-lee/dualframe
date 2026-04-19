@@ -58,21 +58,25 @@ class CameraManager(private val context: Context) {
 
     private var boundLifecycleOwner: LifecycleOwner? = null
     private var boundQuality: Quality = Quality.FHD
+    private var boundCommonMaster: Boolean = false
     // ── Camera binding (always 2 use cases) ───────────────────────────
 
     suspend fun bindCamera(
         lifecycleOwner: LifecycleOwner,
         quality: Quality = Quality.FHD,
+        commonMaster: Boolean = false,
         onError: (String) -> Unit,
     ): Boolean {
         boundLifecycleOwner = lifecycleOwner
         boundQuality = quality
-        return bindInternal(lifecycleOwner, quality, onError)
+        boundCommonMaster = commonMaster
+        return bindInternal(lifecycleOwner, quality, commonMaster, onError)
     }
 
     private suspend fun bindInternal(
         lifecycleOwner: LifecycleOwner,
         quality: Quality,
+        commonMaster: Boolean,
         onError: (String) -> Unit,
     ): Boolean {
         try {
@@ -120,11 +124,24 @@ class CameraManager(private val context: Context) {
             val cameraSelector = currentCameraSelector()
 
             // Bind via UseCaseGroup + ViewPort so Preview and VideoCapture share
-            // the same crop rect. ViewPort is 9:16 PORTRAIT because the master
-            // recording must be the full portrait frame (e.g., 2160x3840).
-            // The 16:9 landscape version is derived by cropping from this portrait master.
+            // the same crop rect.
+            //
+            // Default (commonMaster=false): 9:16 PORTRAIT — master mp4 is full
+            //   portrait (e.g., 1080x1920). 16:9 is derived by cropping height.
+            //
+            // PoC (commonMaster=true): 3:4 PORTRAIT — master is more square so
+            //   BOTH 9:16 and 16:9 are derived from a common centered region.
+            //   Note: CameraX Quality enum is 16:9-aligned at the encoder level;
+            //   ViewPort applies a crop rect via SurfaceProcessor in CameraX 1.3+,
+            //   so the recorded mp4 should reflect the 3:4 crop. We log actual
+            //   master dimensions post-record to verify on-device behavior.
+            val masterRatio = if (commonMaster) {
+                android.util.Rational(3, 4) // portrait 4:3 (W:H = 3:4)
+            } else {
+                android.util.Rational(9, 16) // current default
+            }
             val viewPort = androidx.camera.core.ViewPort.Builder(
-                android.util.Rational(9, 16),
+                masterRatio,
                 android.view.Surface.ROTATION_0,
             )
                 .setScaleType(androidx.camera.core.ViewPort.FILL_CENTER)
@@ -137,7 +154,9 @@ class CameraManager(private val context: Context) {
                 .build()
 
             camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
-            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 9:16")
+            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) " +
+                "with ViewPort ${masterRatio.numerator}:${masterRatio.denominator} " +
+                "(commonMaster=$commonMaster)")
 
             return true
         } catch (e: Exception) {
@@ -187,7 +206,7 @@ class CameraManager(private val context: Context) {
         val owner = boundLifecycleOwner ?: return false
         _useFrontCamera.value = !_useFrontCamera.value
         Log.i(TAG, "Switching to ${if (_useFrontCamera.value) "front" else "back"} camera")
-        return bindInternal(owner, boundQuality, onError)
+        return bindInternal(owner, boundQuality, boundCommonMaster, onError)
     }
 
     suspend fun rebindWithQuality(
@@ -198,7 +217,22 @@ class CameraManager(private val context: Context) {
         if (isRecording) return true
         val owner = boundLifecycleOwner ?: return false
         boundQuality = newQuality
-        return bindInternal(owner, newQuality, onError)
+        return bindInternal(owner, newQuality, boundCommonMaster, onError)
+    }
+
+    /**
+     * [PoC: feature/master-poc] Rebind when the experimental "common master"
+     * setting toggles. Skips work if recording or value unchanged.
+     */
+    suspend fun rebindWithCommonMaster(
+        commonMaster: Boolean,
+        onError: (String) -> Unit,
+    ): Boolean {
+        if (commonMaster == boundCommonMaster) return true
+        if (isRecording) return true
+        val owner = boundLifecycleOwner ?: return false
+        boundCommonMaster = commonMaster
+        return bindInternal(owner, boundQuality, commonMaster, onError)
     }
 
     // ── Torch (flash) ─────────────────────────────────────────────────

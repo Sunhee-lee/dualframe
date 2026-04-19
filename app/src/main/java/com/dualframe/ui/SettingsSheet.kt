@@ -136,6 +136,24 @@ fun SettingsSheet(
                 checked = settings.frontCameraEffect,
                 onCheckedChange = { onSettingsChange(settings.copy(frontCameraEffect = it)) },
             )
+
+            SettingDivider()
+
+            // ── [PoC: feature/master-poc] Experimental: Common 4:3 Master ──
+            SettingSectionTitle("Experimental")
+            SwitchSetting(
+                label = "Common 4:3 Master (PoC)",
+                checked = settings.experimentalCommonMaster,
+                onCheckedChange = {
+                    onSettingsChange(settings.copy(experimentalCommonMaster = it))
+                },
+            )
+            Text(
+                text = "Records a 4:3 master so 9:16 and 16:9 are derived from a common centered frame. Off = current 9:16 master.",
+                color = Color(0xFF888888),
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
+            )
         }
     }
 }

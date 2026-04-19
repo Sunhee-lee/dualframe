@@ -80,6 +80,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val success = cameraManager.bindCamera(
                 lifecycleOwner = lifecycleOwner,
                 quality = settings.videoQuality.toCameraXQuality(),
+                commonMaster = settings.experimentalCommonMaster,
                 onError = { msg -> setError(msg) },
             )
             _uiState.update { it.copy(cameraReady = success) }
@@ -151,6 +152,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 val success = cameraManager.rebindWithQuality(
                     newQuality = currentSettings.videoQuality.toCameraXQuality(),
+                    onError = { msg -> setError(msg) },
+                )
+                _uiState.update { it.copy(cameraReady = success) }
+            }
+        }
+
+        // [PoC: feature/master-poc] If common-master toggle changed, rebind to
+        // apply the new ViewPort ratio to the live camera session.
+        if (newSettings.experimentalCommonMaster != oldSettings.experimentalCommonMaster) {
+            viewModelScope.launch {
+                val success = cameraManager.rebindWithCommonMaster(
+                    commonMaster = newSettings.experimentalCommonMaster,
                     onError = { msg -> setError(msg) },
                 )
                 _uiState.update { it.copy(cameraReady = success) }
@@ -319,68 +332,93 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
-            // Detect native orientation from the actual master file
-            val isPortrait = withContext(Dispatchers.IO) {
-                exportManager.isMasterPortrait(file)
-            }
+            // Read full master metadata once for both diagnostics and routing.
+            val masterMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(file) }
+            val masterAspect = masterMeta?.displayAspectRatio ?: ExportManager.ASPECT_9x16
+            val isPortrait = masterAspect < 1f
+            val commonMaster = _uiState.value.settings.experimentalCommonMaster
 
-            val nativeSuffix: String
-            val nativeLabel: String
-            val croppedAspect: Float
-            val croppedSuffix: String
-            val croppedLabel: String
+            // === MASTER → DERIVED ROUTING DIAGNOSTICS ===
+            Log.i(TAG, "=== EXPORT PIPELINE ROUTING ===")
+            Log.i(TAG, "  commonMaster flag: $commonMaster")
+            Log.i(TAG, "  Master display: ${masterMeta?.displayWidth}x${masterMeta?.displayHeight} " +
+                "(aspect=${"%.4f".format(masterAspect)})")
+            Log.i(TAG, "  Master orientation: ${if (isPortrait) "portrait" else "landscape"}")
 
-            if (isPortrait) {
-                nativeSuffix = "9x16"
-                nativeLabel = "9:16"
-                croppedAspect = ExportManager.ASPECT_16x9
-                croppedSuffix = "16x9"
-                croppedLabel = "16:9"
-            } else {
-                nativeSuffix = "16x9"
-                nativeLabel = "16:9"
-                croppedAspect = ExportManager.ASPECT_9x16
-                croppedSuffix = "9x16"
-                croppedLabel = "9:16"
-            }
+            // Routing rule:
+            //   - If master aspect ≈ 9:16 OR ≈ 16:9 → one is native copy, the other cropped.
+            //   - If master is "common" (e.g., 3:4 from PoC) → BOTH are cropped from the
+            //     same centered region, sharing one coordinate system.
+            //
+            // ASPECT_9x16 = 0.5625, ASPECT_16x9 = 1.7778, 3:4 = 0.75 (common-master PoC).
+            val aspectTol = 0.02f
+            val nativeIs916 = kotlin.math.abs(masterAspect - ExportManager.ASPECT_9x16) < aspectTol
+            val nativeIs169 = kotlin.math.abs(masterAspect - ExportManager.ASPECT_16x9) < aspectTol
 
-            // ── Step 1: Native output — direct file copy, zero quality loss ──
-            // The master file already has the native framing. Copying preserves
-            // the exact recorded resolution, bitrate, and codec without re-encoding.
+            val export916AsCopy = nativeIs916
+            val export169AsCopy = nativeIs169
+
+            Log.i(TAG, "  9:16 path: ${if (export916AsCopy) "native copy" else "Transformer crop"}")
+            Log.i(TAG, "  16:9 path: ${if (export169AsCopy) "native copy" else "Transformer crop"}")
+            Log.i(TAG, "===============================")
+
+            // ── Step 1: 9:16 portrait output ──
             _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_NATIVE, exportProgress = 0f) }
-
-            val nativeFile = exportManager.exportNativeCopy(file, nativeSuffix) { progress ->
-                _uiState.update { it.copy(exportProgress = progress) }
+            val portraitFile = if (export916AsCopy) {
+                exportManager.exportNativeCopy(file, "9x16") { p ->
+                    _uiState.update { it.copy(exportProgress = p) }
+                }
+            } else {
+                exportManager.exportCropped(file, ExportManager.ASPECT_9x16, "9x16") { p ->
+                    _uiState.update { it.copy(exportProgress = p) }
+                }
             }
-            if (nativeFile == null) {
-                setError("$nativeLabel export failed")
+            if (portraitFile == null) {
+                setError("9:16 export failed")
                 _uiState.update { it.copy(appStatus = AppStatus.ERROR) }
                 return@launch
             }
+            val portraitMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(portraitFile) }
+            val portraitRes = portraitMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
+            val portraitFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(portraitFile) }
+            Log.i(TAG, "9:16 output: $portraitRes $portraitFps " +
+                "(${if (export916AsCopy) "native copy" else "cropped"})")
 
-            // Read verified metadata — do NOT save to gallery yet (user must explicitly save)
-            val nativeMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(nativeFile) }
-            val nativeRes = nativeMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
-            val nativeFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(nativeFile) }
-            Log.i(TAG, "Native output: $nativeLabel $nativeRes $nativeFps (temp, not saved)")
-
-            // ── Step 2: Derived output — center-crop with resolution preservation ──
-            // Uses Presentation.createForHeight() to prevent Transformer's default downscale.
+            // ── Step 2: 16:9 landscape output ──
             _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_CROPPED, exportProgress = 0f) }
-
-            val croppedFile = exportManager.exportCropped(file, croppedAspect, croppedSuffix) { progress ->
-                _uiState.update { it.copy(exportProgress = progress) }
+            val landscapeFile = if (export169AsCopy) {
+                exportManager.exportNativeCopy(file, "16x9") { p ->
+                    _uiState.update { it.copy(exportProgress = p) }
+                }
+            } else {
+                exportManager.exportCropped(file, ExportManager.ASPECT_16x9, "16x9") { p ->
+                    _uiState.update { it.copy(exportProgress = p) }
+                }
             }
-            if (croppedFile == null) {
-                setError("$croppedLabel export failed")
+            if (landscapeFile == null) {
+                setError("16:9 export failed")
                 _uiState.update { it.copy(appStatus = AppStatus.ERROR) }
                 return@launch
             }
+            val landscapeMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(landscapeFile) }
+            val landscapeRes = landscapeMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
+            val landscapeFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(landscapeFile) }
+            Log.i(TAG, "16:9 output: $landscapeRes $landscapeFps " +
+                "(${if (export169AsCopy) "native copy" else "cropped"})")
 
-            val croppedMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(croppedFile) }
-            val croppedRes = croppedMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
-            val croppedFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(croppedFile) }
-            Log.i(TAG, "Derived output: $croppedLabel $croppedRes $croppedFps (temp, not saved)")
+            // Map outputs to existing UI slots:
+            //   nativeExport* slot → portrait (9:16) for portrait-master apps,
+            //   landscape (16:9) for landscape-master apps.
+            //   croppedExport* slot → the other one.
+            // We keep this mapping stable so existing UI ordering doesn't change.
+            val nativeFile = if (isPortrait) portraitFile else landscapeFile
+            val croppedFile = if (isPortrait) landscapeFile else portraitFile
+            val nativeLabel = if (isPortrait) "9:16" else "16:9"
+            val croppedLabel = if (isPortrait) "16:9" else "9:16"
+            val nativeRes = if (isPortrait) portraitRes else landscapeRes
+            val croppedRes = if (isPortrait) landscapeRes else portraitRes
+            val nativeFps = if (isPortrait) portraitFps else landscapeFps
+            val croppedFps = if (isPortrait) landscapeFps else portraitFps
 
             val thumbnail = generateThumbnail(nativeFile)
 

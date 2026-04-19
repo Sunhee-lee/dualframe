@@ -12,6 +12,10 @@ data class AppSettings(
     val frontCameraEffect: Boolean = true,
     val keepScreenAwake: Boolean = true,
     val showGuides: Boolean = true,
+    // [PoC: feature/master-poc] When true, request a 4:3 portrait ViewPort
+    // so 9:16 and 16:9 outputs are derived from a common, more square master.
+    // Default OFF — ships current behavior unchanged. Toggle in Settings.
+    val experimentalCommonMaster: Boolean = false,
 )
 
 enum class VideoQuality(val label: String) {
@@ -30,6 +34,7 @@ object SettingsStore {
     private const val KEY_FRONT_EFFECT = "front_camera_effect"
     private const val KEY_SCREEN_AWAKE = "keep_screen_awake"
     private const val KEY_GUIDES = "show_guides"
+    private const val KEY_COMMON_MASTER = "experimental_common_master"
 
     fun load(context: Context): AppSettings {
         val prefs = prefs(context)
@@ -45,6 +50,7 @@ object SettingsStore {
             frontCameraEffect = prefs.getBoolean(KEY_FRONT_EFFECT, true),
             keepScreenAwake = prefs.getBoolean(KEY_SCREEN_AWAKE, true),
             showGuides = prefs.getBoolean(KEY_GUIDES, true),
+            experimentalCommonMaster = prefs.getBoolean(KEY_COMMON_MASTER, false),
         )
     }
 
@@ -57,6 +63,7 @@ object SettingsStore {
             putBoolean(KEY_FRONT_EFFECT, settings.frontCameraEffect)
             putBoolean(KEY_SCREEN_AWAKE, settings.keepScreenAwake)
             putBoolean(KEY_GUIDES, settings.showGuides)
+            putBoolean(KEY_COMMON_MASTER, settings.experimentalCommonMaster)
         }
     }
 
