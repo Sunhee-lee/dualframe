@@ -13,6 +13,7 @@ import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
+import com.dualframe.util.CropMath
 import com.dualframe.util.FileStorage
 import com.dualframe.util.VideoMetadata
 import java.io.File
@@ -147,44 +148,18 @@ class ExportManager(private val context: Context) {
         val displayW = sourceMetadata?.displayWidth ?: 1920
         val displayH = sourceMetadata?.displayHeight ?: 1080
 
-        Log.i(TAG, "Crop transform: source=${displayW}x${displayH} " +
-            "(aspect=${"%.3f".format(sourceAspect)}), target aspect=${"%.3f".format(targetAspectRatio)}")
+        // Use shared CropMath — same math used by preview renderer for WYSIWYG
+        val crop = CropMath.centerCrop(sourceAspect, targetAspectRatio)
+        val outputW = (displayW * crop.keepFractionX).toInt().coerceAtLeast(2)
+        val outputH = (displayH * crop.keepFractionY).toInt().coerceAtLeast(2)
 
-        val cropLeft: Float
-        val cropRight: Float
-        val cropBottom: Float
-        val cropTop: Float
-        val outputW: Int
-        val outputH: Int
+        Log.i(TAG, "Export crop: source=${displayW}x${displayH} " +
+            "(aspect=${"%.3f".format(sourceAspect)}) → target=${"%.3f".format(targetAspectRatio)} " +
+            "→ output=${outputW}x${outputH} " +
+            "bounds=[L=${"%.3f".format(crop.left)} R=${"%.3f".format(crop.right)} " +
+            "B=${"%.3f".format(crop.bottom)} T=${"%.3f".format(crop.top)}]")
 
-        val aspectTolerance = 0.01f
-        if (kotlin.math.abs(targetAspectRatio - sourceAspect) < aspectTolerance) {
-            cropLeft = -1f; cropRight = 1f; cropBottom = -1f; cropTop = 1f
-            outputW = displayW; outputH = displayH
-            Log.i(TAG, "No crop needed — output ${outputW}x${outputH}")
-        } else if (targetAspectRatio > sourceAspect) {
-            // Target wider → crop height, keep full width
-            val keepFraction = sourceAspect / targetAspectRatio
-            cropLeft = -1f; cropRight = 1f
-            cropBottom = -keepFraction; cropTop = keepFraction
-            outputW = displayW
-            outputH = (displayH * keepFraction).toInt()
-            Log.i(TAG, "Cropping height: ${displayW}x${displayH} → ${outputW}x${outputH}")
-        } else {
-            // Target taller → crop width, keep full height
-            val keepFraction = targetAspectRatio / sourceAspect
-            cropLeft = -keepFraction; cropRight = keepFraction
-            cropBottom = -1f; cropTop = 1f
-            outputW = (displayW * keepFraction).toInt()
-            outputH = displayH
-            Log.i(TAG, "Cropping width: ${displayW}x${displayH} → ${outputW}x${outputH}")
-        }
-
-        require(cropLeft >= -1f && cropRight <= 1f && cropBottom >= -1f && cropTop <= 1f) {
-            "Crop out of bounds: L=$cropLeft R=$cropRight B=$cropBottom T=$cropTop"
-        }
-
-        val cropEffect = Crop(cropLeft, cropRight, cropBottom, cropTop)
+        val cropEffect = Crop(crop.left, crop.right, crop.bottom, crop.top)
 
         // Presentation locks the output to the exact cropped pixel dimensions.
         // Without this, Transformer defaults to ~720p when effects are present.

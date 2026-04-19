@@ -192,25 +192,15 @@ class DualPreviewRenderer {
         st.updateTexImage()
         st.getTransformMatrix(stMatrix)
 
-        // The SurfaceTexture transform matrix rotates the texture coordinates to
-        // account for sensor orientation. After applying the ST matrix, the visual
-        // content is in display orientation (typically portrait on a phone).
-        //
-        // The VISUAL aspect (what the user sees) is the post-rotation aspect:
-        // - For a 1920x1080 buffer with 90° rotation → visual is 1080x1920 (portrait)
-        // - visualAspect = 1080/1920 = 0.5625
-        //
-        // Using the raw bufferAspect (1920/1080 = 1.778) would be WRONG because
-        // the ST matrix has already rotated the content. The fill-center scaling
-        // must compare the VISUAL aspect against the surface aspect.
+        // Compute the post-rotation visual aspect. The SurfaceTexture's ST matrix
+        // handles sensor rotation, so the visual content is in display orientation.
+        // For a 1920x1080 landscape buffer with 90° rotation → visual is 1080x1920.
         val visualAspect = if (previewWidth > 0 && previewHeight > 0) {
-            // Camera buffers are typically landscape (w > h). After ST matrix rotation
-            // for portrait display, the visual is min/max.
             val shorter = minOf(previewWidth, previewHeight).toFloat()
             val longer = maxOf(previewWidth, previewHeight).toFloat()
-            shorter / longer // portrait visual aspect
+            shorter / longer
         } else {
-            9f / 16f // safe portrait fallback
+            9f / 16f
         }
 
         if (eglSurface9x16 != EGL14.EGL_NO_SURFACE) {
@@ -222,18 +212,14 @@ class DualPreviewRenderer {
     }
 
     /**
-     * Render the camera texture to one output surface with uniform-scale fill-center.
+     * Render the camera texture to one output surface using SHARED crop math.
      *
-     * The quad is scaled UNIFORMLY (same factor for X and Y) so the camera image
-     * fills the surface completely. Overflow is clipped — never stretched.
+     * Uses CropMath.centerCrop() — the SAME function used by ExportManager —
+     * so preview and saved output show the exact same visible region (WYSIWYG).
      *
-     * visualAspect = post-rotation camera image aspect (width/height as displayed)
-     * surfaceAspect = output TextureView width/height
-     *
-     * If visualAspect > surfaceAspect: image is wider → scale up uniformly until
-     *   height fills, sides overflow and get clipped (center-crop horizontally).
-     * If visualAspect < surfaceAspect: image is taller → scale up uniformly until
-     *   width fills, top/bottom overflow and get clipped (center-crop vertically).
+     * Instead of scaling the quad to overflow clip space (old approach),
+     * we keep the quad at [-1,1] and adjust texture coordinates to select
+     * the center-crop region. This matches the export's NDC crop bounds.
      */
     private fun renderToSurface(eglSurface: EGLSurface, visualAspect: Float) {
         if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) return
@@ -252,33 +238,33 @@ class DualPreviewRenderer {
 
         GLES20.glUseProgram(program)
 
-        // Compute MVP matrix for UNIFORM-SCALE fill-center.
-        // The quad spans [-1,1] in both axes. After the ST matrix transforms the
-        // texture coords, the visual content has visualAspect. The output surface
-        // has surfaceAspect. We scale the quad uniformly (same factor for both
-        // axes) so the image fills the surface, then the GPU clips overflow.
-        //
-        // This is NOT stretch — both X and Y scale by the same factor.
+        // Compute crop using shared CropMath — same as ExportManager uses.
+        // visualAspect = post-rotation source. surfaceAspect = output target.
         val surfaceAspect = sw.toFloat() / sh.toFloat()
+        val crop = com.dualframe.util.CropMath.centerCrop(visualAspect, surfaceAspect)
+        val texCrop = com.dualframe.util.CropMath.ndcToTexCoords(crop)
+
+        // Build cropped quad vertices: position stays [-1,1], texture coords
+        // are narrowed to [offset, offset+range] to select the crop region.
+        // This replaces the old MVP-scale overflow approach.
+        val cropVertices = floatArrayOf(
+            // x,     y,     s,                           t
+            -1f, -1f,  texCrop.offsetX,                   texCrop.offsetY,                    // bottom-left
+             1f, -1f,  texCrop.offsetX + texCrop.rangeX,  texCrop.offsetY,                    // bottom-right
+            -1f,  1f,  texCrop.offsetX,                   texCrop.offsetY + texCrop.rangeY,   // top-left
+             1f,  1f,  texCrop.offsetX + texCrop.rangeX,  texCrop.offsetY + texCrop.rangeY,   // top-right
+        )
+
+        val cropBuf = java.nio.ByteBuffer.allocateDirect(cropVertices.size * 4)
+            .order(java.nio.ByteOrder.nativeOrder())
+            .asFloatBuffer()
+            .apply { put(cropVertices); position(0) }
+
+        // MVP is identity — no scaling, no overflow, no stretch.
+        // The crop is handled entirely by texture coordinates.
         val mvp = FloatArray(16).apply { android.opengl.Matrix.setIdentityM(this, 0) }
 
-        // Fill-center: scale uniformly until the smaller dimension fills.
-        // The ratio between visual and surface aspects determines which axis overflows.
-        if (visualAspect > surfaceAspect) {
-            // Visual is wider relative to surface → uniform scale to fill height,
-            // width overflows and gets clipped (center-crop left/right)
-            val scale = visualAspect / surfaceAspect
-            android.opengl.Matrix.scaleM(mvp, 0, scale, 1f, 1f)
-        } else if (visualAspect < surfaceAspect) {
-            // Visual is taller relative to surface → uniform scale to fill width,
-            // height overflows and gets clipped (center-crop top/bottom)
-            val scale = surfaceAspect / visualAspect
-            android.opengl.Matrix.scaleM(mvp, 0, 1f, scale, 1f)
-        }
-        // If equal, identity — no scaling needed, perfect fit.
-
-        // Front camera mirror: applied AFTER fill-center scaling so the
-        // scale factor doesn't interact with the flip direction.
+        // Front camera mirror
         if (mirrorHorizontally) {
             android.opengl.Matrix.scaleM(mvp, 0, -1f, 1f, 1f)
         }
@@ -292,15 +278,14 @@ class DualPreviewRenderer {
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId)
 
-        // Draw quad
-        val buf = vertexBuffer ?: return
-        buf.position(0)
+        // Draw quad with cropped texture coordinates
+        cropBuf.position(0)
         GLES20.glEnableVertexAttribArray(aPositionHandle)
-        GLES20.glVertexAttribPointer(aPositionHandle, 2, GLES20.GL_FLOAT, false, 16, buf)
+        GLES20.glVertexAttribPointer(aPositionHandle, 2, GLES20.GL_FLOAT, false, 16, cropBuf)
 
-        buf.position(2)
+        cropBuf.position(2)
         GLES20.glEnableVertexAttribArray(aTexCoordHandle)
-        GLES20.glVertexAttribPointer(aTexCoordHandle, 2, GLES20.GL_FLOAT, false, 16, buf)
+        GLES20.glVertexAttribPointer(aTexCoordHandle, 2, GLES20.GL_FLOAT, false, 16, cropBuf)
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
 
