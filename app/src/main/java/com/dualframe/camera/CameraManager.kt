@@ -43,6 +43,7 @@ class CameraManager(private val context: Context) {
 
     companion object {
         private const val TAG = "CameraManager"
+        private const val DIAG_TAG = "DualFrameCameraDiag"
     }
 
     private var cameraProvider: ProcessCameraProvider? = null
@@ -150,33 +151,28 @@ class CameraManager(private val context: Context) {
             val cam = camera!!
             val camInfo = cam.cameraInfo
             val zoomState = camInfo.zoomState.value
-            Log.i(TAG, "=== CAMERA DIAGNOSTICS ===")
-            Log.i(TAG, "  Zoom ratio: ${zoomState?.zoomRatio}")
-            Log.i(TAG, "  Crop rect (sensor): ${zoomState?.let { "not directly exposed" }}")
-            Log.i(TAG, "  Has stabilization: checking...")
+            Log.i(DIAG_TAG, "=== DUALFRAME CAMERA DIAGNOSTICS ===")
+            Log.i(DIAG_TAG, "Zoom ratio: ${zoomState?.zoomRatio}")
 
-            // Check video stabilization mode via Camera2 interop
             try {
                 val camera2Info = androidx.camera.camera2.interop.Camera2CameraInfo.from(camInfo)
-                val chars = camera2Info.getCameraCharacteristic(
+                val stabModes = camera2Info.getCameraCharacteristic(
                     android.hardware.camera2.CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES
                 )
-                Log.i(TAG, "  Available video stabilization modes: ${chars?.toList()}")
-                // 0=OFF, 1=ON, 2=PREVIEW_STABILIZATION
+                Log.i(DIAG_TAG, "Available video stabilization modes: ${stabModes?.toList()}")
                 val activeRect = camera2Info.getCameraCharacteristic(
                     android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE
                 )
-                Log.i(TAG, "  Sensor active array: $activeRect")
+                Log.i(DIAG_TAG, "Sensor active array: $activeRect")
             } catch (e: Exception) {
-                Log.w(TAG, "  Camera2 interop not available: ${e.message}")
+                Log.w(DIAG_TAG, "Camera2 interop not available: ${e.message}")
             }
 
-            // Log preview and video capture resolutions
-            Log.i(TAG, "  Preview resolution: ${preview?.resolutionInfo?.resolution}")
-            Log.i(TAG, "  Preview crop rect: ${preview?.resolutionInfo?.cropRect}")
-            Log.i(TAG, "  VideoCapture resolution: ${videoCapture?.resolutionInfo?.resolution}")
-            Log.i(TAG, "  VideoCapture crop rect: ${videoCapture?.resolutionInfo?.cropRect}")
-            Log.i(TAG, "==========================")
+            Log.i(DIAG_TAG, "Preview resolution: ${preview?.resolutionInfo?.resolution}")
+            Log.i(DIAG_TAG, "Preview crop rect: ${preview?.resolutionInfo?.cropRect}")
+            Log.i(DIAG_TAG, "VideoCapture resolution: ${videoCapture?.resolutionInfo?.resolution}")
+            Log.i(DIAG_TAG, "VideoCapture crop rect: ${videoCapture?.resolutionInfo?.cropRect}")
+            Log.i(DIAG_TAG, "==============================")
 
             return true
         } catch (e: Exception) {
