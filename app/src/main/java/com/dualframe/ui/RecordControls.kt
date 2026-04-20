@@ -56,7 +56,7 @@ fun RecordControls(
         if (appStatus == AppStatus.COUNTDOWN) {
             CountdownDisplay(
                 remaining = countdownRemaining,
-                modifier = Modifier.offset(x = (-84).dp),
+                modifier = Modifier.offset(x = (-132).dp),
             )
         }
     }

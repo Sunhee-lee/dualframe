@@ -135,8 +135,6 @@ fun MainScreen(
     ) {
         Header(
             state = state,
-            canSwitch = state.cameraReady && state.appStatus != AppStatus.RECORDING,
-            onSwitch = { viewModel.switchCamera() },
             showFlash = !isFrontCamera && state.cameraReady,
             flashOn = state.flashOn,
             onFlashToggle = { viewModel.toggleFlash() },
@@ -151,7 +149,18 @@ fun MainScreen(
         ) {
             ExportStatusStub(state)
             Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
-                Spacer(Modifier.width(48.dp))
+                if (state.appStatus != AppStatus.RECORDING) {
+                    IconButton(
+                        onClick = { viewModel.switchCamera() },
+                        enabled = state.cameraReady,
+                    ) {
+                        Icon(Icons.Outlined.Cameraswitch, "Switch camera",
+                            tint = if (state.cameraReady) Color.White else Color(0xFF555555),
+                            modifier = Modifier.size(22.dp))
+                    }
+                } else {
+                    Spacer(Modifier.width(48.dp))
+                }
                 RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
                     viewModel.toggleRecording(hasAudioPermission)
                 }
@@ -160,6 +169,8 @@ fun MainScreen(
                         Icon(Icons.Outlined.Settings, "Settings",
                             tint = Color(0xFFCCCCCC), modifier = Modifier.size(22.dp))
                     }
+                } else {
+                    Spacer(Modifier.width(48.dp))
                 }
             }
             ResultActions(state, viewModel, context)
@@ -176,7 +187,7 @@ fun MainScreen(
 
 @Composable
 private fun Header(
-    state: UiState, canSwitch: Boolean, onSwitch: () -> Unit,
+    state: UiState,
     showFlash: Boolean, flashOn: Boolean, onFlashToggle: () -> Unit,
 ) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
@@ -194,14 +205,6 @@ private fun Header(
                         modifier = Modifier.size(22.dp),
                     )
                 }
-            }
-            IconButton(onSwitch, enabled = canSwitch) {
-                Icon(
-                    imageVector = Icons.Outlined.Cameraswitch,
-                    contentDescription = "Switch camera",
-                    tint = if (canSwitch) Color.White else Color(0xFF555555),
-                    modifier = Modifier.size(22.dp),
-                )
             }
         }
     }
@@ -439,7 +442,7 @@ private fun GuideBorder() {
 
 @Composable
 private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
-    val padH = if (rotation != 0f) 10.dp else 8.dp
+    val padH = if (rotation != 0f) 5.dp else 8.dp
     val padV = if (rotation != 0f) 24.dp else 8.dp
     Box(Modifier.fillMaxSize()) {
         Text(
@@ -456,10 +459,11 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
 
 @Composable
 private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
-    val pad = if (rotation != 0f) 16.dp else 6.dp
+    val padH = if (rotation != 0f) 3.dp else 6.dp
+    val padV = if (rotation != 0f) 6.dp else 6.dp
     Box(Modifier.fillMaxSize()) {
         Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(anchor).padding(pad).rotate(rotation)
+            modifier = Modifier.align(anchor).padding(horizontal = padH, vertical = padV).rotate(rotation)
                 .background(Color(0xAA000000), RoundedCornerShape(6.dp))
                 .padding(horizontal = 8.dp, vertical = 3.dp))
     }
