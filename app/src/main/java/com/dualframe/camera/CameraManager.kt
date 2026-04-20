@@ -84,8 +84,9 @@ class CameraManager(private val context: Context) {
 
             logDiagnostics("bindInternal", quality)
 
-            // Build Preview — no explicit aspect ratio target. The ViewPort (9:16 portrait)
-            // drives the crop rect for both Preview and VideoCapture via UseCaseGroup.
+            // Build Preview — no explicit aspect ratio target. The ViewPort (9:16)
+            // drives the crop rect for VideoCapture. Preview gets the raw sensor buffer;
+            // the renderer applies the matching crop for WYSIWYG via masterVisualAspect.
             preview = Preview.Builder()
                 .build().also { previewUseCase ->
                 previewUseCase.surfaceProvider = Preview.SurfaceProvider { request ->
@@ -121,18 +122,13 @@ class CameraManager(private val context: Context) {
 
             val cameraSelector = currentCameraSelector()
 
-            // Bind via UseCaseGroup + ViewPort. ViewPort is 16:9 LANDSCAPE because:
-            // 1. The camera sensor natively outputs 16:9 landscape buffers
-            // 2. Preview receives the raw 16:9 buffer via SurfaceTexture
-            // 3. Making the master 16:9 means the 16:9 preview = 16:9 saved (WYSIWYG)
-            // 4. The 9:16 portrait version is derived by center-cropping the 16:9 master
-            //
-            // Previous 9:16 ViewPort could NOT achieve WYSIWYG because CameraX
-            // does not apply ViewPort crop to the Preview's SurfaceTexture — only
-            // to VideoCapture. So preview always showed the full 16:9 sensor buffer
-            // while the master was cropped to 9:16.
+            // Bind via UseCaseGroup + ViewPort. ViewPort is 9:16 PORTRAIT because:
+            // 1. Portrait (9:16) is the primary output — native copy, zero quality loss
+            // 2. Landscape (16:9) is derived from the portrait master via center-crop
+            // 3. CameraX ViewPort crops the VideoCapture buffer to 9:16
+            // 4. The renderer applies a matching crop to Preview for WYSIWYG
             val viewPort = androidx.camera.core.ViewPort.Builder(
-                android.util.Rational(16, 9),
+                android.util.Rational(9, 16),
                 android.view.Surface.ROTATION_0,
             )
                 .setScaleType(androidx.camera.core.ViewPort.FILL_CENTER)
@@ -145,7 +141,7 @@ class CameraManager(private val context: Context) {
                 .build()
 
             camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
-            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 16:9")
+            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 9:16")
 
             // === DIAGNOSTIC LOGGING ===
             val cam = camera!!

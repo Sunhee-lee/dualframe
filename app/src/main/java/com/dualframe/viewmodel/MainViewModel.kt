@@ -310,8 +310,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      *   with Presentation.createForHeight() to preserve pixel dimensions and prevent
      *   Transformer's default downscale to ~720p.
      *
-     * Portrait master → 9:16 copy + 16:9 crop
-     * Landscape master → 16:9 copy + 9:16 crop
+     * Portrait master (default) → portrait native copy + landscape crop
+     * Landscape master (fallback) → landscape native copy + portrait crop
      */
     private fun startExportPipeline() {
         val file = masterFile ?: run {
@@ -342,16 +342,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val croppedLabel: String
 
             if (isPortrait) {
-                nativeSuffix = "9x16"
+                nativeSuffix = "portrait"
                 nativeLabel = "9:16"
                 croppedAspect = ExportManager.ASPECT_16x9
-                croppedSuffix = "16x9"
+                croppedSuffix = "landscape"
                 croppedLabel = "16:9"
             } else {
-                nativeSuffix = "16x9"
+                nativeSuffix = "landscape"
                 nativeLabel = "16:9"
                 croppedAspect = ExportManager.ASPECT_9x16
-                croppedSuffix = "9x16"
+                croppedSuffix = "portrait"
                 croppedLabel = "9:16"
             }
 
@@ -457,8 +457,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val beauty = isFront && _uiState.value.settings.frontCameraEffect
             // Mirror saved selfie when setting is OFF (user wants mirrored save)
             val mirror = isFront && !_uiState.value.settings.saveSelfieUnmirrored
-            val wmNative = FileStorage.createExportFile(app, "wm_native")
-            val wmCropped = FileStorage.createExportFile(app, "wm_cropped")
+            val wmNative = FileStorage.createExportFile(app, "wm_portrait")
+            val wmCropped = FileStorage.createExportFile(app, "wm_landscape")
 
             val wmNativeResult = WatermarkHelper.applyEffects(
                 app, nativeFile, wmNative,
@@ -475,10 +475,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(saveMessage = null) }
 
             val uriN = withContext(Dispatchers.IO) {
-                FileStorage.saveToMediaStore(app, sourceNative, sourceNative.name)
+                FileStorage.saveToMediaStore(app, sourceNative, nativeFile.name)
             }
             val uriC = withContext(Dispatchers.IO) {
-                FileStorage.saveToMediaStore(app, sourceCropped, sourceCropped.name)
+                FileStorage.saveToMediaStore(app, sourceCropped, croppedFile.name)
             }
 
             _uiState.update {
@@ -514,7 +514,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val needsTransform = beauty || mirror
 
             val sourceNative: File = if (needsTransform) {
-                val processed = FileStorage.createExportFile(app, "clean_native")
+                val processed = FileStorage.createExportFile(app, "tmp_portrait")
                 WatermarkHelper.applyEffects(
                     app, nativeFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
@@ -522,7 +522,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else nativeFile
 
             val sourceCropped: File = if (needsTransform) {
-                val processed = FileStorage.createExportFile(app, "clean_cropped")
+                val processed = FileStorage.createExportFile(app, "tmp_landscape")
                 WatermarkHelper.applyEffects(
                     app, croppedFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
@@ -530,10 +530,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else croppedFile
 
             val uriN = withContext(Dispatchers.IO) {
-                FileStorage.saveToMediaStore(app, sourceNative, sourceNative.name)
+                FileStorage.saveToMediaStore(app, sourceNative, nativeFile.name)
             }
             val uriC = withContext(Dispatchers.IO) {
-                FileStorage.saveToMediaStore(app, sourceCropped, sourceCropped.name)
+                FileStorage.saveToMediaStore(app, sourceCropped, croppedFile.name)
             }
 
             _uiState.update {
