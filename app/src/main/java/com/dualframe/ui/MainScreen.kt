@@ -109,6 +109,16 @@ fun MainScreen(
         onDispose { listener.disable() }
     }
 
+    // Sync device rotation → CameraX targetRotation so saved video matches viewing direction
+    LaunchedEffect(deviceRotation) {
+        val surfaceRot = when (deviceRotation) {
+            270 -> android.view.Surface.ROTATION_90
+            90 -> android.view.Surface.ROTATION_270
+            else -> android.view.Surface.ROTATION_0
+        }
+        viewModel.cameraManager.setTargetRotation(surfaceRot)
+    }
+
     var showSettings by remember { mutableStateOf(false) }
     if (showSettings) {
         SettingsSheet(
@@ -425,44 +435,43 @@ private fun GuideBorder() {
 // Maps a user-perspective alignment to screen alignment for a given device rotation.
 // When the device is rotated, "user's top-right" is a different screen corner.
 private fun userToScreen(userAlign: Alignment, rotation: Int): Alignment = when (rotation) {
-    270 -> when (userAlign) { // CCW, earpiece left
-        Alignment.TopStart -> Alignment.TopEnd
-        Alignment.TopEnd -> Alignment.BottomEnd
-        Alignment.BottomStart -> Alignment.TopStart
-        Alignment.BottomEnd -> Alignment.BottomStart
-        else -> userAlign
-    }
-    90 -> when (userAlign) { // CW, earpiece right
+    270 -> when (userAlign) {
         Alignment.TopStart -> Alignment.BottomStart
         Alignment.TopEnd -> Alignment.TopStart
         Alignment.BottomStart -> Alignment.BottomEnd
         Alignment.BottomEnd -> Alignment.TopEnd
         else -> userAlign
     }
+    90 -> when (userAlign) {
+        Alignment.TopStart -> Alignment.TopEnd
+        Alignment.TopEnd -> Alignment.BottomEnd
+        Alignment.BottomStart -> Alignment.TopStart
+        Alignment.BottomEnd -> Alignment.BottomStart
+        else -> userAlign
+    }
     else -> userAlign
 }
 
 private fun textRotation(deviceRotation: Int): Float = when (deviceRotation) {
-    270 -> -90f
-    90 -> 90f
+    270 -> 90f
+    90 -> -90f
     else -> 0f
 }
 
 @Composable
 private fun GhostWatermark(isPortraitPanel: Boolean, deviceRotation: Int = 0) {
-    // When device rotates, each panel's visual shape flips (tall↔wide from user's POV).
     val visuallyPortrait = if (deviceRotation == 0) isPortraitPanel else !isPortraitPanel
     val userAlign = if (visuallyPortrait) Alignment.TopEnd else Alignment.BottomEnd
     val screenAlign = userToScreen(userAlign, deviceRotation)
     val rot = textRotation(deviceRotation)
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().padding(10.dp)) {
         Text(
             text = "DualFrame",
             color = Color.White.copy(alpha = 0.3f),
             fontSize = if (visuallyPortrait) 13.sp else 11.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(screenAlign).padding(8.dp).rotate(rot),
+            modifier = Modifier.align(screenAlign).rotate(rot),
         )
     }
 }
@@ -471,10 +480,11 @@ private fun GhostWatermark(isPortraitPanel: Boolean, deviceRotation: Int = 0) {
 private fun AspectLabel(text: String, deviceRotation: Int = 0) {
     val screenAlign = userToScreen(Alignment.TopStart, deviceRotation)
     val rot = textRotation(deviceRotation)
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().padding(8.dp)) {
         Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(screenAlign).padding(6.dp).rotate(rot)
-                .background(Color(0xAA000000), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
+            modifier = Modifier.align(screenAlign).rotate(rot)
+                .background(Color(0xAA000000), RoundedCornerShape(6.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp))
     }
 }
 

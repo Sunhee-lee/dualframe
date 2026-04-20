@@ -260,6 +260,11 @@ class CameraManager(private val context: Context) {
         cam.cameraControl.setZoomRatio(clamped)
     }
 
+    fun setTargetRotation(surfaceRotation: Int) {
+        preview?.targetRotation = surfaceRotation
+        videoCapture?.targetRotation = surfaceRotation
+    }
+
     // ── Focus / Metering ─────────────────────────────────────────────
 
     fun focusAt(normX: Float, normY: Float) {
