@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -90,14 +91,18 @@ fun MainScreen(
         onDispose { }
     }
 
-    // Detect device physical orientation via sensor (not Activity config).
-    // Activity stays portrait-locked; only overlays react to rotation.
-    var deviceLandscape by remember { mutableStateOf(false) }
+    // Detect device physical rotation via sensor (Activity stays portrait-locked).
+    // 0 = portrait, 270 = landscape CCW (top-left), 90 = landscape CW (top-right).
+    var deviceRotation by remember { mutableIntStateOf(0) }
     DisposableEffect(context) {
         val listener = object : OrientationEventListener(context) {
             override fun onOrientationChanged(degrees: Int) {
                 if (degrees == ORIENTATION_UNKNOWN) return
-                deviceLandscape = degrees in 60..120 || degrees in 240..300
+                deviceRotation = when {
+                    degrees in 60..120 -> 90
+                    degrees in 240..300 -> 270
+                    else -> 0
+                }
             }
         }
         listener.enable()
@@ -128,7 +133,7 @@ fun MainScreen(
         )
 
         PreviewPanels(renderer, viewModel.cameraManager, state.settings.showGuides,
-            Modifier.weight(1f), deviceLandscape = deviceLandscape)
+            Modifier.weight(1f), deviceRotation = deviceRotation)
 
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 36.dp),
@@ -225,7 +230,7 @@ private fun PreviewPanels(
     cameraManager: com.dualframe.camera.CameraManager,
     showGuides: Boolean,
     modifier: Modifier = Modifier,
-    deviceLandscape: Boolean = false,
+    deviceRotation: Int = 0,
 ) {
     Column(
         modifier.fillMaxWidth().padding(horizontal = 8.dp),
@@ -264,8 +269,8 @@ private fun PreviewPanels(
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
-            GhostWatermark(isPortrait = true, deviceLandscape = deviceLandscape)
-            AspectLabel("9:16", deviceLandscape = deviceLandscape)
+            GhostWatermark(isPortraitPanel = true, deviceRotation = deviceRotation)
+            AspectLabel("9:16", deviceRotation = deviceRotation)
             FocusRingOverlay(pFocusKey, pFocusPos)
         }
 
@@ -317,8 +322,8 @@ private fun PreviewPanels(
             )
             GuideBorder()
             if (showGuides) RuleOfThirdsGrid()
-            GhostWatermark(isPortrait = false, deviceLandscape = deviceLandscape)
-            AspectLabel("16:9", deviceLandscape = deviceLandscape)
+            GhostWatermark(isPortraitPanel = false, deviceRotation = deviceRotation)
+            AspectLabel("16:9", deviceRotation = deviceRotation)
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
         }
@@ -417,30 +422,58 @@ private fun GuideBorder() {
  * - Portrait uses top-right, landscape uses bottom-right
  * - Portrait is slightly larger than landscape (13sp vs 11sp)
  */
-@Composable
-private fun GhostWatermark(isPortrait: Boolean, deviceLandscape: Boolean = false) {
-    val alignment = if (deviceLandscape) {
-        if (isPortrait) Alignment.BottomStart else Alignment.TopEnd
-    } else {
-        if (isPortrait) Alignment.TopEnd else Alignment.BottomEnd
+// Maps a user-perspective alignment to screen alignment for a given device rotation.
+// When the device is rotated, "user's top-right" is a different screen corner.
+private fun userToScreen(userAlign: Alignment, rotation: Int): Alignment = when (rotation) {
+    270 -> when (userAlign) { // CCW, earpiece left
+        Alignment.TopStart -> Alignment.TopEnd
+        Alignment.TopEnd -> Alignment.BottomEnd
+        Alignment.BottomStart -> Alignment.TopStart
+        Alignment.BottomEnd -> Alignment.BottomStart
+        else -> userAlign
     }
+    90 -> when (userAlign) { // CW, earpiece right
+        Alignment.TopStart -> Alignment.BottomStart
+        Alignment.TopEnd -> Alignment.TopStart
+        Alignment.BottomStart -> Alignment.BottomEnd
+        Alignment.BottomEnd -> Alignment.TopEnd
+        else -> userAlign
+    }
+    else -> userAlign
+}
+
+private fun textRotation(deviceRotation: Int): Float = when (deviceRotation) {
+    270 -> -90f
+    90 -> 90f
+    else -> 0f
+}
+
+@Composable
+private fun GhostWatermark(isPortraitPanel: Boolean, deviceRotation: Int = 0) {
+    // When device rotates, each panel's visual shape flips (tall↔wide from user's POV).
+    val visuallyPortrait = if (deviceRotation == 0) isPortraitPanel else !isPortraitPanel
+    val userAlign = if (visuallyPortrait) Alignment.TopEnd else Alignment.BottomEnd
+    val screenAlign = userToScreen(userAlign, deviceRotation)
+    val rot = textRotation(deviceRotation)
+
     Box(Modifier.fillMaxSize()) {
         Text(
             text = "DualFrame",
             color = Color.White.copy(alpha = 0.3f),
-            fontSize = if (isPortrait) 13.sp else 11.sp,
+            fontSize = if (visuallyPortrait) 13.sp else 11.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(alignment).padding(8.dp),
+            modifier = Modifier.align(screenAlign).padding(8.dp).rotate(rot),
         )
     }
 }
 
 @Composable
-private fun AspectLabel(text: String, deviceLandscape: Boolean = false) {
-    val alignment = if (deviceLandscape) Alignment.TopEnd else Alignment.TopStart
+private fun AspectLabel(text: String, deviceRotation: Int = 0) {
+    val screenAlign = userToScreen(Alignment.TopStart, deviceRotation)
+    val rot = textRotation(deviceRotation)
     Box(Modifier.fillMaxSize()) {
         Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(alignment).padding(6.dp)
+            modifier = Modifier.align(screenAlign).padding(6.dp).rotate(rot)
                 .background(Color(0xAA000000), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
     }
 }
