@@ -266,7 +266,8 @@ private fun PreviewPanels(
                             cameraManager.focusAt(pos.x / size.width, pos.y / size.height)
                         },
                         onGesture = { _, zoom ->
-                            if (zoom != 1f) cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
+                            if (!cameraManager.isRecording && zoom != 1f)
+                                cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
                         },
                     )
                 },
@@ -325,6 +326,7 @@ private fun PreviewPanels(
                             cameraManager.focusAt(normX, masterY.coerceIn(0f, 1f))
                         },
                         onGesture = { pan, zoom ->
+                            if (cameraManager.isRecording) return@detectTapPanZoom
                             if (zoom != 1f) cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
                             if (pan.y != 0f) {
                                 val sensitivity = 2f / size.height
