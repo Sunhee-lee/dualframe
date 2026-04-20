@@ -165,9 +165,9 @@ fun MainScreen(
                     viewModel.toggleRecording(hasAudioPermission)
                 }
                 if (state.appStatus != AppStatus.RECORDING) {
-                    IconButton({ showSettings = true }, Modifier.padding(start = 8.dp)) {
+                    IconButton({ showSettings = true }) {
                         Icon(Icons.Outlined.Settings, "Settings",
-                            tint = Color(0xFFCCCCCC), modifier = Modifier.size(22.dp))
+                            tint = Color.White, modifier = Modifier.size(22.dp))
                     }
                 } else {
                     Spacer(Modifier.width(48.dp))
@@ -253,9 +253,6 @@ private fun PreviewPanels(
         val isDeviceLandscape = deviceRotation == 90 || deviceRotation == 270
         val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
 
-        // When device rotates, panel visual appearance flips:
-        //   9:16 panel (tall on screen) looks wide to the user → visually landscape
-        //   16:9 panel (wide on screen) looks tall to the user → visually portrait
         var pFocusKey by remember { mutableIntStateOf(0) }
         var pFocusPos by remember { mutableStateOf(Offset.Zero) }
 
@@ -288,12 +285,19 @@ private fun PreviewPanels(
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
-            if (isDeviceLandscape) {
-                GhostWatermark(Alignment.TopEnd, 11, rot)
-                AspectLabel("16:9", Alignment.BottomStart, rot)
-            } else {
-                GhostWatermark(Alignment.TopEnd, 13, 0f)
-                AspectLabel("9:16", Alignment.TopStart, 0f)
+            when (deviceRotation) {
+                90 -> {  // landscape right
+                    GhostWatermark(Alignment.TopEnd, 11, rot)
+                    AspectLabel("16:9", Alignment.BottomStart, rot)
+                }
+                270 -> { // landscape left — mirror anchors
+                    GhostWatermark(Alignment.BottomStart, 11, rot)
+                    AspectLabel("16:9", Alignment.TopEnd, rot)
+                }
+                else -> {
+                    GhostWatermark(Alignment.TopEnd, 13, 0f)
+                    AspectLabel("9:16", Alignment.TopStart, 0f)
+                }
             }
             FocusRingOverlay(pFocusKey, pFocusPos)
         }
@@ -346,12 +350,19 @@ private fun PreviewPanels(
             )
             GuideBorder()
             if (showGuides) RuleOfThirdsGrid()
-            if (isDeviceLandscape) {
-                GhostWatermark(Alignment.TopStart, 13, rot)
-                AspectLabel("9:16", Alignment.BottomStart, rot)
-            } else {
-                GhostWatermark(Alignment.BottomEnd, 11, 0f)
-                AspectLabel("16:9", Alignment.TopStart, 0f)
+            when (deviceRotation) {
+                90 -> {
+                    GhostWatermark(Alignment.TopStart, 13, rot)
+                    AspectLabel("9:16", Alignment.BottomStart, rot)
+                }
+                270 -> {
+                    GhostWatermark(Alignment.BottomEnd, 13, rot)
+                    AspectLabel("9:16", Alignment.TopEnd, rot)
+                }
+                else -> {
+                    GhostWatermark(Alignment.BottomEnd, 11, 0f)
+                    AspectLabel("16:9", Alignment.TopStart, 0f)
+                }
             }
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
@@ -442,7 +453,7 @@ private fun GuideBorder() {
 
 @Composable
 private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
-    val padH = if (rotation != 0f) 5.dp else 8.dp
+    val padH = if (rotation != 0f) 2.dp else 8.dp
     val padV = if (rotation != 0f) 24.dp else 8.dp
     Box(Modifier.fillMaxSize()) {
         Text(
@@ -460,7 +471,7 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
 @Composable
 private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
     val padH = if (rotation != 0f) 3.dp else 6.dp
-    val padV = if (rotation != 0f) 6.dp else 6.dp
+    val padV = if (rotation != 0f) 8.dp else 6.dp
     Box(Modifier.fillMaxSize()) {
         Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.align(anchor).padding(horizontal = padH, vertical = padV).rotate(rotation)
