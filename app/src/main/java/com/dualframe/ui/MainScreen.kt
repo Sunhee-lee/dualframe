@@ -48,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -143,7 +142,7 @@ fun MainScreen(
         )
 
         PreviewPanels(renderer, viewModel.cameraManager, state.settings.showGuides,
-            Modifier.weight(1f), deviceRotation = deviceRotation)
+            Modifier.weight(1f))
 
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 36.dp),
@@ -240,7 +239,6 @@ private fun PreviewPanels(
     cameraManager: com.dualframe.camera.CameraManager,
     showGuides: Boolean,
     modifier: Modifier = Modifier,
-    deviceRotation: Int = 0,
 ) {
     Column(
         modifier.fillMaxWidth().padding(horizontal = 8.dp),
@@ -279,8 +277,8 @@ private fun PreviewPanels(
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
-            GhostWatermark(isPortraitPanel = true, deviceRotation = deviceRotation)
-            AspectLabel("9:16", deviceRotation = deviceRotation)
+            GhostWatermark(isPortrait = true)
+            AspectLabel("9:16")
             FocusRingOverlay(pFocusKey, pFocusPos)
         }
 
@@ -332,8 +330,8 @@ private fun PreviewPanels(
             )
             GuideBorder()
             if (showGuides) RuleOfThirdsGrid()
-            GhostWatermark(isPortraitPanel = false, deviceRotation = deviceRotation)
-            AspectLabel("16:9", deviceRotation = deviceRotation)
+            GhostWatermark(isPortrait = false)
+            AspectLabel("16:9")
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
         }
@@ -421,68 +419,26 @@ private fun GuideBorder() {
     )
 }
 
-/**
- * Ghost watermark overlay on the live preview. 30% opacity so the user can see
- * where the watermark will appear on the saved video without it being intrusive.
- * Position matches the saved-video watermark: top-right for portrait, bottom-right for landscape.
- */
-/**
- * Ghost watermark drawn inside each preview's visible rect (not screen-relative).
- * - 30% opacity for preview
- * - Portrait uses top-right, landscape uses bottom-right
- * - Portrait is slightly larger than landscape (13sp vs 11sp)
- */
-// Maps a user-perspective alignment to screen alignment for a given device rotation.
-// When the device is rotated, "user's top-right" is a different screen corner.
-private fun userToScreen(userAlign: Alignment, rotation: Int): Alignment = when (rotation) {
-    270 -> when (userAlign) {
-        Alignment.TopStart -> Alignment.BottomStart
-        Alignment.TopEnd -> Alignment.TopStart
-        Alignment.BottomStart -> Alignment.BottomEnd
-        Alignment.BottomEnd -> Alignment.TopEnd
-        else -> userAlign
-    }
-    90 -> when (userAlign) {
-        Alignment.TopStart -> Alignment.TopEnd
-        Alignment.TopEnd -> Alignment.BottomEnd
-        Alignment.BottomStart -> Alignment.TopStart
-        Alignment.BottomEnd -> Alignment.BottomStart
-        else -> userAlign
-    }
-    else -> userAlign
-}
-
-private fun textRotation(deviceRotation: Int): Float = when (deviceRotation) {
-    270 -> 90f
-    90 -> -90f
-    else -> 0f
-}
-
 @Composable
-private fun GhostWatermark(isPortraitPanel: Boolean, deviceRotation: Int = 0) {
-    val visuallyPortrait = if (deviceRotation == 0) isPortraitPanel else !isPortraitPanel
-    val userAlign = if (visuallyPortrait) Alignment.TopEnd else Alignment.BottomEnd
-    val screenAlign = userToScreen(userAlign, deviceRotation)
-    val rot = textRotation(deviceRotation)
-
-    Box(Modifier.fillMaxSize().padding(10.dp)) {
+private fun GhostWatermark(isPortrait: Boolean) {
+    Box(Modifier.fillMaxSize()) {
         Text(
             text = "DualFrame",
             color = Color.White.copy(alpha = 0.3f),
-            fontSize = if (visuallyPortrait) 13.sp else 11.sp,
+            fontSize = if (isPortrait) 13.sp else 11.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(screenAlign).rotate(rot),
+            modifier = Modifier
+                .align(if (isPortrait) Alignment.TopEnd else Alignment.BottomEnd)
+                .padding(8.dp),
         )
     }
 }
 
 @Composable
-private fun AspectLabel(text: String, deviceRotation: Int = 0) {
-    val screenAlign = userToScreen(Alignment.TopStart, deviceRotation)
-    val rot = textRotation(deviceRotation)
-    Box(Modifier.fillMaxSize().padding(8.dp)) {
+private fun AspectLabel(text: String) {
+    Box(Modifier.fillMaxSize()) {
         Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(screenAlign).rotate(rot)
+            modifier = Modifier.align(Alignment.TopStart).padding(6.dp)
                 .background(Color(0xAA000000), RoundedCornerShape(6.dp))
                 .padding(horizontal = 8.dp, vertical = 3.dp))
     }
