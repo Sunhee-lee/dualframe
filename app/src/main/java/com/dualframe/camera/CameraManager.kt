@@ -143,7 +143,7 @@ class CameraManager(private val context: Context) {
                 .build()
 
             camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
-            currentZoomRatio = 1f
+            _zoomRatio.value = 1f
             Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 9:16")
 
             // === DIAGNOSTIC LOGGING ===
@@ -249,14 +249,15 @@ class CameraManager(private val context: Context) {
 
     // ── Zoom ──────────────────────────────────────────────────────────
 
-    var currentZoomRatio: Float = 1f
-        private set
+    private val _zoomRatio = MutableStateFlow(1f)
+    val zoomRatio: StateFlow<Float> = _zoomRatio.asStateFlow()
+    val currentZoomRatio: Float get() = _zoomRatio.value
 
     fun setZoomRatio(ratio: Float) {
         val cam = camera ?: return
         val zoomState = cam.cameraInfo.zoomState.value ?: return
         val clamped = ratio.coerceIn(zoomState.minZoomRatio, zoomState.maxZoomRatio)
-        currentZoomRatio = clamped
+        _zoomRatio.value = clamped
         cam.cameraControl.setZoomRatio(clamped)
     }
 

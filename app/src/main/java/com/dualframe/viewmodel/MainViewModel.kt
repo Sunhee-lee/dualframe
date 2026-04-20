@@ -188,6 +188,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 appStatus = AppStatus.COUNTDOWN,
                 countdownRemaining = seconds,
                 thumbnailBitmap = null,
+                landscapeThumbnailBitmap = null,
                 nativeExportInfo = null,
                 croppedExportInfo = null,
             )
@@ -215,6 +216,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 thumbnailBitmap = null,
+                landscapeThumbnailBitmap = null,
                 nativeExportInfo = null,
                 croppedExportInfo = null,
             )
@@ -408,6 +410,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             Log.i("DualFrameCameraDiag", "==============================")
 
             val thumbnail = generateThumbnail(nativeFile)
+            val landscapeThumbnail = generateThumbnail(croppedFile)
 
             // Files ready in temp — NOT saved to gallery yet.
             // User must press Save Both or Remove Watermark to trigger gallery save.
@@ -416,6 +419,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appStatus = AppStatus.EXPORT_COMPLETE,
                     exportProgress = 1f,
                     thumbnailBitmap = thumbnail,
+                    landscapeThumbnailBitmap = landscapeThumbnail,
                     nativeExportInfo = buildOutputLine(nativeLabel, nativeRes, nativeFps),
                     croppedExportInfo = buildOutputLine(croppedLabel, croppedRes, croppedFps),
                     nativeTempPath = nativeFile.absolutePath,

@@ -142,36 +142,40 @@ fun MainScreen(
         )
 
         PreviewPanels(renderer, viewModel.cameraManager, state.settings.showGuides,
-            Modifier.weight(1f), deviceRotation = deviceRotation)
+            Modifier.weight(1f), deviceRotation = deviceRotation, appStatus = state.appStatus)
 
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ExportStatusStub(state)
-            Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
-                if (state.appStatus != AppStatus.RECORDING) {
-                    IconButton(
-                        onClick = { viewModel.switchCamera() },
-                        enabled = state.cameraReady,
-                    ) {
-                        Icon(Icons.Outlined.Cameraswitch, "Switch camera",
-                            tint = if (state.cameraReady) Color.White else Color(0xFF555555),
-                            modifier = Modifier.size(22.dp))
+            val showRecordControls = state.appStatus != AppStatus.EXPORT_COMPLETE &&
+                state.appStatus != AppStatus.SAVING
+            if (showRecordControls) {
+                Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
+                    if (state.appStatus != AppStatus.RECORDING) {
+                        IconButton(
+                            onClick = { viewModel.switchCamera() },
+                            enabled = state.cameraReady,
+                        ) {
+                            Icon(Icons.Outlined.Cameraswitch, "Switch camera",
+                                tint = if (state.cameraReady) Color.White else Color(0xFF555555),
+                                modifier = Modifier.size(22.dp))
+                        }
+                    } else {
+                        Spacer(Modifier.width(48.dp))
                     }
-                } else {
-                    Spacer(Modifier.width(48.dp))
-                }
-                RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
-                    viewModel.toggleRecording(hasAudioPermission)
-                }
-                if (state.appStatus != AppStatus.RECORDING) {
-                    IconButton({ showSettings = true }) {
-                        Icon(Icons.Outlined.Settings, "Settings",
-                            tint = Color.White, modifier = Modifier.size(22.dp))
+                    RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
+                        viewModel.toggleRecording(hasAudioPermission)
                     }
-                } else {
-                    Spacer(Modifier.width(48.dp))
+                    if (state.appStatus != AppStatus.RECORDING) {
+                        IconButton({ showSettings = true }) {
+                            Icon(Icons.Outlined.Settings, "Settings",
+                                tint = Color.White, modifier = Modifier.size(22.dp))
+                        }
+                    } else {
+                        Spacer(Modifier.width(48.dp))
+                    }
                 }
             }
             ResultActions(state, viewModel, context)
@@ -245,7 +249,9 @@ private fun PreviewPanels(
     showGuides: Boolean,
     modifier: Modifier = Modifier,
     deviceRotation: Int = 0,
+    appStatus: AppStatus = AppStatus.IDLE,
 ) {
+    val zoomRatio by cameraManager.zoomRatio.collectAsState()
     Column(
         modifier.fillMaxWidth().padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -369,7 +375,9 @@ private fun PreviewPanels(
             }
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
-            if (!cameraManager.isRecording) {
+            val zoomed = kotlin.math.abs(zoomRatio - 1f) > 0.01f
+            val hideForExport = appStatus == AppStatus.EXPORT_COMPLETE || appStatus == AppStatus.SAVING
+            if (!cameraManager.isRecording && !hideForExport && zoomed) {
                 val zoomBtnModifier = when (deviceRotation) {
                     90 -> Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
                     270 -> Modifier.align(Alignment.CenterStart).padding(start = 8.dp)
@@ -592,7 +600,16 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     Modifier.width(72.dp).aspectRatio(9f / 16f)
                         .clip(RoundedCornerShape(6.dp)).background(Color.Black),
                 ) {
-                    Image(bmp.asImageBitmap(), "Result", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                }
+            }
+            state.landscapeThumbnailBitmap?.let { bmp ->
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    Modifier.width(72.dp).aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(6.dp)).background(Color.Black),
+                ) {
+                    Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 }
             }
             // Save progress bar
