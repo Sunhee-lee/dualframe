@@ -253,7 +253,6 @@ private fun PreviewPanels(
         // When device rotates, panel visual appearance flips:
         //   9:16 panel (tall on screen) looks wide to the user → visually landscape
         //   16:9 panel (wide on screen) looks tall to the user → visually portrait
-        // userToScreen maps user-perspective corners to Compose panel-local corners.
         var pFocusKey by remember { mutableIntStateOf(0) }
         var pFocusPos by remember { mutableStateOf(Offset.Zero) }
 
@@ -286,10 +285,9 @@ private fun PreviewPanels(
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
-            // 9:16 panel: portrait when device portrait, landscape when device landscape
             if (isDeviceLandscape) {
-                GhostWatermark(userToScreen(Alignment.BottomEnd, deviceRotation), 11, rot)
-                AspectLabel("16:9", userToScreen(Alignment.TopStart, deviceRotation), rot)
+                GhostWatermark(Alignment.TopEnd, 11, rot)
+                AspectLabel("16:9", Alignment.BottomStart, rot)
             } else {
                 GhostWatermark(Alignment.TopEnd, 13, 0f)
                 AspectLabel("9:16", Alignment.TopStart, 0f)
@@ -345,10 +343,9 @@ private fun PreviewPanels(
             )
             GuideBorder()
             if (showGuides) RuleOfThirdsGrid()
-            // 16:9 panel: landscape when device portrait, portrait when device landscape
             if (isDeviceLandscape) {
-                GhostWatermark(userToScreen(Alignment.TopEnd, deviceRotation), 13, rot)
-                AspectLabel("9:16", userToScreen(Alignment.TopStart, deviceRotation), rot)
+                GhostWatermark(Alignment.TopStart, 13, rot)
+                AspectLabel("9:16", Alignment.BottomStart, rot)
             } else {
                 GhostWatermark(Alignment.BottomEnd, 11, 0f)
                 AspectLabel("16:9", Alignment.TopStart, 0f)
@@ -440,42 +437,26 @@ private fun GuideBorder() {
     )
 }
 
-private fun userToScreen(userAlign: Alignment, deviceRotation: Int): Alignment = when (deviceRotation) {
-    270 -> when (userAlign) {
-        Alignment.TopStart -> Alignment.BottomStart
-        Alignment.TopEnd -> Alignment.TopStart
-        Alignment.BottomStart -> Alignment.BottomEnd
-        Alignment.BottomEnd -> Alignment.TopEnd
-        else -> userAlign
-    }
-    90 -> when (userAlign) {
-        Alignment.TopStart -> Alignment.TopEnd
-        Alignment.TopEnd -> Alignment.BottomEnd
-        Alignment.BottomStart -> Alignment.TopStart
-        Alignment.BottomEnd -> Alignment.BottomStart
-        else -> userAlign
-    }
-    else -> userAlign
-}
-
 @Composable
-private fun GhostWatermark(screenAlign: Alignment, fontSize: Int, rotation: Float) {
+private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
+    val pad = if (rotation != 0f) 24.dp else 8.dp
     Box(Modifier.fillMaxSize()) {
         Text(
             text = "DualFrame",
             color = Color.White.copy(alpha = 0.3f),
             fontSize = fontSize.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(screenAlign).padding(8.dp).rotate(rotation),
+            modifier = Modifier.align(anchor).padding(pad).rotate(rotation),
         )
     }
 }
 
 @Composable
-private fun AspectLabel(text: String, screenAlign: Alignment, rotation: Float) {
+private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
+    val pad = if (rotation != 0f) 16.dp else 6.dp
     Box(Modifier.fillMaxSize()) {
         Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(screenAlign).padding(6.dp).rotate(rotation)
+            modifier = Modifier.align(anchor).padding(pad).rotate(rotation)
                 .background(Color(0xAA000000), RoundedCornerShape(6.dp))
                 .padding(horizontal = 8.dp, vertical = 3.dp))
     }
