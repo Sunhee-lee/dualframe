@@ -368,8 +368,8 @@ private fun FocusRingOverlay(tapKey: Int, position: Offset) {
     LaunchedEffect(tapKey) {
         alpha.snapTo(0.7f)
         scale.snapTo(1.4f)
-        kotlinx.coroutines.launch { scale.animateTo(1f, tween(200)) }
-        kotlinx.coroutines.delay(600)
+        launch { scale.animateTo(1f, tween(200)) }
+        delay(600)
         alpha.animateTo(0f, tween(300))
     }
     Canvas(Modifier.fillMaxSize()) {

@@ -265,7 +265,7 @@ class CameraManager(private val context: Context) {
     fun focusAt(normX: Float, normY: Float) {
         val cam = camera ?: return
         val factory = SurfaceOrientedMeteringPointFactory(1f, 1f)
-        val point = factory.createMeteringPoint(
+        val point = factory.createPoint(
             normX.coerceIn(0f, 1f), normY.coerceIn(0f, 1f),
         )
         val action = FocusMeteringAction.Builder(
