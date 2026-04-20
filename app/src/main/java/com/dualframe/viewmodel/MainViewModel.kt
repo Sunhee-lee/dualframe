@@ -570,8 +570,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Falls back to generic gallery if no saved URI is available.
      */
     fun buildOpenGalleryIntent(): Intent {
-        return Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*")
+        // Try opening the specific saved video in gallery (shows the file + gallery context)
+        val savedUri = _uiState.value.savedNativeUri ?: _uiState.value.savedCroppedUri
+        if (savedUri != null) {
+            return Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(savedUri, "video/*")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        }
+        // Fallback: open gallery app directly
+        return Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_APP_GALLERY)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     }
 

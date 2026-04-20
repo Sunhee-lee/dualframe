@@ -1,5 +1,6 @@
 package com.dualframe.ui
 
+import android.content.Intent
 import android.graphics.SurfaceTexture
 import android.view.OrientationEventListener
 import android.view.Surface
@@ -640,7 +641,14 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 }
             }
             ResultButton("View Saved", true) {
-                try { context.startActivity(viewModel.buildOpenGalleryIntent()) } catch (_: Exception) {}
+                val intent = viewModel.buildOpenGalleryIntent()
+                try {
+                    context.startActivity(intent)
+                } catch (_: Exception) {
+                    try {
+                        context.startActivity(Intent.createChooser(intent, "Open with"))
+                    } catch (_: Exception) {}
+                }
             }
             ResultButton("Retake", true) {
                 viewModel.resetToIdle()
