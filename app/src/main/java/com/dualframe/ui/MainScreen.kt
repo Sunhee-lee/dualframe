@@ -1,5 +1,6 @@
 package com.dualframe.ui
 
+import android.content.res.Configuration
 import android.graphics.SurfaceTexture
 import android.view.Surface
 import android.view.TextureView
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -56,6 +58,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +92,8 @@ fun MainScreen(
         onDispose { }
     }
 
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     var showSettings by remember { mutableStateOf(false) }
     if (showSettings) {
         SettingsSheet(
@@ -99,49 +104,103 @@ fun MainScreen(
         )
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Header(
-            state = state,
-            canSwitch = state.cameraReady && state.appStatus != AppStatus.RECORDING,
-            onSwitch = { viewModel.switchCamera() },
-            showFlash = !isFrontCamera && state.cameraReady,
-            flashOn = state.flashOn,
-            onFlashToggle = { viewModel.toggleFlash() },
-        )
+    val canSwitch = state.cameraReady && state.appStatus != AppStatus.RECORDING
+    val showFlash = !isFrontCamera && state.cameraReady
 
-        PreviewPanels(renderer, viewModel.cameraManager, state.settings.showGuides, Modifier.weight(1f))
+    if (isLandscape) {
+        // ── Landscape: previews side-by-side + controls sidebar ──
+        Box(Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
+            Row(Modifier.fillMaxSize()) {
+                PreviewPanels(renderer, viewModel.cameraManager, state.settings.showGuides,
+                    Modifier.weight(1f), isLandscape = true)
 
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 36.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            ExportStatusStub(state)
-            Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
-                Spacer(Modifier.width(48.dp))
-                RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
-                    viewModel.toggleRecording(hasAudioPermission)
-                }
-                // Hide settings icon during recording
-                if (state.appStatus != AppStatus.RECORDING) {
-                    IconButton({ showSettings = true }, Modifier.padding(start = 8.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Settings",
-                            tint = Color(0xFFCCCCCC),
-                            modifier = Modifier.size(22.dp),
-                        )
+                Column(
+                    Modifier.fillMaxHeight().width(90.dp).padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton({ viewModel.switchCamera() }, enabled = canSwitch) {
+                            Icon(Icons.Outlined.Cameraswitch, "Switch camera",
+                                tint = if (canSwitch) Color.White else Color(0xFF555555),
+                                modifier = Modifier.size(22.dp))
+                        }
+                        if (showFlash) {
+                            IconButton({ viewModel.toggleFlash() }) {
+                                Icon(
+                                    if (state.flashOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+                                    "Flash",
+                                    tint = if (state.flashOn) Color(0xFFFFD54F) else Color.White,
+                                    modifier = Modifier.size(22.dp))
+                            }
+                        }
+                        if (state.appStatus == AppStatus.RECORDING) RecIndicator(state.recordingDurationSeconds)
+                        else StatusChip(state.appStatus)
+                    }
+
+                    RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
+                        viewModel.toggleRecording(hasAudioPermission)
+                    }
+
+                    if (state.appStatus != AppStatus.RECORDING) {
+                        IconButton({ showSettings = true }) {
+                            Icon(Icons.Outlined.Settings, "Settings",
+                                tint = Color(0xFFCCCCCC), modifier = Modifier.size(22.dp))
+                        }
+                    } else {
+                        Spacer(Modifier.size(48.dp))
                     }
                 }
             }
-            ResultActions(state, viewModel, context)
+
+            ExportStatusStub(state)
+            if (state.appStatus == AppStatus.EXPORT_COMPLETE || state.appStatus == AppStatus.SAVING) {
+                Box(Modifier.align(Alignment.BottomCenter)
+                    .fillMaxWidth().background(Color(0xCC0A0A0A)).padding(8.dp)) {
+                    ResultActions(state, viewModel, context)
+                }
+            }
             ErrorArea(state) { viewModel.clearError() }
+        }
+    } else {
+        // ── Portrait: current layout ──
+        Column(
+            modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Header(
+                state = state, canSwitch = canSwitch,
+                onSwitch = { viewModel.switchCamera() },
+                showFlash = showFlash, flashOn = state.flashOn,
+                onFlashToggle = { viewModel.toggleFlash() },
+            )
+
+            PreviewPanels(renderer, viewModel.cameraManager, state.settings.showGuides,
+                Modifier.weight(1f), isLandscape = false)
+
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 36.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                ExportStatusStub(state)
+                Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
+                    Spacer(Modifier.width(48.dp))
+                    RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
+                        viewModel.toggleRecording(hasAudioPermission)
+                    }
+                    if (state.appStatus != AppStatus.RECORDING) {
+                        IconButton({ showSettings = true }, Modifier.padding(start = 8.dp)) {
+                            Icon(Icons.Outlined.Settings, "Settings",
+                                tint = Color(0xFFCCCCCC), modifier = Modifier.size(22.dp))
+                        }
+                    }
+                }
+                ResultActions(state, viewModel, context)
+                ErrorArea(state) { viewModel.clearError() }
+            }
         }
     }
 
-    // Remove Watermark dialog
     if (state.showRemoveWatermarkDialog) {
         RemoveWatermarkDialog(viewModel, context) { viewModel.dismissRemoveWatermarkDialog() }
     }
@@ -215,32 +274,28 @@ private fun PreviewPanels(
     cameraManager: com.dualframe.camera.CameraManager,
     showGuides: Boolean,
     modifier: Modifier = Modifier,
+    isLandscape: Boolean = false,
 ) {
-    Column(
-        modifier.fillMaxWidth().padding(horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        // Portrait focus ring state
-        var pFocusKey by remember { mutableIntStateOf(0) }
-        var pFocusPos by remember { mutableStateOf(Offset.Zero) }
+    var pFocusKey by remember { mutableIntStateOf(0) }
+    var pFocusPos by remember { mutableStateOf(Offset.Zero) }
+    var lFocusKey by remember { mutableIntStateOf(0) }
+    var lFocusPos by remember { mutableStateOf(Offset.Zero) }
+    var landscapeOffset by remember { mutableFloatStateOf(0f) }
 
-        // Top: 9:16 portrait preview — tap to focus, pinch to zoom
-        Box(
-            Modifier.weight(2f).aspectRatio(9f / 16f)
-                .clip(RoundedCornerShape(8.dp)).background(Color.Black)
-                .pointerInput(Unit) {
-                    detectTapPanZoom(
-                        onTap = { pos ->
-                            pFocusPos = pos; pFocusKey++
-                            cameraManager.focusAt(pos.x / size.width, pos.y / size.height)
-                        },
-                        onGesture = { _, zoom ->
-                            if (zoom != 1f) cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
-                        },
-                    )
-                },
-        ) {
+    @Composable
+    fun PortraitPanel(mod: Modifier) {
+        Box(mod.clip(RoundedCornerShape(8.dp)).background(Color.Black)
+            .pointerInput(Unit) {
+                detectTapPanZoom(
+                    onTap = { pos ->
+                        pFocusPos = pos; pFocusKey++
+                        cameraManager.focusAt(pos.x / size.width, pos.y / size.height)
+                    },
+                    onGesture = { _, zoom ->
+                        if (zoom != 1f) cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
+                    },
+                )
+            }) {
             AndroidView(
                 factory = { ctx ->
                     TextureView(ctx).apply {
@@ -259,42 +314,35 @@ private fun PreviewPanels(
             AspectLabel("9:16")
             FocusRingOverlay(pFocusKey, pFocusPos)
         }
+    }
 
-        // Landscape focus ring + crop offset state
-        var lFocusKey by remember { mutableIntStateOf(0) }
-        var lFocusPos by remember { mutableStateOf(Offset.Zero) }
-        var landscapeOffset by remember { mutableFloatStateOf(0f) }
-
-        // Bottom: 16:9 landscape — tap to focus, pinch to zoom, drag to adjust crop
-        Box(
-            Modifier.weight(1f).fillMaxWidth().aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black)
-                .pointerInput(Unit) {
-                    detectTapPanZoom(
-                        onTap = { pos ->
-                            lFocusPos = pos; lFocusKey++
-                            val normX = pos.x / size.width
-                            val normY = pos.y / size.height
-                            val masterAspect = renderer.masterVisualAspect
-                            val panelAspect = size.width.toFloat() / size.height
-                            val keepY = (masterAspect / panelAspect).coerceAtMost(1f)
-                            val maxShift = 1f - keepY
-                            val shift = renderer.landscapeCropOffsetY * maxShift
-                            val masterY = (1f - keepY - shift) / 2f + normY * keepY
-                            cameraManager.focusAt(normX, masterY.coerceIn(0f, 1f))
-                        },
-                        onGesture = { pan, zoom ->
-                            if (zoom != 1f) cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
-                            if (pan.y != 0f) {
-                                val sensitivity = 2f / size.height
-                                landscapeOffset = (landscapeOffset - pan.y * sensitivity).coerceIn(-1f, 1f)
-                                renderer.landscapeCropOffsetY = landscapeOffset
-                            }
-                        },
-                    )
-                },
-        ) {
+    @Composable
+    fun LscapePanel(mod: Modifier) {
+        Box(mod.clip(RoundedCornerShape(8.dp)).background(Color.Black)
+            .pointerInput(Unit) {
+                detectTapPanZoom(
+                    onTap = { pos ->
+                        lFocusPos = pos; lFocusKey++
+                        val normX = pos.x / size.width
+                        val normY = pos.y / size.height
+                        val masterAspect = renderer.masterVisualAspect
+                        val panelAspect = size.width.toFloat() / size.height
+                        val keepY = (masterAspect / panelAspect).coerceAtMost(1f)
+                        val maxShift = 1f - keepY
+                        val shift = renderer.landscapeCropOffsetY * maxShift
+                        val masterY = (1f - keepY - shift) / 2f + normY * keepY
+                        cameraManager.focusAt(normX, masterY.coerceIn(0f, 1f))
+                    },
+                    onGesture = { pan, zoom ->
+                        if (zoom != 1f) cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
+                        if (pan.y != 0f) {
+                            val sensitivity = 2f / size.height
+                            landscapeOffset = (landscapeOffset - pan.y * sensitivity).coerceIn(-1f, 1f)
+                            renderer.landscapeCropOffsetY = landscapeOffset
+                        }
+                    },
+                )
+            }) {
             AndroidView(
                 factory = { ctx ->
                     TextureView(ctx).apply {
@@ -314,6 +362,26 @@ private fun PreviewPanels(
             AspectLabel("16:9")
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
+        }
+    }
+
+    if (isLandscape) {
+        Row(
+            modifier.fillMaxSize().padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PortraitPanel(Modifier.weight(9f).aspectRatio(9f / 16f))
+            LscapePanel(Modifier.weight(16f).aspectRatio(16f / 9f))
+        }
+    } else {
+        Column(
+            modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            PortraitPanel(Modifier.weight(2f).aspectRatio(9f / 16f))
+            LscapePanel(Modifier.weight(1f).fillMaxWidth().aspectRatio(16f / 9f))
         }
     }
 }
