@@ -168,8 +168,21 @@ class CameraManager(private val context: Context) {
                 Log.w(DIAG_TAG, "Camera2 interop not available: ${e.message}")
             }
 
-            Log.i(DIAG_TAG, "Preview resolution: ${preview?.attachedSurfaceResolution}")
-            Log.i(DIAG_TAG, "VideoCapture resolution: ${videoCapture?.attachedSurfaceResolution}")
+            val previewRes = preview?.attachedSurfaceResolution
+            val masterRes = videoCapture?.attachedSurfaceResolution
+            Log.i(DIAG_TAG, "Preview resolution: $previewRes")
+            Log.i(DIAG_TAG, "VideoCapture resolution: $masterRes")
+
+            // Tell renderer the master aspect so preview visually matches saved output
+            // (WYSIWYG). Without this, if Preview buffer aspect ≠ master aspect, the
+            // preview would show a wider FOV than what gets recorded.
+            if (masterRes != null) {
+                val shorter = minOf(masterRes.width, masterRes.height).toFloat()
+                val longer = maxOf(masterRes.width, masterRes.height).toFloat()
+                val aspect = shorter / longer
+                renderer.masterVisualAspect = aspect
+                Log.i(DIAG_TAG, "Master visual aspect set on renderer: ${"%.4f".format(aspect)}")
+            }
             Log.i(DIAG_TAG, "==============================")
 
             return true
