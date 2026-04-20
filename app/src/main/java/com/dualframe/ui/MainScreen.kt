@@ -7,7 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -103,7 +103,7 @@ fun MainScreen(
             onFlashToggle = { viewModel.toggleFlash() },
         )
 
-        PreviewPanels(renderer, state.settings.showGuides, Modifier.weight(1f))
+        PreviewPanels(renderer, viewModel.cameraManager, state.settings.showGuides, Modifier.weight(1f))
 
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 36.dp),
@@ -203,24 +203,26 @@ private fun StatusChip(status: AppStatus) {
 @Composable
 private fun PreviewPanels(
     renderer: com.dualframe.camera.DualPreviewRenderer,
+    cameraManager: com.dualframe.camera.CameraManager,
     showGuides: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    // Architecture:
-    // - Camera is bound via UseCaseGroup+ViewPort in CameraManager → single crop rect.
-    // - Only ONE active preview region; the other is an overlay guide.
-    // - Top = 9:16 active live preview. Bottom = 16:9 overlay guide (not live).
-    // - Two regions are stacked in a Column and don't overlap by construction.
     Column(
         modifier.fillMaxWidth().padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // Top: ACTIVE live preview region, constrained to 9:16.
-        // aspectRatio locks the container so it stays stable across recomposition.
+        // Top: 9:16 portrait preview. Pinch here to zoom (affects both panels).
         Box(
             Modifier.weight(2f).aspectRatio(9f / 16f)
-                .clip(RoundedCornerShape(8.dp)).background(Color.Black),
+                .clip(RoundedCornerShape(8.dp)).background(Color.Black)
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, _, zoom, _ ->
+                        if (zoom != 1f) {
+                            cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
+                        }
+                    }
+                },
         ) {
             AndroidView(
                 factory = { ctx ->
@@ -236,25 +238,30 @@ private fun PreviewPanels(
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
-            // Ghost watermark sized relative to THIS preview's visible rect, not screen.
-            // Portrait uses top-end; slightly bigger (+2sp) than landscape.
             GhostWatermark(isPortrait = true)
             AspectLabel("9:16")
         }
 
-        // Bottom: 16:9 landscape preview with vertical drag to adjust crop position.
+        // Bottom: 16:9 landscape preview.
+        // - Pinch: shared camera zoom (same as portrait)
+        // - Single-finger vertical drag: landscape-only crop offset
         var landscapeOffset by remember { mutableFloatStateOf(0f) }
         Box(
             Modifier.weight(1f).fillMaxWidth().aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color.Black)
                 .pointerInput(Unit) {
-                    detectVerticalDragGestures { _, dragAmount ->
-                        val sensitivity = 2f / size.height
-                        val newOffset = (landscapeOffset - dragAmount * sensitivity)
-                            .coerceIn(-1f, 1f)
-                        landscapeOffset = newOffset
-                        renderer.landscapeCropOffsetY = newOffset
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        if (zoom != 1f) {
+                            cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
+                        }
+                        if (pan.y != 0f) {
+                            val sensitivity = 2f / size.height
+                            val newOffset = (landscapeOffset - pan.y * sensitivity)
+                                .coerceIn(-1f, 1f)
+                            landscapeOffset = newOffset
+                            renderer.landscapeCropOffsetY = newOffset
+                        }
                     }
                 },
         ) {
