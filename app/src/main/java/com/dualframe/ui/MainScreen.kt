@@ -58,6 +58,7 @@ import com.dualframe.util.formatDuration
 import com.dualframe.viewmodel.MainViewModel
 
 @UnstableApi
+@androidx.camera.camera2.interop.ExperimentalCamera2Interop
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,

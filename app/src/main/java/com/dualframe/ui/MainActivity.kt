@@ -37,6 +37,7 @@ import com.dualframe.ui.theme.DualFrameTheme
 import com.dualframe.viewmodel.MainViewModel
 
 @UnstableApi
+@androidx.camera.camera2.interop.ExperimentalCamera2Interop
 class MainActivity : ComponentActivity() {
 
     private lateinit var viewModel: MainViewModel

@@ -38,6 +38,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  * - Both previews stay live during recording (GPU rendering, not frozen)
  * - Zero CPU bitmap processing for the second preview
  */
+@androidx.camera.camera2.interop.ExperimentalCamera2Interop
 class CameraManager(private val context: Context) {
 
     companion object {
@@ -144,6 +145,38 @@ class CameraManager(private val context: Context) {
 
             camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
             Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 16:9")
+
+            // === DIAGNOSTIC LOGGING ===
+            val cam = camera!!
+            val camInfo = cam.cameraInfo
+            val zoomState = camInfo.zoomState.value
+            Log.i(TAG, "=== CAMERA DIAGNOSTICS ===")
+            Log.i(TAG, "  Zoom ratio: ${zoomState?.zoomRatio}")
+            Log.i(TAG, "  Crop rect (sensor): ${zoomState?.let { "not directly exposed" }}")
+            Log.i(TAG, "  Has stabilization: checking...")
+
+            // Check video stabilization mode via Camera2 interop
+            try {
+                val camera2Info = androidx.camera.camera2.interop.Camera2CameraInfo.from(camInfo)
+                val chars = camera2Info.getCameraCharacteristic(
+                    android.hardware.camera2.CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES
+                )
+                Log.i(TAG, "  Available video stabilization modes: ${chars?.toList()}")
+                // 0=OFF, 1=ON, 2=PREVIEW_STABILIZATION
+                val activeRect = camera2Info.getCameraCharacteristic(
+                    android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE
+                )
+                Log.i(TAG, "  Sensor active array: $activeRect")
+            } catch (e: Exception) {
+                Log.w(TAG, "  Camera2 interop not available: ${e.message}")
+            }
+
+            // Log preview and video capture resolutions
+            Log.i(TAG, "  Preview resolution: ${preview?.resolutionInfo?.resolution}")
+            Log.i(TAG, "  Preview crop rect: ${preview?.resolutionInfo?.cropRect}")
+            Log.i(TAG, "  VideoCapture resolution: ${videoCapture?.resolutionInfo?.resolution}")
+            Log.i(TAG, "  VideoCapture crop rect: ${videoCapture?.resolutionInfo?.cropRect}")
+            Log.i(TAG, "==========================")
 
             return true
         } catch (e: Exception) {

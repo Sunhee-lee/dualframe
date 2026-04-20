@@ -46,6 +46,7 @@ import kotlinx.coroutines.withContext
  * 8. UI state emission
  */
 @UnstableApi
+@androidx.camera.camera2.interop.ExperimentalCamera2Interop
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
