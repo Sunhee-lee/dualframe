@@ -168,10 +168,8 @@ class CameraManager(private val context: Context) {
                 Log.w(DIAG_TAG, "Camera2 interop not available: ${e.message}")
             }
 
-            Log.i(DIAG_TAG, "Preview resolution: ${preview?.resolutionInfo?.resolution}")
-            Log.i(DIAG_TAG, "Preview crop rect: ${preview?.resolutionInfo?.cropRect}")
-            Log.i(DIAG_TAG, "VideoCapture resolution: ${videoCapture?.resolutionInfo?.resolution}")
-            Log.i(DIAG_TAG, "VideoCapture crop rect: ${videoCapture?.resolutionInfo?.cropRect}")
+            Log.i(DIAG_TAG, "Preview resolution: ${preview?.attachedSurfaceResolution}")
+            Log.i(DIAG_TAG, "VideoCapture resolution: ${videoCapture?.attachedSurfaceResolution}")
             Log.i(DIAG_TAG, "==============================")
 
             return true
