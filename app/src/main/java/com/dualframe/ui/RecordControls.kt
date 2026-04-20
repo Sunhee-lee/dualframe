@@ -9,10 +9,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -46,11 +46,11 @@ fun RecordControls(
     countdownRemaining: Int,
     onRecordTap: () -> Unit,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        // Countdown number (only during countdown)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // Countdown number sits to the left of the record button during countdown
         if (appStatus == AppStatus.COUNTDOWN) {
             CountdownDisplay(countdownRemaining)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
         }
 
         // The button itself
@@ -142,17 +142,24 @@ private fun CountdownDisplay(remaining: Int) {
         label = "pulse_scale",
     )
 
+    // Fixed-size outer container so the pulsing inner ring doesn't reflow
+    // the record button beside it.
     Box(
-        modifier = Modifier
-            .size((56 * scale).dp)
-            .border(3.dp, Color(0xFFFFA726), CircleShape),
+        modifier = Modifier.size(64.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = remaining.toString(),
-            color = Color(0xFFFFA726),
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-        )
+        Box(
+            modifier = Modifier
+                .size((48 * scale).dp)
+                .border(3.dp, Color(0xFFFFA726), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = remaining.toString(),
+                color = Color(0xFFFFA726),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
