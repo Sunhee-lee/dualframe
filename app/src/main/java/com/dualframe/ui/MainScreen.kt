@@ -150,6 +150,16 @@ fun MainScreen(
             ExportStatusStub(state)
             Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
                 if (state.appStatus != AppStatus.RECORDING) {
+                    // 1x zoom reset button
+                    Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                        androidx.compose.material3.TextButton(
+                            onClick = { viewModel.cameraManager.setZoomRatio(1f) },
+                            modifier = Modifier.size(36.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                        ) {
+                            Text("1x", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                     IconButton(
                         onClick = { viewModel.switchCamera() },
                         enabled = state.cameraReady,
@@ -159,7 +169,7 @@ fun MainScreen(
                             modifier = Modifier.size(22.dp))
                     }
                 } else {
-                    Spacer(Modifier.width(48.dp))
+                    Spacer(Modifier.width(96.dp))
                 }
                 RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
                     viewModel.toggleRecording(hasAudioPermission)
