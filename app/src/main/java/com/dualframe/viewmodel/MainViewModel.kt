@@ -320,10 +320,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
+            // === EXPORT PIPELINE DIAGNOSTICS ===
+            val masterMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(file) }
+            Log.i("DualFrameCameraDiag", "=== EXPORT PIPELINE DIAGNOSTICS ===")
+            Log.i("DualFrameCameraDiag", "Master file: ${file.name} (${file.length()/1024}KB)")
+            Log.i("DualFrameCameraDiag", "Master raw: ${masterMeta?.rawWidth}x${masterMeta?.rawHeight}")
+            Log.i("DualFrameCameraDiag", "Master display: ${masterMeta?.displayWidth}x${masterMeta?.displayHeight}")
+            Log.i("DualFrameCameraDiag", "Master rotation: ${masterMeta?.rotation}")
+            Log.i("DualFrameCameraDiag", "Master display aspect: ${masterMeta?.displayAspectRatio}")
+
             // Detect native orientation from the actual master file
             val isPortrait = withContext(Dispatchers.IO) {
                 exportManager.isMasterPortrait(file)
             }
+            Log.i("DualFrameCameraDiag", "isMasterPortrait: $isPortrait")
 
             val nativeSuffix: String
             val nativeLabel: String
@@ -359,11 +369,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            // Read verified metadata — do NOT save to gallery yet (user must explicitly save)
             val nativeMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(nativeFile) }
             val nativeRes = nativeMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
             val nativeFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(nativeFile) }
-            Log.i(TAG, "Native output: $nativeLabel $nativeRes $nativeFps (temp, not saved)")
+            Log.i("DualFrameCameraDiag", "Native export ($nativeLabel): file=${nativeFile.name}")
+            Log.i("DualFrameCameraDiag", "  raw: ${nativeMeta?.rawWidth}x${nativeMeta?.rawHeight}")
+            Log.i("DualFrameCameraDiag", "  display: ${nativeMeta?.displayWidth}x${nativeMeta?.displayHeight}")
+            Log.i("DualFrameCameraDiag", "  rotation: ${nativeMeta?.rotation}")
+            Log.i("DualFrameCameraDiag", "  fps: $nativeFps")
+            Log.i("DualFrameCameraDiag", "  size: ${nativeFile.length()/1024}KB")
 
             // ── Step 2: Derived output — center-crop with resolution preservation ──
             // Uses Presentation.createForHeight() to prevent Transformer's default downscale.
@@ -381,7 +395,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val croppedMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(croppedFile) }
             val croppedRes = croppedMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
             val croppedFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(croppedFile) }
-            Log.i(TAG, "Derived output: $croppedLabel $croppedRes $croppedFps (temp, not saved)")
+            Log.i("DualFrameCameraDiag", "Cropped export ($croppedLabel): file=${croppedFile.name}")
+            Log.i("DualFrameCameraDiag", "  raw: ${croppedMeta?.rawWidth}x${croppedMeta?.rawHeight}")
+            Log.i("DualFrameCameraDiag", "  display: ${croppedMeta?.displayWidth}x${croppedMeta?.displayHeight}")
+            Log.i("DualFrameCameraDiag", "  rotation: ${croppedMeta?.rotation}")
+            Log.i("DualFrameCameraDiag", "  fps: $croppedFps")
+            Log.i("DualFrameCameraDiag", "==============================")
 
             val thumbnail = generateThumbnail(nativeFile)
 

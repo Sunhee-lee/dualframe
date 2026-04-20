@@ -188,7 +188,8 @@ class CameraManager(private val context: Context) {
      */
     private fun onSurfaceRequested(request: SurfaceRequest) {
         val resolution = request.resolution
-        Log.i(TAG, "SurfaceRequest: ${resolution.width}x${resolution.height}")
+        Log.i(DIAG_TAG, "Preview SurfaceRequest: ${resolution.width}x${resolution.height}")
+        Log.i(DIAG_TAG, "Preview SurfaceRequest aspect: ${"%.4f".format(resolution.width.toFloat()/resolution.height)}")
 
         renderer.setPreviewSize(resolution.width, resolution.height)
 
