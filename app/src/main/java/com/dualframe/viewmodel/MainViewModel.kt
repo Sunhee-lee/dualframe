@@ -343,16 +343,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (isPortrait) {
                 nativeSuffix = "portrait"
-                nativeLabel = "9:16"
+                nativeLabel = "Portrait"
                 croppedAspect = ExportManager.ASPECT_16x9
                 croppedSuffix = "landscape"
-                croppedLabel = "16:9"
+                croppedLabel = "Landscape"
             } else {
                 nativeSuffix = "landscape"
-                nativeLabel = "16:9"
+                nativeLabel = "Landscape"
                 croppedAspect = ExportManager.ASPECT_9x16
                 croppedSuffix = "portrait"
-                croppedLabel = "9:16"
+                croppedLabel = "Portrait"
             }
 
             // ── Step 1: Native output — direct file copy, zero quality loss ──

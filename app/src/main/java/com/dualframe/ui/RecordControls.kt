@@ -9,10 +9,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -46,19 +44,21 @@ fun RecordControls(
     countdownRemaining: Int,
     onRecordTap: () -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // Countdown number sits to the left of the record button during countdown
-        if (appStatus == AppStatus.COUNTDOWN) {
-            CountdownDisplay(countdownRemaining)
-            Spacer(modifier = Modifier.width(12.dp))
-        }
-
-        // The button itself
+    // Box overlay: button stays fixed at center, countdown floats to the left
+    // without affecting the button's position in the parent layout.
+    Box(contentAlignment = Alignment.Center) {
         RecordButton(
             appStatus = appStatus,
             cameraReady = cameraReady,
             onClick = onRecordTap,
         )
+
+        if (appStatus == AppStatus.COUNTDOWN) {
+            CountdownDisplay(
+                remaining = countdownRemaining,
+                modifier = Modifier.offset(x = (-84).dp),
+            )
+        }
     }
 }
 
@@ -133,7 +133,7 @@ private fun RecordButton(
 // ── Countdown Display ─────────────────────────────────────────────────
 
 @Composable
-private fun CountdownDisplay(remaining: Int) {
+private fun CountdownDisplay(remaining: Int, modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "pulse")
     val scale by transition.animateFloat(
         initialValue = 0.8f,
@@ -142,10 +142,8 @@ private fun CountdownDisplay(remaining: Int) {
         label = "pulse_scale",
     )
 
-    // Fixed-size outer container so the pulsing inner ring doesn't reflow
-    // the record button beside it.
     Box(
-        modifier = Modifier.size(64.dp),
+        modifier = modifier.size(64.dp),
         contentAlignment = Alignment.Center,
     ) {
         Box(

@@ -234,7 +234,7 @@ private fun PreviewPanels(
             // Ghost watermark sized relative to THIS preview's visible rect, not screen.
             // Portrait uses top-end; slightly bigger (+2sp) than landscape.
             GhostWatermark(isPortrait = true)
-            AspectLabel("9:16")
+            AspectLabel("Portrait")
         }
 
         // Bottom: 16:9 OVERLAY GUIDE (not a live second preview). Shows the 16:9
@@ -262,7 +262,7 @@ private fun PreviewPanels(
             GuideBorder()
             if (showGuides) RuleOfThirdsGrid()
             GhostWatermark(isPortrait = false)
-            AspectLabel("16:9")
+            AspectLabel("Landscape")
         }
     }
 }
