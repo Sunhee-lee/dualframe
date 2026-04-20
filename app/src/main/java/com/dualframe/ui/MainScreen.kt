@@ -10,6 +10,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -150,16 +151,6 @@ fun MainScreen(
             ExportStatusStub(state)
             Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
                 if (state.appStatus != AppStatus.RECORDING) {
-                    // 1x zoom reset button
-                    Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                        androidx.compose.material3.TextButton(
-                            onClick = { viewModel.cameraManager.setZoomRatio(1f) },
-                            modifier = Modifier.size(36.dp),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
-                        ) {
-                            Text("1x", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
                     IconButton(
                         onClick = { viewModel.switchCamera() },
                         enabled = state.cameraReady,
@@ -169,7 +160,7 @@ fun MainScreen(
                             modifier = Modifier.size(22.dp))
                     }
                 } else {
-                    Spacer(Modifier.width(96.dp))
+                    Spacer(Modifier.width(48.dp))
                 }
                 RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
                     viewModel.toggleRecording(hasAudioPermission)
@@ -378,6 +369,11 @@ private fun PreviewPanels(
             }
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
+            ZoomResetButton(
+                rotation = rot,
+                onClick = { cameraManager.setZoomRatio(1f) },
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+            )
         }
     }
 }
@@ -489,6 +485,30 @@ private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
             modifier = Modifier.align(anchor).padding(horizontal = padH, vertical = padV).rotate(rotation)
                 .background(Color(0xAA000000), RoundedCornerShape(6.dp))
                 .padding(horizontal = 8.dp, vertical = 3.dp))
+    }
+}
+
+/**
+ * "1x" zoom reset button. Fixed position; only the text content rotates
+ * based on device orientation.
+ */
+@Composable
+private fun ZoomResetButton(rotation: Float, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(Color(0xAA000000))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "1x",
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.rotate(rotation),
+        )
     }
 }
 
