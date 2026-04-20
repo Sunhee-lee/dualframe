@@ -248,7 +248,7 @@ private fun PreviewPanels(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         val isDeviceLandscape = deviceRotation == 90 || deviceRotation == 270
-        val rot = when (deviceRotation) { 270 -> -90f; 90 -> 90f; else -> 0f }
+        val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
 
         // When device rotates, panel visual appearance flips:
         //   9:16 panel (tall on screen) looks wide to the user → visually landscape
@@ -439,14 +439,17 @@ private fun GuideBorder() {
 
 @Composable
 private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
-    val pad = if (rotation != 0f) 24.dp else 8.dp
+    val padH = if (rotation != 0f) 10.dp else 8.dp
+    val padV = if (rotation != 0f) 24.dp else 8.dp
     Box(Modifier.fillMaxSize()) {
         Text(
             text = "DualFrame",
             color = Color.White.copy(alpha = 0.3f),
             fontSize = fontSize.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(anchor).padding(pad).rotate(rotation),
+            modifier = Modifier.align(anchor)
+                .padding(horizontal = padH, vertical = padV)
+                .rotate(rotation),
         )
     }
 }
