@@ -369,10 +369,15 @@ private fun PreviewPanels(
             }
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
+            val zoomBtnModifier = when (deviceRotation) {
+                90 -> Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
+                270 -> Modifier.align(Alignment.CenterStart).padding(start = 8.dp)
+                else -> Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+            }
             ZoomResetButton(
                 rotation = rot,
                 onClick = { cameraManager.setZoomRatio(1f) },
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+                modifier = zoomBtnModifier,
             )
         }
     }
