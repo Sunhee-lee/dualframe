@@ -68,6 +68,8 @@ import com.dualframe.data.AppStatus
 import com.dualframe.data.UiState
 import com.dualframe.util.formatDuration
 import com.dualframe.viewmodel.MainViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @UnstableApi
 @androidx.camera.camera2.interop.ExperimentalCamera2Interop
