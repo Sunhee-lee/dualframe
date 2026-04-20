@@ -511,16 +511,16 @@ private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
 private fun ZoomResetButton(rotation: Float, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .size(24.dp)
+            .size(28.dp)
             .clip(CircleShape)
-            .background(Color(0x22000000))
+            .background(Color(0x66000000))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = "1x",
-            color = Color.White.copy(alpha = 0.35f),
-            fontSize = 9.sp,
+            color = Color.White.copy(alpha = 0.8f),
+            fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.rotate(rotation),
         )

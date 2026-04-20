@@ -570,16 +570,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Falls back to generic gallery if no saved URI is available.
      */
     fun buildOpenGalleryIntent(): Intent {
-        val savedUri = _uiState.value.savedNativeUri ?: _uiState.value.savedCroppedUri
-        return if (savedUri != null) {
-            Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(savedUri, "video/*")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-        } else {
-            Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*")
-            }
+        return Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*")
         }
     }
 
