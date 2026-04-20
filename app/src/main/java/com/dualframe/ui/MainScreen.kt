@@ -247,6 +247,7 @@ private fun PreviewPanels(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        val isDeviceLandscape = deviceRotation == 90 || deviceRotation == 270
         var pFocusKey by remember { mutableIntStateOf(0) }
         var pFocusPos by remember { mutableStateOf(Offset.Zero) }
 
@@ -279,8 +280,8 @@ private fun PreviewPanels(
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
-            GhostWatermark(isPortrait = true, deviceRotation = deviceRotation)
-            AspectLabel("9:16", deviceRotation = deviceRotation)
+            GhostWatermark(visuallyPortrait = if (isDeviceLandscape) false else true, deviceRotation = deviceRotation)
+            AspectLabel(if (isDeviceLandscape) "16:9" else "9:16", deviceRotation = deviceRotation)
             FocusRingOverlay(pFocusKey, pFocusPos)
         }
 
@@ -332,8 +333,8 @@ private fun PreviewPanels(
             )
             GuideBorder()
             if (showGuides) RuleOfThirdsGrid()
-            GhostWatermark(isPortrait = false, deviceRotation = deviceRotation)
-            AspectLabel("16:9", deviceRotation = deviceRotation)
+            GhostWatermark(visuallyPortrait = if (isDeviceLandscape) true else false, deviceRotation = deviceRotation)
+            AspectLabel(if (isDeviceLandscape) "9:16" else "16:9", deviceRotation = deviceRotation)
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
         }
@@ -422,16 +423,16 @@ private fun GuideBorder() {
 }
 
 @Composable
-private fun GhostWatermark(isPortrait: Boolean, deviceRotation: Int = 0) {
+private fun GhostWatermark(visuallyPortrait: Boolean, deviceRotation: Int = 0) {
     val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
     Box(Modifier.fillMaxSize()) {
         Text(
             text = "DualFrame",
             color = Color.White.copy(alpha = 0.3f),
-            fontSize = if (isPortrait) 13.sp else 11.sp,
+            fontSize = if (visuallyPortrait) 13.sp else 11.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
-                .align(if (isPortrait) Alignment.TopEnd else Alignment.BottomEnd)
+                .align(if (visuallyPortrait) Alignment.TopEnd else Alignment.BottomEnd)
                 .padding(8.dp)
                 .rotate(rot),
         )
