@@ -5,7 +5,9 @@ import android.graphics.SurfaceTexture
 import android.util.Log
 import android.view.Surface
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.Preview
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.SurfaceRequest
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FileOutputOptions
@@ -256,6 +258,20 @@ class CameraManager(private val context: Context) {
         val clamped = ratio.coerceIn(zoomState.minZoomRatio, zoomState.maxZoomRatio)
         currentZoomRatio = clamped
         cam.cameraControl.setZoomRatio(clamped)
+    }
+
+    // ── Focus / Metering ─────────────────────────────────────────────
+
+    fun focusAt(normX: Float, normY: Float) {
+        val cam = camera ?: return
+        val factory = SurfaceOrientedMeteringPointFactory(1f, 1f)
+        val point = factory.createMeteringPoint(
+            normX.coerceIn(0f, 1f), normY.coerceIn(0f, 1f),
+        )
+        val action = FocusMeteringAction.Builder(
+            point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE,
+        ).setAutoCancelDuration(3, java.util.concurrent.TimeUnit.SECONDS).build()
+        cam.cameraControl.startFocusAndMetering(action)
     }
 
     // ── Torch (flash) ─────────────────────────────────────────────────

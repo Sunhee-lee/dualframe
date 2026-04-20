@@ -3,11 +3,14 @@ package com.dualframe.ui
 import android.graphics.SurfaceTexture
 import android.view.Surface
 import android.view.TextureView
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,7 +38,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,8 +51,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -212,16 +219,24 @@ private fun PreviewPanels(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // Top: 9:16 portrait preview. Pinch here to zoom (affects both panels).
+        // Portrait focus ring state
+        var pFocusKey by remember { mutableIntStateOf(0) }
+        var pFocusPos by remember { mutableStateOf(Offset.Zero) }
+
+        // Top: 9:16 portrait preview — tap to focus, pinch to zoom
         Box(
             Modifier.weight(2f).aspectRatio(9f / 16f)
                 .clip(RoundedCornerShape(8.dp)).background(Color.Black)
                 .pointerInput(Unit) {
-                    detectTransformGestures { _, _, zoom, _ ->
-                        if (zoom != 1f) {
-                            cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
-                        }
-                    }
+                    detectTapPanZoom(
+                        onTap = { pos ->
+                            pFocusPos = pos; pFocusKey++
+                            cameraManager.focusAt(pos.x / size.width, pos.y / size.height)
+                        },
+                        onGesture = { _, zoom ->
+                            if (zoom != 1f) cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
+                        },
+                    )
                 },
         ) {
             AndroidView(
@@ -240,29 +255,42 @@ private fun PreviewPanels(
             if (showGuides) RuleOfThirdsGrid()
             GhostWatermark(isPortrait = true)
             AspectLabel("9:16")
+            FocusRingOverlay(pFocusKey, pFocusPos)
         }
 
-        // Bottom: 16:9 landscape preview.
-        // - Pinch: shared camera zoom (same as portrait)
-        // - Single-finger vertical drag: landscape-only crop offset
+        // Landscape focus ring + crop offset state
+        var lFocusKey by remember { mutableIntStateOf(0) }
+        var lFocusPos by remember { mutableStateOf(Offset.Zero) }
         var landscapeOffset by remember { mutableFloatStateOf(0f) }
+
+        // Bottom: 16:9 landscape — tap to focus, pinch to zoom, drag to adjust crop
         Box(
             Modifier.weight(1f).fillMaxWidth().aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color.Black)
                 .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        if (zoom != 1f) {
-                            cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
-                        }
-                        if (pan.y != 0f) {
-                            val sensitivity = 2f / size.height
-                            val newOffset = (landscapeOffset - pan.y * sensitivity)
-                                .coerceIn(-1f, 1f)
-                            landscapeOffset = newOffset
-                            renderer.landscapeCropOffsetY = newOffset
-                        }
-                    }
+                    detectTapPanZoom(
+                        onTap = { pos ->
+                            lFocusPos = pos; lFocusKey++
+                            val normX = pos.x / size.width
+                            val normY = pos.y / size.height
+                            val masterAspect = renderer.masterVisualAspect
+                            val panelAspect = size.width.toFloat() / size.height
+                            val keepY = (masterAspect / panelAspect).coerceAtMost(1f)
+                            val maxShift = 1f - keepY
+                            val shift = renderer.landscapeCropOffsetY * maxShift
+                            val masterY = (1f - keepY - shift) / 2f + normY * keepY
+                            cameraManager.focusAt(normX, masterY.coerceIn(0f, 1f))
+                        },
+                        onGesture = { pan, zoom ->
+                            if (zoom != 1f) cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
+                            if (pan.y != 0f) {
+                                val sensitivity = 2f / size.height
+                                landscapeOffset = (landscapeOffset - pan.y * sensitivity).coerceIn(-1f, 1f)
+                                renderer.landscapeCropOffsetY = landscapeOffset
+                            }
+                        },
+                    )
                 },
         ) {
             AndroidView(
@@ -283,6 +311,75 @@ private fun PreviewPanels(
             GhostWatermark(isPortrait = false)
             AspectLabel("16:9")
             CropPositionIndicator(landscapeOffset)
+            FocusRingOverlay(lFocusKey, lFocusPos)
+        }
+    }
+}
+
+// ── Custom gesture detector: tap + pan + pinch in one scope ──────────
+
+private suspend fun PointerInputScope.detectTapPanZoom(
+    onTap: (Offset) -> Unit,
+    onGesture: (pan: Offset, zoom: Float) -> Unit,
+) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        val startPos = down.position
+        var pastSlop = false
+        var maxPointers = 1
+
+        do {
+            val event = awaitPointerEvent()
+            val pressed = event.changes.filter { it.pressed }
+            if (pressed.size > maxPointers) maxPointers = pressed.size
+
+            if (pressed.size >= 2) {
+                pastSlop = true
+                val cur = (pressed[0].position - pressed[1].position).getDistance()
+                val prev = (pressed[0].previousPosition - pressed[1].previousPosition).getDistance()
+                if (prev > 0f && cur > 0f) onGesture(Offset.Zero, cur / prev)
+                event.changes.forEach { it.consume() }
+            } else if (pressed.size == 1 && maxPointers == 1) {
+                val change = pressed[0]
+                if (!pastSlop && (change.position - startPos).getDistance() > viewConfiguration.touchSlop) {
+                    pastSlop = true
+                }
+                if (pastSlop) {
+                    val pan = change.position - change.previousPosition
+                    if (pan != Offset.Zero) {
+                        onGesture(pan, 1f)
+                        change.consume()
+                    }
+                }
+            }
+        } while (event.changes.any { it.pressed })
+
+        if (!pastSlop && maxPointers == 1) onTap(startPos)
+    }
+}
+
+// ── Focus ring animation ─────────────────────────────────────────────
+
+@Composable
+private fun FocusRingOverlay(tapKey: Int, position: Offset) {
+    if (tapKey == 0) return
+    val alpha = remember { Animatable(0f) }
+    val scale = remember { Animatable(1f) }
+    LaunchedEffect(tapKey) {
+        alpha.snapTo(0.7f)
+        scale.snapTo(1.4f)
+        kotlinx.coroutines.launch { scale.animateTo(1f, tween(200)) }
+        kotlinx.coroutines.delay(600)
+        alpha.animateTo(0f, tween(300))
+    }
+    Canvas(Modifier.fillMaxSize()) {
+        if (alpha.value > 0f) {
+            drawCircle(
+                color = Color.White.copy(alpha = alpha.value),
+                radius = 22.dp.toPx() * scale.value,
+                center = position,
+                style = Stroke(width = 1.5.dp.toPx()),
+            )
         }
     }
 }
