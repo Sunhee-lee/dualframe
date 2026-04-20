@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -142,7 +143,7 @@ fun MainScreen(
         )
 
         PreviewPanels(renderer, viewModel.cameraManager, state.settings.showGuides,
-            Modifier.weight(1f))
+            Modifier.weight(1f), deviceRotation = deviceRotation)
 
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 36.dp),
@@ -239,6 +240,7 @@ private fun PreviewPanels(
     cameraManager: com.dualframe.camera.CameraManager,
     showGuides: Boolean,
     modifier: Modifier = Modifier,
+    deviceRotation: Int = 0,
 ) {
     Column(
         modifier.fillMaxWidth().padding(horizontal = 8.dp),
@@ -277,8 +279,8 @@ private fun PreviewPanels(
                 modifier = Modifier.fillMaxSize(),
             )
             if (showGuides) RuleOfThirdsGrid()
-            GhostWatermark(isPortrait = true)
-            AspectLabel("9:16")
+            GhostWatermark(isPortrait = true, deviceRotation = deviceRotation)
+            AspectLabel("9:16", deviceRotation = deviceRotation)
             FocusRingOverlay(pFocusKey, pFocusPos)
         }
 
@@ -330,8 +332,8 @@ private fun PreviewPanels(
             )
             GuideBorder()
             if (showGuides) RuleOfThirdsGrid()
-            GhostWatermark(isPortrait = false)
-            AspectLabel("16:9")
+            GhostWatermark(isPortrait = false, deviceRotation = deviceRotation)
+            AspectLabel("16:9", deviceRotation = deviceRotation)
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
         }
@@ -420,7 +422,8 @@ private fun GuideBorder() {
 }
 
 @Composable
-private fun GhostWatermark(isPortrait: Boolean) {
+private fun GhostWatermark(isPortrait: Boolean, deviceRotation: Int = 0) {
+    val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
     Box(Modifier.fillMaxSize()) {
         Text(
             text = "DualFrame",
@@ -429,16 +432,19 @@ private fun GhostWatermark(isPortrait: Boolean) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(if (isPortrait) Alignment.TopEnd else Alignment.BottomEnd)
-                .padding(8.dp),
+                .padding(8.dp)
+                .rotate(rot),
         )
     }
 }
 
 @Composable
-private fun AspectLabel(text: String) {
+private fun AspectLabel(text: String, deviceRotation: Int = 0) {
+    val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
     Box(Modifier.fillMaxSize()) {
         Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.TopStart).padding(6.dp)
+                .rotate(rot)
                 .background(Color(0xAA000000), RoundedCornerShape(6.dp))
                 .padding(horizontal = 8.dp, vertical = 3.dp))
     }
