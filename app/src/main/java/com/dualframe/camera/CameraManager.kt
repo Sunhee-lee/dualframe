@@ -164,15 +164,20 @@ class CameraManager(private val context: Context) {
             Log.i(DIAG_TAG, "Preview resolution: $previewRes")
             Log.i(DIAG_TAG, "VideoCapture resolution: $masterRes")
 
-            // Master aspect in display orientation (shorter/longer, ≤1). The renderer
-            // uses this to make Stage A identity when preview and master share the
-            // same sensor stream (full-sensor case: same aspect, Stage A = no-op).
+            // Master display aspect matching VideoMetadata convention (accounts for rotation).
+            // When device is portrait: display = shorter/longer (rotation=90 swaps w/h).
+            // When device is landscape: display = longer/shorter (rotation=0, no swap).
             if (masterRes != null) {
-                val shorter = minOf(masterRes.width, masterRes.height).toFloat()
-                val longer = maxOf(masterRes.width, masterRes.height).toFloat()
-                val aspect = shorter / longer
+                val aspect = if (renderer.isLandscapeTarget) {
+                    maxOf(masterRes.width, masterRes.height).toFloat() /
+                        minOf(masterRes.width, masterRes.height).toFloat()
+                } else {
+                    minOf(masterRes.width, masterRes.height).toFloat() /
+                        maxOf(masterRes.width, masterRes.height).toFloat()
+                }
                 renderer.masterVisualAspect = aspect
-                Log.i(DIAG_TAG, "Master visual aspect set on renderer: ${"%.4f".format(aspect)}")
+                Log.i(DIAG_TAG, "Master visual aspect (display): ${"%.4f".format(aspect)}" +
+                    " landscape=${renderer.isLandscapeTarget}")
             }
             Log.i(DIAG_TAG, "==============================")
 
@@ -255,6 +260,18 @@ class CameraManager(private val context: Context) {
     fun setTargetRotation(surfaceRotation: Int) {
         preview?.targetRotation = surfaceRotation
         videoCapture?.targetRotation = surfaceRotation
+    }
+
+    fun refreshMasterAspect() {
+        val masterRes = videoCapture?.attachedSurfaceResolution ?: return
+        val aspect = if (renderer.isLandscapeTarget) {
+            maxOf(masterRes.width, masterRes.height).toFloat() /
+                minOf(masterRes.width, masterRes.height).toFloat()
+        } else {
+            minOf(masterRes.width, masterRes.height).toFloat() /
+                maxOf(masterRes.width, masterRes.height).toFloat()
+        }
+        renderer.masterVisualAspect = aspect
     }
 
     // ── Focus / Metering ─────────────────────────────────────────────

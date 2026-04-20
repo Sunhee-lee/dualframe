@@ -118,12 +118,15 @@ class DualPreviewRenderer {
     // Beauty effect for front camera (soft blur + brightness + warm tone)
     var beautyEnabled = false
 
-    // Aspect ratio of the recorder master in display orientation (shorter/longer, ≤1).
-    // Both preview and master come from the same sensor; after stMatrix rotation
-    // they appear in display orientation. This lets Stage B crop each panel
-    // correctly relative to the rotated content.
-    // Set by CameraManager after bind from VideoCapture.attachedSurfaceResolution.
+    // Master display aspect (must match VideoMetadata.displayAspectRatio used by export).
+    // Set by CameraManager after bind. When device is portrait this is shorter/longer
+    // (e.g., 0.563 for 9:16). When device is landscape this is longer/shorter (e.g., 1.778
+    // for 16:9). The key is: preview crop math must produce the same region as export crop.
     var masterVisualAspect: Float = 9f / 16f
+
+    // Whether the current recording targets landscape orientation.
+    // Controls how visualAspect is computed from the raw preview buffer.
+    @Volatile var isLandscapeTarget: Boolean = false
 
     // User-adjustable vertical crop offset for the landscape (16:9) panel.
     // Normalized [-1, 1]: -1 = bottom, 0 = center, +1 = top.
@@ -204,14 +207,18 @@ class DualPreviewRenderer {
         st.updateTexImage()
         st.getTransformMatrix(stMatrix)
 
-        // Display-oriented aspect (shorter/longer). The stMatrix rotates sensor
-        // buffer to display orientation, so we treat the aspect as portrait-ish.
+        // Display-oriented aspect matching VideoMetadata.displayAspectRatio convention.
+        // When recording portrait: display = shorter/longer (e.g., 0.563).
+        // When recording landscape: display = longer/shorter (e.g., 1.778).
+        // This ensures preview crop math matches the export's crop math exactly.
         val visualAspect = if (previewWidth > 0 && previewHeight > 0) {
-            val shorter = minOf(previewWidth, previewHeight).toFloat()
-            val longer = maxOf(previewWidth, previewHeight).toFloat()
-            shorter / longer
+            if (isLandscapeTarget) {
+                maxOf(previewWidth, previewHeight).toFloat() / minOf(previewWidth, previewHeight).toFloat()
+            } else {
+                minOf(previewWidth, previewHeight).toFloat() / maxOf(previewWidth, previewHeight).toFloat()
+            }
         } else {
-            9f / 16f
+            if (isLandscapeTarget) 16f / 9f else 9f / 16f
         }
 
         if (eglSurface9x16 != EGL14.EGL_NO_SURFACE) {

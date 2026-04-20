@@ -109,14 +109,17 @@ fun MainScreen(
         onDispose { listener.disable() }
     }
 
-    // Sync device rotation → CameraX targetRotation so saved video matches viewing direction
+    // Sync device rotation → CameraX targetRotation + renderer landscape flag
     LaunchedEffect(deviceRotation) {
+        val isLandscape = deviceRotation == 90 || deviceRotation == 270
         val surfaceRot = when (deviceRotation) {
             270 -> android.view.Surface.ROTATION_90
             90 -> android.view.Surface.ROTATION_270
             else -> android.view.Surface.ROTATION_0
         }
+        renderer.isLandscapeTarget = isLandscape
         viewModel.cameraManager.setTargetRotation(surfaceRot)
+        viewModel.cameraManager.refreshMasterAspect()
     }
 
     var showSettings by remember { mutableStateOf(false) }
