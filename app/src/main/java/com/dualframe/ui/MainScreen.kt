@@ -225,8 +225,8 @@ private fun StatusChip(status: AppStatus) {
         AppStatus.IDLE -> "Ready" to Color(0xFF888888)
         AppStatus.COUNTDOWN -> "Countdown" to Color(0xFFFFA726)
         AppStatus.RECORDING -> "REC" to Color(0xFFFF1744)
-        AppStatus.EXPORTING_NATIVE -> "Exporting..." to Color(0xFFFFA726)
-        AppStatus.EXPORTING_CROPPED -> "Exporting..." to Color(0xFFFFA726)
+        AppStatus.EXPORTING_PORTRAIT -> "Exporting..." to Color(0xFFFFA726)
+        AppStatus.EXPORTING_LANDSCAPE -> "Exporting..." to Color(0xFFFFA726)
         AppStatus.EXPORT_COMPLETE -> "Done" to Color(0xFF66BB6A)
         AppStatus.SAVING -> "Saving..." to Color(0xFFFFA726)
         AppStatus.ERROR -> "Error" to Color(0xFFCF6679)
@@ -527,7 +527,7 @@ private fun RuleOfThirdsGrid() {
 
 @Composable
 private fun ExportStatusStub(state: UiState) {
-    val exporting = state.appStatus == AppStatus.EXPORTING_NATIVE || state.appStatus == AppStatus.EXPORTING_CROPPED
+    val exporting = state.appStatus == AppStatus.EXPORTING_PORTRAIT || state.appStatus == AppStatus.EXPORTING_LANDSCAPE
     if (!exporting) return
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.height(4.dp))

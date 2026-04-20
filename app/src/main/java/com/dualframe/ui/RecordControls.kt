@@ -72,7 +72,7 @@ private fun RecordButton(
 ) {
     val isRecording = appStatus == AppStatus.RECORDING
     val isCountdown = appStatus == AppStatus.COUNTDOWN
-    val isExporting = appStatus == AppStatus.EXPORTING_NATIVE || appStatus == AppStatus.EXPORTING_CROPPED
+    val isExporting = appStatus == AppStatus.EXPORTING_PORTRAIT || appStatus == AppStatus.EXPORTING_LANDSCAPE
 
     // Button is enabled when camera is ready and we're not mid-export
     val enabled = cameraReady && !isExporting

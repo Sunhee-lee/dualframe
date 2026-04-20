@@ -15,14 +15,14 @@ data class UiState(
     // Thumbnail of latest export result
     val thumbnailBitmap: Bitmap? = null,
     // Export result info (shown in result panel)
-    val nativeExportInfo: String? = null,
-    val croppedExportInfo: String? = null,
+    val portraitExportInfo: String? = null,
+    val landscapeExportInfo: String? = null,
     // Temp file paths for exported files (NOT yet saved to gallery)
-    val nativeTempPath: String? = null,
-    val croppedTempPath: String? = null,
+    val portraitTempPath: String? = null,
+    val landscapeTempPath: String? = null,
     // Saved URIs (set only after explicit user save action)
-    val savedNativeUri: Uri? = null,
-    val savedCroppedUri: Uri? = null,
+    val savedPortraitUri: Uri? = null,
+    val savedLandscapeUri: Uri? = null,
     // Save status message (e.g., "Saved to gallery", "Saving...")
     val saveMessage: String? = null,
     // Whether the Remove Watermark dialog is showing
@@ -36,8 +36,8 @@ enum class AppStatus {
     IDLE,
     COUNTDOWN,
     RECORDING,
-    EXPORTING_NATIVE,
-    EXPORTING_CROPPED,
+    EXPORTING_PORTRAIT,
+    EXPORTING_LANDSCAPE,
     EXPORT_COMPLETE, // result ready in temp, not yet saved to gallery
     SAVING,          // actively saving to gallery
     ERROR,

@@ -124,27 +124,19 @@ class CameraManager(private val context: Context) {
 
             val cameraSelector = currentCameraSelector()
 
-            // Bind via UseCaseGroup + ViewPort. ViewPort is 9:16 PORTRAIT because:
-            // 1. Portrait (9:16) is the primary output — native copy, zero quality loss
-            // 2. Landscape (16:9) is derived from the portrait master via center-crop
-            // 3. CameraX ViewPort crops the VideoCapture buffer to 9:16
-            // 4. The renderer applies a matching crop to Preview for WYSIWYG
-            val viewPort = androidx.camera.core.ViewPort.Builder(
-                android.util.Rational(9, 16),
-                android.view.Surface.ROTATION_0,
-            )
-                .setScaleType(androidx.camera.core.ViewPort.FILL_CENTER)
-                .build()
-
+            // Full-sensor recording: NO ViewPort crop on VideoCapture.
+            // VideoCapture records the full camera buffer (typically 16:9 on most
+            // phones, 4:3 on some). Both 9:16 and 16:9 outputs are derived as
+            // crops during export — this gives the 16:9 output the full sensor
+            // width (wider FOV than when cropped from 9:16 master).
             val useCaseGroup = androidx.camera.core.UseCaseGroup.Builder()
                 .addUseCase(preview!!)
                 .addUseCase(videoCapture!!)
-                .setViewPort(viewPort)
                 .build()
 
             camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
             currentZoomRatio = 1f
-            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 9:16")
+            Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) FULL SENSOR (no ViewPort)")
 
             // === DIAGNOSTIC LOGGING ===
             val cam = camera!!
@@ -172,9 +164,9 @@ class CameraManager(private val context: Context) {
             Log.i(DIAG_TAG, "Preview resolution: $previewRes")
             Log.i(DIAG_TAG, "VideoCapture resolution: $masterRes")
 
-            // Tell renderer the master aspect so preview visually matches saved output
-            // (WYSIWYG). Without this, if Preview buffer aspect ≠ master aspect, the
-            // preview would show a wider FOV than what gets recorded.
+            // Master aspect in display orientation (shorter/longer, ≤1). The renderer
+            // uses this to make Stage A identity when preview and master share the
+            // same sensor stream (full-sensor case: same aspect, Stage A = no-op).
             if (masterRes != null) {
                 val shorter = minOf(masterRes.width, masterRes.height).toFloat()
                 val longer = maxOf(masterRes.width, masterRes.height).toFloat()

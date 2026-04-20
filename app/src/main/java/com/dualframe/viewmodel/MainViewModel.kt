@@ -188,8 +188,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 appStatus = AppStatus.COUNTDOWN,
                 countdownRemaining = seconds,
                 thumbnailBitmap = null,
-                nativeExportInfo = null,
-                croppedExportInfo = null,
+                portraitExportInfo = null,
+                landscapeExportInfo = null,
             )
         }
 
@@ -215,8 +215,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 thumbnailBitmap = null,
-                nativeExportInfo = null,
-                croppedExportInfo = null,
+                portraitExportInfo = null,
+                landscapeExportInfo = null,
             )
         }
 
@@ -302,16 +302,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // ── Export pipeline ───────────────────────────────────────────────
 
     /**
-     * Quality-preserving export pipeline.
-     *
-     * Step 1 — Native output: direct file copy of the master. No re-encode,
-     *   no Transformer, no quality loss. Resolution matches exactly what CameraX recorded.
-     * Step 2 — Derived output: Transformer center-crop to the other aspect ratio,
-     *   with Presentation.createForHeight() to preserve pixel dimensions and prevent
-     *   Transformer's default downscale to ~720p.
-     *
-     * Portrait master (default) → portrait native copy + landscape crop
-     * Landscape master (fallback) → landscape native copy + portrait crop
+     * Full-sensor export pipeline: both 9:16 portrait and 16:9 landscape are
+     * derived as crops from the full-sensor master. ExportManager handles the
+     * identity-crop optimization internally (falls back to file copy when the
+     * source aspect already matches the target, e.g. on 16:9 sensor + portrait
+     * device the 9:16 crop is lossless).
      */
     private fun startExportPipeline() {
         val file = masterFile ?: run {
@@ -329,99 +324,70 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             Log.i("DualFrameCameraDiag", "Master rotation: ${masterMeta?.rotation}")
             Log.i("DualFrameCameraDiag", "Master display aspect: ${masterMeta?.displayAspectRatio}")
 
-            // Detect native orientation from the actual master file
-            val isPortrait = withContext(Dispatchers.IO) {
-                exportManager.isMasterPortrait(file)
-            }
-            Log.i("DualFrameCameraDiag", "isMasterPortrait: $isPortrait")
+            // ── Step 1: Portrait (9:16) crop from full-sensor master ──
+            _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_PORTRAIT, exportProgress = 0f) }
 
-            val nativeSuffix: String
-            val nativeLabel: String
-            val croppedAspect: Float
-            val croppedSuffix: String
-            val croppedLabel: String
-
-            if (isPortrait) {
-                nativeSuffix = "portrait"
-                nativeLabel = "9:16"
-                croppedAspect = ExportManager.ASPECT_16x9
-                croppedSuffix = "landscape"
-                croppedLabel = "16:9"
-            } else {
-                nativeSuffix = "landscape"
-                nativeLabel = "16:9"
-                croppedAspect = ExportManager.ASPECT_9x16
-                croppedSuffix = "portrait"
-                croppedLabel = "9:16"
-            }
-
-            // ── Step 1: Native output — direct file copy, zero quality loss ──
-            // The master file already has the native framing. Copying preserves
-            // the exact recorded resolution, bitrate, and codec without re-encoding.
-            _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_NATIVE, exportProgress = 0f) }
-
-            val nativeFile = exportManager.exportNativeCopy(file, nativeSuffix) { progress ->
+            val portraitFile = exportManager.exportCropped(
+                masterFile = file,
+                targetAspect = ExportManager.ASPECT_9x16,
+                fileSuffix = "portrait",
+                verticalOffset = 0f,
+            ) { progress ->
                 _uiState.update { it.copy(exportProgress = progress) }
             }
-            if (nativeFile == null) {
-                setError("$nativeLabel export failed")
+            if (portraitFile == null) {
+                setError("9:16 export failed")
                 _uiState.update { it.copy(appStatus = AppStatus.ERROR) }
                 return@launch
             }
 
-            val nativeMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(nativeFile) }
-            val nativeRes = nativeMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
-            val nativeFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(nativeFile) }
-            Log.i("DualFrameCameraDiag", "Native export ($nativeLabel): file=${nativeFile.name}")
-            Log.i("DualFrameCameraDiag", "  raw: ${nativeMeta?.rawWidth}x${nativeMeta?.rawHeight}")
-            Log.i("DualFrameCameraDiag", "  display: ${nativeMeta?.displayWidth}x${nativeMeta?.displayHeight}")
-            Log.i("DualFrameCameraDiag", "  rotation: ${nativeMeta?.rotation}")
-            Log.i("DualFrameCameraDiag", "  fps: $nativeFps")
-            Log.i("DualFrameCameraDiag", "  size: ${nativeFile.length()/1024}KB")
+            val portraitMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(portraitFile) }
+            val portraitRes = portraitMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
+            val portraitFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(portraitFile) }
+            Log.i("DualFrameCameraDiag", "Portrait export (9:16): file=${portraitFile.name}")
+            Log.i("DualFrameCameraDiag", "  display: ${portraitMeta?.displayWidth}x${portraitMeta?.displayHeight}")
+            Log.i("DualFrameCameraDiag", "  fps: $portraitFps, size: ${portraitFile.length()/1024}KB")
 
-            // ── Step 2: Derived output — center-crop with resolution preservation ──
-            // Uses Presentation.createForHeight() to prevent Transformer's default downscale.
-            _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_CROPPED, exportProgress = 0f) }
+            // ── Step 2: Landscape (16:9) crop from full-sensor master ──
+            _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_LANDSCAPE, exportProgress = 0f) }
 
             val cropOffset = cameraManager.renderer.landscapeCropOffsetY
             Log.i("DualFrameCameraDiag", "Landscape crop vertical offset: ${"%.3f".format(cropOffset)}")
-            val croppedFile = exportManager.exportCropped(
-                file, croppedAspect, croppedSuffix,
+            val landscapeFile = exportManager.exportCropped(
+                masterFile = file,
+                targetAspect = ExportManager.ASPECT_16x9,
+                fileSuffix = "landscape",
                 verticalOffset = cropOffset,
             ) { progress ->
                 _uiState.update { it.copy(exportProgress = progress) }
             }
-            if (croppedFile == null) {
-                setError("$croppedLabel export failed")
+            if (landscapeFile == null) {
+                setError("16:9 export failed")
                 _uiState.update { it.copy(appStatus = AppStatus.ERROR) }
                 return@launch
             }
 
-            val croppedMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(croppedFile) }
-            val croppedRes = croppedMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
-            val croppedFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(croppedFile) }
-            Log.i("DualFrameCameraDiag", "Cropped export ($croppedLabel): file=${croppedFile.name}")
-            Log.i("DualFrameCameraDiag", "  raw: ${croppedMeta?.rawWidth}x${croppedMeta?.rawHeight}")
-            Log.i("DualFrameCameraDiag", "  display: ${croppedMeta?.displayWidth}x${croppedMeta?.displayHeight}")
-            Log.i("DualFrameCameraDiag", "  rotation: ${croppedMeta?.rotation}")
-            Log.i("DualFrameCameraDiag", "  fps: $croppedFps")
+            val landscapeMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(landscapeFile) }
+            val landscapeRes = landscapeMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
+            val landscapeFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(landscapeFile) }
+            Log.i("DualFrameCameraDiag", "Landscape export (16:9): file=${landscapeFile.name}")
+            Log.i("DualFrameCameraDiag", "  display: ${landscapeMeta?.displayWidth}x${landscapeMeta?.displayHeight}")
+            Log.i("DualFrameCameraDiag", "  fps: $landscapeFps, size: ${landscapeFile.length()/1024}KB")
             Log.i("DualFrameCameraDiag", "==============================")
 
-            val thumbnail = generateThumbnail(nativeFile)
+            val thumbnail = generateThumbnail(portraitFile)
 
-            // Files ready in temp — NOT saved to gallery yet.
-            // User must press Save Both or Remove Watermark to trigger gallery save.
             _uiState.update {
                 it.copy(
                     appStatus = AppStatus.EXPORT_COMPLETE,
                     exportProgress = 1f,
                     thumbnailBitmap = thumbnail,
-                    nativeExportInfo = buildOutputLine(nativeLabel, nativeRes, nativeFps),
-                    croppedExportInfo = buildOutputLine(croppedLabel, croppedRes, croppedFps),
-                    nativeTempPath = nativeFile.absolutePath,
-                    croppedTempPath = croppedFile.absolutePath,
-                    savedNativeUri = null,
-                    savedCroppedUri = null,
+                    portraitExportInfo = buildOutputLine("9:16", portraitRes, portraitFps),
+                    landscapeExportInfo = buildOutputLine("16:9", landscapeRes, landscapeFps),
+                    portraitTempPath = portraitFile.absolutePath,
+                    landscapeTempPath = landscapeFile.absolutePath,
+                    savedPortraitUri = null,
+                    savedLandscapeUri = null,
                     saveMessage = null,
                 )
             }
@@ -448,50 +414,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        val nativePath = state.nativeTempPath ?: return
-        val croppedPath = state.croppedTempPath ?: return
+        val portraitPath = state.portraitTempPath ?: return
+        val landscapePath = state.landscapeTempPath ?: return
 
         _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = null) }
 
         viewModelScope.launch {
             val app: android.app.Application = getApplication()
-            val nativeFile = File(nativePath)
-            val croppedFile = File(croppedPath)
+            val portraitFile = File(portraitPath)
+            val landscapeFile = File(landscapePath)
 
             val isFront = cameraManager.useFrontCamera.value
             val beauty = isFront && _uiState.value.settings.frontCameraEffect
             // Mirror saved selfie when setting is OFF (user wants mirrored save)
             val mirror = isFront && !_uiState.value.settings.saveSelfieUnmirrored
-            val wmNative = FileStorage.createExportFile(app, "wm_portrait")
-            val wmCropped = FileStorage.createExportFile(app, "wm_landscape")
+            val wmPortrait = FileStorage.createExportFile(app, "wm_portrait")
+            val wmLandscape = FileStorage.createExportFile(app, "wm_landscape")
 
-            val wmNativeResult = WatermarkHelper.applyEffects(
-                app, nativeFile, wmNative,
+            val wmPortraitResult = WatermarkHelper.applyEffects(
+                app, portraitFile, wmPortrait,
                 applyWatermark = true, applyBeauty = beauty, mirrorHorizontally = mirror,
             )
-            val wmCroppedResult = WatermarkHelper.applyEffects(
-                app, croppedFile, wmCropped,
+            val wmLandscapeResult = WatermarkHelper.applyEffects(
+                app, landscapeFile, wmLandscape,
                 applyWatermark = true, applyBeauty = beauty, mirrorHorizontally = mirror,
             )
 
-            val sourceNative = wmNativeResult ?: nativeFile
-            val sourceCropped = wmCroppedResult ?: croppedFile
+            val sourcePortrait = wmPortraitResult ?: portraitFile
+            val sourceLandscape = wmLandscapeResult ?: landscapeFile
 
             _uiState.update { it.copy(saveMessage = null) }
 
-            val uriN = withContext(Dispatchers.IO) {
-                FileStorage.saveToMediaStore(app, sourceNative, nativeFile.name)
+            val uriP = withContext(Dispatchers.IO) {
+                FileStorage.saveToMediaStore(app, sourcePortrait, portraitFile.name)
             }
-            val uriC = withContext(Dispatchers.IO) {
-                FileStorage.saveToMediaStore(app, sourceCropped, croppedFile.name)
+            val uriL = withContext(Dispatchers.IO) {
+                FileStorage.saveToMediaStore(app, sourceLandscape, landscapeFile.name)
             }
 
             _uiState.update {
                 it.copy(
                     appStatus = AppStatus.EXPORT_COMPLETE,
-                    savedNativeUri = uriN,
-                    savedCroppedUri = uriC,
-                    saveMessage = if (uriN != null && uriC != null) "Saved" else "Save failed",
+                    savedPortraitUri = uriP,
+                    savedLandscapeUri = uriL,
+                    saveMessage = if (uriP != null && uriL != null) "Saved" else "Save failed",
                 )
             }
         }
@@ -503,50 +469,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun saveBothClean() {
         val state = _uiState.value
         if (state.appStatus != AppStatus.EXPORT_COMPLETE && state.appStatus != AppStatus.SAVING) return
-        val nativePath = state.nativeTempPath ?: return
-        val croppedPath = state.croppedTempPath ?: return
+        val portraitPath = state.portraitTempPath ?: return
+        val landscapePath = state.landscapeTempPath ?: return
 
         _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = null) }
 
         viewModelScope.launch {
             val app: android.app.Application = getApplication()
-            val nativeFile = File(nativePath)
-            val croppedFile = File(croppedPath)
+            val portraitFile = File(portraitPath)
+            val landscapeFile = File(landscapePath)
 
             val isFront = cameraManager.useFrontCamera.value
             val beauty = isFront && _uiState.value.settings.frontCameraEffect
             val mirror = isFront && !_uiState.value.settings.saveSelfieUnmirrored
             val needsTransform = beauty || mirror
 
-            val sourceNative: File = if (needsTransform) {
+            val sourcePortrait: File = if (needsTransform) {
                 val processed = FileStorage.createExportFile(app, "tmp_portrait")
                 WatermarkHelper.applyEffects(
-                    app, nativeFile, processed,
+                    app, portraitFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
-                ) ?: nativeFile
-            } else nativeFile
+                ) ?: portraitFile
+            } else portraitFile
 
-            val sourceCropped: File = if (needsTransform) {
+            val sourceLandscape: File = if (needsTransform) {
                 val processed = FileStorage.createExportFile(app, "tmp_landscape")
                 WatermarkHelper.applyEffects(
-                    app, croppedFile, processed,
+                    app, landscapeFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
-                ) ?: croppedFile
-            } else croppedFile
+                ) ?: landscapeFile
+            } else landscapeFile
 
-            val uriN = withContext(Dispatchers.IO) {
-                FileStorage.saveToMediaStore(app, sourceNative, nativeFile.name)
+            val uriP = withContext(Dispatchers.IO) {
+                FileStorage.saveToMediaStore(app, sourcePortrait, portraitFile.name)
             }
-            val uriC = withContext(Dispatchers.IO) {
-                FileStorage.saveToMediaStore(app, sourceCropped, croppedFile.name)
+            val uriL = withContext(Dispatchers.IO) {
+                FileStorage.saveToMediaStore(app, sourceLandscape, landscapeFile.name)
             }
 
             _uiState.update {
                 it.copy(
                     appStatus = AppStatus.EXPORT_COMPLETE,
-                    savedNativeUri = uriN,
-                    savedCroppedUri = uriC,
-                    saveMessage = if (uriN != null && uriC != null) "Saved" else "Save failed",
+                    savedPortraitUri = uriP,
+                    savedLandscapeUri = uriL,
+                    saveMessage = if (uriP != null && uriL != null) "Saved" else "Save failed",
                 )
             }
         }
@@ -566,7 +532,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Falls back to generic gallery if no saved URI is available.
      */
     fun buildOpenGalleryIntent(): Intent {
-        val savedUri = _uiState.value.savedNativeUri ?: _uiState.value.savedCroppedUri
+        val savedUri = _uiState.value.savedPortraitUri ?: _uiState.value.savedLandscapeUri
         return if (savedUri != null) {
             Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(savedUri, "video/*")

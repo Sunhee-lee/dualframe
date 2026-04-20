@@ -118,9 +118,10 @@ class DualPreviewRenderer {
     // Beauty effect for front camera (soft blur + brightness + warm tone)
     var beautyEnabled = false
 
-    // Aspect ratio of the recorder master buffer (shorter/longer, so always ≤ 1).
-    // Preview is first cropped to this aspect before cropping to each panel's aspect,
-    // so the visible preview FOV matches what's actually saved (WYSIWYG).
+    // Aspect ratio of the recorder master in display orientation (shorter/longer, ≤1).
+    // Both preview and master come from the same sensor; after stMatrix rotation
+    // they appear in display orientation. This lets Stage B crop each panel
+    // correctly relative to the rotated content.
     // Set by CameraManager after bind from VideoCapture.attachedSurfaceResolution.
     var masterVisualAspect: Float = 9f / 16f
 
@@ -203,9 +204,8 @@ class DualPreviewRenderer {
         st.updateTexImage()
         st.getTransformMatrix(stMatrix)
 
-        // Compute the post-rotation visual aspect. The SurfaceTexture's ST matrix
-        // handles sensor rotation, so the visual content is in display orientation.
-        // For a 1920x1080 landscape buffer with 90° rotation → visual is 1080x1920.
+        // Display-oriented aspect (shorter/longer). The stMatrix rotates sensor
+        // buffer to display orientation, so we treat the aspect as portrait-ish.
         val visualAspect = if (previewWidth > 0 && previewHeight > 0) {
             val shorter = minOf(previewWidth, previewHeight).toFloat()
             val longer = maxOf(previewWidth, previewHeight).toFloat()

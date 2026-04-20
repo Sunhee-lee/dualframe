@@ -108,9 +108,23 @@ class ExportManager(private val context: Context) {
         verticalOffset: Float = 0f,
         onProgress: (Float) -> Unit,
     ): File? = withContext(Dispatchers.Main) {
+        // Identity-crop shortcut: if source aspect already ≈ target aspect AND no
+        // vertical offset is applied, skip Transformer and do a lossless file copy.
+        // This preserves the native-copy quality benefit for the common case
+        // (e.g., 16:9 sensor + portrait device → master is 9:16 → 9:16 export is
+        // identity). Falls back to re-encode when a real crop is needed.
+        val metadata = VideoMetadata.fromFile(masterFile)
+        if (metadata != null && verticalOffset == 0f) {
+            val sourceAspect = metadata.displayAspectRatio
+            if (kotlin.math.abs(sourceAspect - targetAspect) < 0.01f) {
+                Log.i(TAG, "Identity crop for $fileSuffix: source≈target " +
+                    "(${"%.3f".format(sourceAspect)}≈${"%.3f".format(targetAspect)}) → file copy")
+                return@withContext exportNativeCopy(masterFile, fileSuffix, onProgress)
+            }
+        }
+
         val outputFile = FileStorage.createExportFile(context, fileSuffix)
         try {
-            val metadata = VideoMetadata.fromFile(masterFile)
             if (metadata == null) {
                 Log.e(TAG, "Cannot read metadata for crop")
             }
