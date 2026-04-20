@@ -369,16 +369,18 @@ private fun PreviewPanels(
             }
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
-            val zoomBtnModifier = when (deviceRotation) {
-                90 -> Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
-                270 -> Modifier.align(Alignment.CenterStart).padding(start = 8.dp)
-                else -> Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+            if (!cameraManager.isRecording) {
+                val zoomBtnModifier = when (deviceRotation) {
+                    90 -> Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
+                    270 -> Modifier.align(Alignment.CenterStart).padding(start = 8.dp)
+                    else -> Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+                }
+                ZoomResetButton(
+                    rotation = rot,
+                    onClick = { cameraManager.setZoomRatio(1f) },
+                    modifier = zoomBtnModifier,
+                )
             }
-            ZoomResetButton(
-                rotation = rot,
-                onClick = { cameraManager.setZoomRatio(1f) },
-                modifier = zoomBtnModifier,
-            )
         }
     }
 }
@@ -501,16 +503,16 @@ private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
 private fun ZoomResetButton(rotation: Float, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .size(32.dp)
+            .size(24.dp)
             .clip(CircleShape)
-            .background(Color(0xAA000000))
+            .background(Color(0x22000000))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = "1x",
-            color = Color.White,
-            fontSize = 12.sp,
+            color = Color.White.copy(alpha = 0.35f),
+            fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.rotate(rotation),
         )
