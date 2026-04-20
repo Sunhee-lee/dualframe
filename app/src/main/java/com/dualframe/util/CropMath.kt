@@ -37,49 +37,62 @@ object CropMath {
         val tolerance = 0.01f
 
         return if (kotlin.math.abs(targetAspect - sourceAspect) < tolerance) {
-            // Aspects match — no crop
-            CropResult(-1f, 1f, -1f, 1f, 1f, 1f).also {
-                Log.d(TAG, "No crop: source=${"%.3f".format(sourceAspect)} ≈ target=${"%.3f".format(targetAspect)}")
-            }
+            CropResult(-1f, 1f, -1f, 1f, 1f, 1f)
         } else if (targetAspect > sourceAspect) {
-            // Target is wider → crop top/bottom, keep full width
             val keepY = sourceAspect / targetAspect
             CropResult(
                 left = -1f, right = 1f,
                 bottom = -keepY, top = keepY,
                 keepFractionX = 1f, keepFractionY = keepY,
-            ).also {
-                Log.d(TAG, "Crop height: keepY=${"%.3f".format(keepY)} " +
-                    "(source=${"%.3f".format(sourceAspect)} → target=${"%.3f".format(targetAspect)})")
-            }
+            )
         } else {
-            // Target is taller → crop left/right, keep full height
             val keepX = targetAspect / sourceAspect
             CropResult(
                 left = -keepX, right = keepX,
                 bottom = -1f, top = 1f,
                 keepFractionX = keepX, keepFractionY = 1f,
-            ).also {
-                Log.d(TAG, "Crop width: keepX=${"%.3f".format(keepX)} " +
-                    "(source=${"%.3f".format(sourceAspect)} → target=${"%.3f".format(targetAspect)})")
-            }
+            )
         }
     }
 
     /**
+     * Center-crop with a vertical offset for user-adjustable landscape framing.
+     *
+     * @param verticalOffset normalized [-1, 1] where -1 = crop window at bottom,
+     *   0 = center (default), +1 = crop window at top of the source frame.
+     *   Only affects crops that remove top/bottom (target wider than source).
+     */
+    fun centerCropWithVerticalOffset(
+        sourceAspect: Float,
+        targetAspect: Float,
+        verticalOffset: Float = 0f,
+    ): CropResult {
+        val base = centerCrop(sourceAspect, targetAspect)
+        if (verticalOffset == 0f || base.keepFractionY >= 1f) return base
+
+        val maxShift = 1f - base.keepFractionY
+        val shift = verticalOffset.coerceIn(-1f, 1f) * maxShift
+        return base.copy(
+            bottom = base.bottom + shift,
+            top = base.top + shift,
+        )
+    }
+
+    /**
      * Convert NDC crop bounds to texture coordinate offsets.
-     * NDC [-1,1] maps to texCoord [0,1]:
-     *   texOffset = (1 - keepFraction) / 2
-     *   texRange = keepFraction
+     * NDC [-1,1] maps to texCoord [0,1]: tex = (ndc + 1) / 2.
+     * Handles both centered and offset crops.
      */
     fun ndcToTexCoords(crop: CropResult): TexCropCoords {
-        val texOffsetX = (1f - crop.keepFractionX) / 2f
-        val texOffsetY = (1f - crop.keepFractionY) / 2f
+        val texLeft = (crop.left + 1f) / 2f
+        val texBottom = (crop.bottom + 1f) / 2f
+        val texRight = (crop.right + 1f) / 2f
+        val texTop = (crop.top + 1f) / 2f
         return TexCropCoords(
-            offsetX = texOffsetX,
-            offsetY = texOffsetY,
-            rangeX = crop.keepFractionX,
-            rangeY = crop.keepFractionY,
+            offsetX = texLeft,
+            offsetY = texBottom,
+            rangeX = texRight - texLeft,
+            rangeY = texTop - texBottom,
         )
     }
 

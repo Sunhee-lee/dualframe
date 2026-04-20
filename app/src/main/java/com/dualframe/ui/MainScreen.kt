@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,14 +35,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -234,16 +239,24 @@ private fun PreviewPanels(
             // Ghost watermark sized relative to THIS preview's visible rect, not screen.
             // Portrait uses top-end; slightly bigger (+2sp) than landscape.
             GhostWatermark(isPortrait = true)
-            AspectLabel("Portrait")
+            AspectLabel("9:16")
         }
 
-        // Bottom: 16:9 OVERLAY GUIDE (not a live second preview). Shows the 16:9
-        // crop framing. The actual 16:9 video is recorded via VideoCapture through
-        // the UseCaseGroup, so the framing here is a faithful static guide.
+        // Bottom: 16:9 landscape preview with vertical drag to adjust crop position.
+        var landscapeOffset by remember { mutableFloatStateOf(0f) }
         Box(
             Modifier.weight(1f).fillMaxWidth().aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black),
+                .background(Color.Black)
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures { _, dragAmount ->
+                        val sensitivity = 2f / size.height
+                        val newOffset = (landscapeOffset - dragAmount * sensitivity)
+                            .coerceIn(-1f, 1f)
+                        landscapeOffset = newOffset
+                        renderer.landscapeCropOffsetY = newOffset
+                    }
+                },
         ) {
             AndroidView(
                 factory = { ctx ->
@@ -258,11 +271,11 @@ private fun PreviewPanels(
                 },
                 modifier = Modifier.fillMaxSize(),
             )
-            // 16:9 guide border, drawn relative to this container (preview visible rect)
             GuideBorder()
             if (showGuides) RuleOfThirdsGrid()
             GhostWatermark(isPortrait = false)
-            AspectLabel("Landscape")
+            AspectLabel("16:9")
+            CropPositionIndicator(landscapeOffset)
         }
     }
 }
@@ -312,6 +325,32 @@ private fun AspectLabel(text: String) {
         Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.TopStart).padding(6.dp)
                 .background(Color(0xAA000000), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
+    }
+}
+
+@Composable
+private fun CropPositionIndicator(offset: Float) {
+    if (offset == 0f) return
+    Canvas(Modifier.fillMaxSize()) {
+        val barW = 3.dp.toPx()
+        val barX = size.width - barW - 4.dp.toPx()
+        val pad = 4.dp.toPx()
+        val trackH = size.height - pad * 2
+        val thumbH = trackH * 0.3f
+        val travel = trackH - thumbH
+        val thumbTop = pad + travel * (1f - offset) / 2f
+        drawRoundRect(
+            color = Color.White.copy(alpha = 0.15f),
+            topLeft = Offset(barX, pad),
+            size = Size(barW, trackH),
+            cornerRadius = CornerRadius(barW / 2),
+        )
+        drawRoundRect(
+            color = Color.White.copy(alpha = 0.5f),
+            topLeft = Offset(barX, thumbTop),
+            size = Size(barW, thumbH),
+            cornerRadius = CornerRadius(barW / 2),
+        )
     }
 }
 

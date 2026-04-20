@@ -343,16 +343,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (isPortrait) {
                 nativeSuffix = "portrait"
-                nativeLabel = "Portrait"
+                nativeLabel = "9:16"
                 croppedAspect = ExportManager.ASPECT_16x9
                 croppedSuffix = "landscape"
-                croppedLabel = "Landscape"
+                croppedLabel = "16:9"
             } else {
                 nativeSuffix = "landscape"
-                nativeLabel = "Landscape"
+                nativeLabel = "16:9"
                 croppedAspect = ExportManager.ASPECT_9x16
                 croppedSuffix = "portrait"
-                croppedLabel = "Portrait"
+                croppedLabel = "9:16"
             }
 
             // ── Step 1: Native output — direct file copy, zero quality loss ──
@@ -383,7 +383,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // Uses Presentation.createForHeight() to prevent Transformer's default downscale.
             _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_CROPPED, exportProgress = 0f) }
 
-            val croppedFile = exportManager.exportCropped(file, croppedAspect, croppedSuffix) { progress ->
+            val cropOffset = cameraManager.renderer.landscapeCropOffsetY
+            Log.i("DualFrameCameraDiag", "Landscape crop vertical offset: ${"%.3f".format(cropOffset)}")
+            val croppedFile = exportManager.exportCropped(
+                file, croppedAspect, croppedSuffix,
+                verticalOffset = cropOffset,
+            ) { progress ->
                 _uiState.update { it.copy(exportProgress = progress) }
             }
             if (croppedFile == null) {

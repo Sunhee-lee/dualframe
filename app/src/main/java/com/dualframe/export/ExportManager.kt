@@ -105,6 +105,7 @@ class ExportManager(private val context: Context) {
         masterFile: File,
         targetAspect: Float,
         fileSuffix: String,
+        verticalOffset: Float = 0f,
         onProgress: (Float) -> Unit,
     ): File? = withContext(Dispatchers.Main) {
         val outputFile = FileStorage.createExportFile(context, fileSuffix)
@@ -117,6 +118,7 @@ class ExportManager(private val context: Context) {
                 inputFile = masterFile,
                 outputFile = outputFile,
                 targetAspectRatio = targetAspect,
+                verticalOffset = verticalOffset,
                 sourceMetadata = metadata,
                 onProgress = onProgress,
             )
@@ -140,6 +142,7 @@ class ExportManager(private val context: Context) {
         inputFile: File,
         outputFile: File,
         targetAspectRatio: Float,
+        verticalOffset: Float = 0f,
         sourceMetadata: VideoMetadata?,
         onProgress: (Float) -> Unit,
     ) = suspendCancellableCoroutine { cont ->
@@ -148,8 +151,9 @@ class ExportManager(private val context: Context) {
         val displayW = sourceMetadata?.displayWidth ?: 1920
         val displayH = sourceMetadata?.displayHeight ?: 1080
 
-        // Use shared CropMath — same math used by preview renderer for WYSIWYG
-        val crop = CropMath.centerCrop(sourceAspect, targetAspectRatio)
+        val crop = CropMath.centerCropWithVerticalOffset(
+            sourceAspect, targetAspectRatio, verticalOffset,
+        )
         val outputW = (displayW * crop.keepFractionX).toInt().coerceAtLeast(2)
         val outputH = (displayH * crop.keepFractionY).toInt().coerceAtLeast(2)
 

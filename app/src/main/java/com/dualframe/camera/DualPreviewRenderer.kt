@@ -124,6 +124,11 @@ class DualPreviewRenderer {
     // Set by CameraManager after bind from VideoCapture.attachedSurfaceResolution.
     var masterVisualAspect: Float = 9f / 16f
 
+    // User-adjustable vertical crop offset for the landscape (16:9) panel.
+    // Normalized [-1, 1]: -1 = bottom, 0 = center, +1 = top.
+    // Set by drag gesture on the landscape preview. Read by export pipeline.
+    @Volatile var landscapeCropOffsetY: Float = 0f
+
     private val stMatrix = FloatArray(16)
     private var vertexBuffer: FloatBuffer? = null
 
@@ -210,10 +215,10 @@ class DualPreviewRenderer {
         }
 
         if (eglSurface9x16 != EGL14.EGL_NO_SURFACE) {
-            renderToSurface(eglSurface9x16, visualAspect)
+            renderToSurface(eglSurface9x16, visualAspect, 0f)
         }
         if (eglSurface16x9 != EGL14.EGL_NO_SURFACE) {
-            renderToSurface(eglSurface16x9, visualAspect)
+            renderToSurface(eglSurface16x9, visualAspect, landscapeCropOffsetY)
         }
     }
 
@@ -227,7 +232,7 @@ class DualPreviewRenderer {
      * we keep the quad at [-1,1] and adjust texture coordinates to select
      * the center-crop region. This matches the export's NDC crop bounds.
      */
-    private fun renderToSurface(eglSurface: EGLSurface, visualAspect: Float) {
+    private fun renderToSurface(eglSurface: EGLSurface, visualAspect: Float, cropOffsetY: Float) {
         if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) return
 
         val surfaceWidth = intArrayOf(0)
@@ -244,34 +249,26 @@ class DualPreviewRenderer {
 
         GLES20.glUseProgram(program)
 
-        // Two-stage crop to achieve WYSIWYG with the saved master.
-        //
-        // CameraX's ViewPort does NOT crop the Preview SurfaceTexture — only VideoCapture.
-        // So the preview buffer may be wider than the recorder master (e.g., 4:3 sensor mode
-        // while master is 16:9). Cropping preview directly to the panel aspect would show a
-        // different FOV than the saved file.
-        //
-        // Stage A: preview buffer aspect → master aspect (mimic ViewPort crop on Preview)
-        // Stage B: master aspect → panel aspect (final framing)
-        //
-        // Composition is simple because both are centered: keep fractions multiply, and
-        // the combined crop is still centered.
+        // Two-stage crop for WYSIWYG with the saved master.
+        // Stage A: preview buffer → master aspect (mimic ViewPort crop on Preview)
+        // Stage B: master → panel aspect (with optional vertical offset for landscape)
         val surfaceAspect = sw.toFloat() / sh.toFloat()
         val cropA = com.dualframe.util.CropMath.centerCrop(visualAspect, masterVisualAspect)
-        val cropB = com.dualframe.util.CropMath.centerCrop(masterVisualAspect, surfaceAspect)
-        val keepX = cropA.keepFractionX * cropB.keepFractionX
-        val keepY = cropA.keepFractionY * cropB.keepFractionY
-        val offsetX = (1f - keepX) / 2f
-        val offsetY = (1f - keepY) / 2f
+        val cropB = com.dualframe.util.CropMath.centerCropWithVerticalOffset(
+            masterVisualAspect, surfaceAspect, cropOffsetY,
+        )
+        val texA = com.dualframe.util.CropMath.ndcToTexCoords(cropA)
+        val texB = com.dualframe.util.CropMath.ndcToTexCoords(cropB)
+        val oX = texA.offsetX + texA.rangeX * texB.offsetX
+        val oY = texA.offsetY + texA.rangeY * texB.offsetY
+        val rX = texA.rangeX * texB.rangeX
+        val rY = texA.rangeY * texB.rangeY
 
-        // Build cropped quad vertices: position stays [-1,1], texture coords
-        // are narrowed to [offset, offset+keep] to select the composed crop region.
         val cropVertices = floatArrayOf(
-            // x,     y,     s,                   t
-            -1f, -1f,  offsetX,                   offsetY,                   // bottom-left
-             1f, -1f,  offsetX + keepX,           offsetY,                   // bottom-right
-            -1f,  1f,  offsetX,                   offsetY + keepY,           // top-left
-             1f,  1f,  offsetX + keepX,           offsetY + keepY,           // top-right
+            -1f, -1f,  oX,       oY,        // bottom-left
+             1f, -1f,  oX + rX,  oY,        // bottom-right
+            -1f,  1f,  oX,       oY + rY,   // top-left
+             1f,  1f,  oX + rX,  oY + rY,   // top-right
         )
 
         val cropBuf = java.nio.ByteBuffer.allocateDirect(cropVertices.size * 4)
