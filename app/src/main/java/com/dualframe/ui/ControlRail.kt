@@ -19,6 +19,8 @@ import androidx.compose.material.icons.outlined.MicOff
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.rounded.FlashOff
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material3.Icon
@@ -37,14 +39,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 object RailTheme {
-    val tileSize: Dp = 72.dp
-    val tileRadius: Dp = 14.dp
-    val tileGap: Dp = 6.dp
+    val tileSize: Dp = 52.dp
+    val tileRadius: Dp = 12.dp
+    val tileGap: Dp = 5.dp
     val tileBg = Color(0xFF1A1A1A)
     val tileBorder = Color(0xFF2A2A2A)
     val iconColor = Color(0xFFE0E0E0)
+    val iconSize: Dp = 24.dp
     val activeColor = Color(0xFF4CAF50)
-    val inactiveColor = Color(0xFF888888)
+    val inactiveColor = Color(0xFF777777)
     val recDotColor = Color(0xFFFF1744)
 }
 
@@ -58,12 +61,14 @@ fun ControlRail(
     timerSeconds: Int,
     flashOn: Boolean,
     showFlash: Boolean,
+    keepScreenOn: Boolean,
     deviceRotation: Int,
     onAudioToggle: () -> Unit,
     onZoomReset: () -> Unit,
     onGuideToggle: () -> Unit,
     onTimerCycle: () -> Unit,
     onFlashToggle: () -> Unit,
+    onKeepScreenToggle: () -> Unit,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -74,69 +79,54 @@ fun ControlRail(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
     ) {
-        // 1. Recording time
         RecTimeTile(isRecording, recordingSeconds, rot)
 
-        // 2. Audio
-        SquareControlTile(
+        IconTile(
             icon = if (audioEnabled) Icons.Outlined.Mic else Icons.Outlined.MicOff,
-            label = "오디오",
+            label = "Audio", isActive = audioEnabled,
             stateText = if (audioEnabled) "ON" else "OFF",
-            isActive = audioEnabled,
-            rotation = rot,
-            onClick = onAudioToggle,
+            rotation = rot, onClick = onAudioToggle,
         )
 
-        // 3. Zoom
-        SquareControlTile(
+        IconTile(
             icon = Icons.Outlined.Search,
-            label = "줌 설정",
+            label = "Zoom", isActive = true,
             stateText = "${"%.1f".format(zoomRatio)}x",
-            isActive = true,
-            rotation = rot,
-            onClick = onZoomReset,
+            rotation = rot, onClick = onZoomReset,
         )
 
-        // 4. Guide
-        SquareControlTile(
+        IconTile(
             icon = Icons.Outlined.GridOn,
-            label = "가이드",
+            label = "Guide", isActive = guidesEnabled,
             stateText = if (guidesEnabled) "ON" else "OFF",
-            isActive = guidesEnabled,
-            rotation = rot,
-            onClick = onGuideToggle,
+            rotation = rot, onClick = onGuideToggle,
         )
 
-        // 5. Timer
-        SquareControlTile(
+        IconTile(
             icon = Icons.Outlined.Timer,
-            label = "타이머",
+            label = "Timer", isActive = timerSeconds > 0,
             stateText = if (timerSeconds > 0) "${timerSeconds}s" else "OFF",
-            isActive = timerSeconds > 0,
-            rotation = rot,
-            onClick = onTimerCycle,
+            rotation = rot, onClick = onTimerCycle,
         )
 
-        // 6. Flash
         if (showFlash) {
-            SquareControlTile(
+            IconTile(
                 icon = if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
-                label = "플래시",
-                stateText = if (flashOn) "ON" else "OFF",
-                isActive = flashOn,
-                rotation = rot,
-                onClick = onFlashToggle,
+                label = "Flash", isActive = flashOn,
+                stateText = null, rotation = rot, onClick = onFlashToggle,
             )
         }
 
-        // 7. Settings
-        SquareControlTile(
+        IconTile(
+            icon = if (keepScreenOn) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+            label = "Screen", isActive = keepScreenOn,
+            stateText = null, rotation = rot, onClick = onKeepScreenToggle,
+        )
+
+        IconTile(
             icon = Icons.Outlined.Settings,
-            label = "설정",
-            stateText = null,
-            isActive = false,
-            rotation = rot,
-            onClick = onSettings,
+            label = "Settings", isActive = false,
+            stateText = null, rotation = rot, onClick = onSettings,
         )
     }
 }
@@ -157,30 +147,26 @@ private fun RecTimeTile(isRecording: Boolean, seconds: Int, rotation: Float) {
         ) {
             if (isRecording) {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(RailTheme.recDotColor))
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = formatRecTime(seconds),
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
+                    color = Color.White, fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium, fontFamily = FontFamily.SansSerif,
                 )
             } else {
-                Text("00:00:00", color = RailTheme.inactiveColor, fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace)
+                Text("--:--", color = RailTheme.inactiveColor, fontSize = 10.sp,
+                    fontFamily = FontFamily.SansSerif)
             }
-            Spacer(Modifier.height(2.dp))
-            Text("녹화 시간", color = RailTheme.inactiveColor, fontSize = 9.sp)
         }
     }
 }
 
 @Composable
-private fun SquareControlTile(
+private fun IconTile(
     icon: ImageVector,
     label: String,
-    stateText: String?,
     isActive: Boolean,
+    stateText: String?,
     rotation: Float,
     onClick: () -> Unit,
 ) {
@@ -198,20 +184,18 @@ private fun SquareControlTile(
             modifier = Modifier.rotate(rotation),
         ) {
             Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = RailTheme.iconColor,
-                modifier = Modifier.size(22.dp),
+                imageVector = icon, contentDescription = label,
+                tint = if (isActive) RailTheme.activeColor else RailTheme.iconColor,
+                modifier = Modifier.size(RailTheme.iconSize),
             )
             if (stateText != null) {
                 Text(
                     text = stateText,
                     color = if (isActive) RailTheme.activeColor else RailTheme.inactiveColor,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 9.sp, fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.SansSerif,
                 )
             }
-            Text(label, color = RailTheme.inactiveColor, fontSize = 9.sp)
         }
     }
 }

@@ -123,25 +123,31 @@ fun MainScreen(
         )
     }
 
+    // Keep screen on based on setting
+    val keepScreenOn = state.settings.keepScreenAwake
+    val view = androidx.compose.ui.platform.LocalView.current
+    LaunchedEffect(keepScreenOn) {
+        if (keepScreenOn) view.keepScreenOn = true else view.keepScreenOn = false
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
     ) {
-        // ── Top header ──
+        // ── Top header: DualFrame + Ready pill ──
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-            Arrangement.SpaceBetween, Alignment.CenterVertically,
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("DualFrame", style = MaterialTheme.typography.titleMedium,
-                color = Color.White, fontWeight = FontWeight.Bold)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusChip(state.appStatus)
-            }
+            Text("DualFrame", color = Color.White, fontSize = 16.sp,
+                fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif)
+            Spacer(Modifier.width(8.dp))
+            StatusChip(state.appStatus)
         }
 
         // ── Main content: previews (left) + control rail (right) ──
         val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            // Left: preview panels
+            // Left: preview panels (same width, different heights)
             PreviewPanels(
                 renderer, viewModel.cameraManager, state.settings.showGuides,
                 Modifier.weight(1f),
@@ -158,6 +164,7 @@ fun MainScreen(
                 timerSeconds = state.settings.countdownSeconds,
                 flashOn = state.flashOn,
                 showFlash = !isFrontCamera && state.cameraReady,
+                keepScreenOn = keepScreenOn,
                 deviceRotation = deviceRotation,
                 onAudioToggle = {
                     viewModel.updateSettings(state.settings.copy(audioEnabled = !state.settings.audioEnabled))
@@ -173,6 +180,9 @@ fun MainScreen(
                     viewModel.updateSettings(state.settings.copy(countdownSeconds = next))
                 },
                 onFlashToggle = { viewModel.toggleFlash() },
+                onKeepScreenToggle = {
+                    viewModel.updateSettings(state.settings.copy(keepScreenAwake = !keepScreenOn))
+                },
                 onSettings = { showSettings = true },
             )
         }
@@ -194,12 +204,8 @@ fun MainScreen(
                 onSwitchCamera = { viewModel.switchCamera() },
                 onRecord = { viewModel.toggleRecording(hasAudioPermission) },
                 onGallery = {
-                    val intent = viewModel.buildOpenGalleryIntent()
-                    try { context.startActivity(intent) }
-                    catch (_: Exception) {
-                        try { context.startActivity(Intent.createChooser(intent, "Open with")) }
-                        catch (_: Exception) {}
-                    }
+                    try { context.startActivity(buildGalleryIntent(context)) }
+                    catch (_: Exception) {}
                 },
             )
         }
@@ -217,17 +223,19 @@ fun MainScreen(
 @Composable
 private fun StatusChip(status: AppStatus) {
     val (text, color) = when (status) {
-        AppStatus.IDLE -> "Ready" to Color(0xFF888888)
+        AppStatus.IDLE -> "Ready" to Color(0xFF4CAF50)
         AppStatus.COUNTDOWN -> "Countdown" to Color(0xFFFFA726)
         AppStatus.RECORDING -> "REC" to Color(0xFFFF1744)
-        AppStatus.EXPORTING_NATIVE -> "Exporting..." to Color(0xFFFFA726)
-        AppStatus.EXPORTING_CROPPED -> "Exporting..." to Color(0xFFFFA726)
+        AppStatus.EXPORTING_NATIVE -> "Exporting" to Color(0xFFFFA726)
+        AppStatus.EXPORTING_CROPPED -> "Exporting" to Color(0xFFFFA726)
         AppStatus.EXPORT_COMPLETE -> "Done" to Color(0xFF66BB6A)
-        AppStatus.SAVING -> "Saving..." to Color(0xFFFFA726)
+        AppStatus.SAVING -> "Saving" to Color(0xFFFFA726)
         AppStatus.ERROR -> "Error" to Color(0xFFCF6679)
     }
-    Text(text = text, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold,
-        modifier = Modifier.background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
+    Text(text = text, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+        fontFamily = FontFamily.SansSerif,
+        modifier = Modifier.background(color.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 10.dp, vertical = 4.dp))
 }
 
 // ── Preview Panels (GPU dual render via TextureViews) ─────────────────
@@ -243,8 +251,7 @@ private fun PreviewPanels(
 ) {
     val zoomRatio by cameraManager.zoomRatio.collectAsState()
     Column(
-        modifier.fillMaxWidth().padding(horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         val isDeviceLandscape = deviceRotation == 90 || deviceRotation == 270
@@ -254,8 +261,8 @@ private fun PreviewPanels(
         var pFocusPos by remember { mutableStateOf(Offset.Zero) }
 
         Box(
-            Modifier.weight(2f).aspectRatio(9f / 16f)
-                .clip(RoundedCornerShape(8.dp)).background(Color.Black)
+            Modifier.fillMaxWidth().aspectRatio(9f / 16f)
+                .clip(RoundedCornerShape(12.dp)).background(Color.Black)
                 .pointerInput(Unit) {
                     detectTapPanZoom(
                         onTap = { pos ->
@@ -305,8 +312,8 @@ private fun PreviewPanels(
         var landscapeOffset by remember { mutableFloatStateOf(0f) }
 
         Box(
-            Modifier.weight(1f).fillMaxWidth().aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp))
+            Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(12.dp))
                 .background(Color.Black)
                 .pointerInput(Unit) {
                     detectTapPanZoom(
