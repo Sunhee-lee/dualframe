@@ -1,5 +1,8 @@
 package com.dualframe.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,13 +13,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicOff
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Visibility
@@ -26,6 +30,10 @@ import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,16 +47,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 object RailTheme {
-    val tileSize: Dp = 52.dp
-    val tileRadius: Dp = 12.dp
-    val tileGap: Dp = 5.dp
-    val tileBg = Color(0xFF1A1A1A)
-    val tileBorder = Color(0xFF2A2A2A)
-    val iconColor = Color(0xFFE0E0E0)
-    val iconSize: Dp = 24.dp
+    val tileSize: Dp = 48.dp
+    val tileRadius: Dp = 11.dp
+    val tileGap: Dp = 4.dp
+    val tileBg = Color(0xFF151515)
+    val tileBorder = Color(0xFF252525)
+    val iconColor = Color(0xFFCCCCCC)
+    val iconSize: Dp = 20.dp
     val activeColor = Color(0xFF4CAF50)
-    val inactiveColor = Color(0xFF777777)
+    val inactiveColor = Color(0xFF666666)
     val recDotColor = Color(0xFFFF1744)
+    val font: FontFamily = FontFamily.SansSerif
 }
 
 @Composable
@@ -62,72 +71,82 @@ fun ControlRail(
     flashOn: Boolean,
     showFlash: Boolean,
     keepScreenOn: Boolean,
+    selfieEffect: Boolean,
+    isFrontCamera: Boolean,
+    resolution: String,
     deviceRotation: Int,
     onAudioToggle: () -> Unit,
-    onZoomReset: () -> Unit,
+    onZoomToggle: () -> Unit,
     onGuideToggle: () -> Unit,
     onTimerCycle: () -> Unit,
     onFlashToggle: () -> Unit,
     onKeepScreenToggle: () -> Unit,
-    onSettings: () -> Unit,
+    onSelfieEffectToggle: () -> Unit,
+    onResolutionCycle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
+    var expanded by remember { mutableStateOf(false) }
 
     Column(
-        modifier = modifier.padding(end = 4.dp, top = 4.dp, bottom = 4.dp),
+        modifier = modifier.padding(end = 3.dp, top = 3.dp, bottom = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
     ) {
-        RecTimeTile(isRecording, recordingSeconds, rot)
-
-        IconTile(
-            icon = if (audioEnabled) Icons.Outlined.Mic else Icons.Outlined.MicOff,
-            label = "Audio", isActive = audioEnabled,
-            stateText = if (audioEnabled) "ON" else "OFF",
-            rotation = rot, onClick = onAudioToggle,
-        )
-
-        IconTile(
-            icon = Icons.Outlined.Search,
-            label = "Zoom", isActive = true,
-            stateText = "${"%.1f".format(zoomRatio)}x",
-            rotation = rot, onClick = onZoomReset,
-        )
-
-        IconTile(
-            icon = Icons.Outlined.GridOn,
-            label = "Guide", isActive = guidesEnabled,
-            stateText = if (guidesEnabled) "ON" else "OFF",
-            rotation = rot, onClick = onGuideToggle,
-        )
-
-        IconTile(
-            icon = Icons.Outlined.Timer,
-            label = "Timer", isActive = timerSeconds > 0,
-            stateText = if (timerSeconds > 0) "${timerSeconds}s" else "OFF",
-            rotation = rot, onClick = onTimerCycle,
-        )
-
-        if (showFlash) {
-            IconTile(
-                icon = if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
-                label = "Flash", isActive = flashOn,
-                stateText = null, rotation = rot, onClick = onFlashToggle,
-            )
-        }
-
-        IconTile(
-            icon = if (keepScreenOn) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-            label = "Screen", isActive = keepScreenOn,
-            stateText = null, rotation = rot, onClick = onKeepScreenToggle,
-        )
-
+        // Settings toggle button (always visible)
         IconTile(
             icon = Icons.Outlined.Settings,
-            label = "Settings", isActive = false,
-            stateText = null, rotation = rot, onClick = onSettings,
+            stateText = null, isActive = expanded,
+            rotation = rot,
+            onClick = { expanded = !expanded },
         )
+
+        // Expandable menu
+        AnimatedVisibility(
+            visible = expanded,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it }),
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(top = RailTheme.tileGap)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
+            ) {
+                // 1. Recording time
+                RecTimeTile(isRecording, recordingSeconds, rot)
+
+                // 2. Audio
+                IconTile(Icons.Outlined.Mic.takeIf { audioEnabled } ?: Icons.Outlined.MicOff,
+                    if (audioEnabled) "ON" else "OFF", audioEnabled, rot, onAudioToggle)
+
+                // 3. Guide
+                IconTile(Icons.Outlined.GridOn,
+                    if (guidesEnabled) "ON" else "OFF", guidesEnabled, rot, onGuideToggle)
+
+                // 4. Flash
+                if (showFlash) {
+                    IconTile(if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
+                        if (flashOn) "ON" else "OFF", flashOn, rot, onFlashToggle)
+                }
+
+                // 5. Screen
+                IconTile(if (keepScreenOn) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                    if (keepScreenOn) "ON" else "OFF", keepScreenOn, rot, onKeepScreenToggle)
+
+                // 6. Zoom (0.6x ↔ 1.0x toggle)
+                ZoomTile(zoomRatio, rot, onZoomToggle)
+
+                // 7. Resolution
+                TextTile(resolution, rot, onResolutionCycle)
+
+                // 8. Selfie Effect (front camera only)
+                if (isFrontCamera) {
+                    IconTile(Icons.Outlined.Visibility,
+                        if (selfieEffect) "ON" else "OFF", selfieEffect, rot, onSelfieEffectToggle)
+                }
+            }
+        }
     }
 }
 
@@ -141,68 +160,83 @@ private fun RecTimeTile(isRecording: Boolean, seconds: Int, rotation: Float) {
             .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(RailTheme.tileRadius)),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.rotate(rotation),
-        ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.rotate(rotation)) {
             if (isRecording) {
-                Box(Modifier.size(8.dp).clip(CircleShape).background(RailTheme.recDotColor))
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = formatRecTime(seconds),
-                    color = Color.White, fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium, fontFamily = FontFamily.SansSerif,
-                )
+                Box(Modifier.size(6.dp).clip(CircleShape).background(RailTheme.recDotColor))
+                Spacer(Modifier.height(1.dp))
+                Text(formatRecTime(seconds), color = Color.White, fontSize = 8.sp,
+                    fontWeight = FontWeight.Medium, fontFamily = RailTheme.font)
             } else {
-                Text("--:--", color = RailTheme.inactiveColor, fontSize = 10.sp,
-                    fontFamily = FontFamily.SansSerif)
+                Text("--:--", color = RailTheme.inactiveColor, fontSize = 8.sp, fontFamily = RailTheme.font)
             }
         }
     }
 }
 
 @Composable
-private fun IconTile(
-    icon: ImageVector,
-    label: String,
-    isActive: Boolean,
-    stateText: String?,
-    rotation: Float,
-    onClick: () -> Unit,
-) {
+private fun ZoomTile(zoomRatio: Float, rotation: Float, onClick: () -> Unit) {
+    val displayText = if (zoomRatio < 0.8f) "0.6x" else "1.0x"
     Box(
-        modifier = Modifier
-            .size(RailTheme.tileSize)
+        modifier = Modifier.size(RailTheme.tileSize)
             .clip(RoundedCornerShape(RailTheme.tileRadius))
             .background(RailTheme.tileBg)
             .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(RailTheme.tileRadius))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.rotate(rotation),
-        ) {
-            Icon(
-                imageVector = icon, contentDescription = label,
+        Text(displayText, color = RailTheme.activeColor, fontSize = 11.sp,
+            fontWeight = FontWeight.Bold, fontFamily = RailTheme.font,
+            modifier = Modifier.rotate(rotation))
+    }
+}
+
+@Composable
+private fun TextTile(text: String, rotation: Float, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier.size(RailTheme.tileSize)
+            .clip(RoundedCornerShape(RailTheme.tileRadius))
+            .background(RailTheme.tileBg)
+            .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(RailTheme.tileRadius))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, color = RailTheme.iconColor, fontSize = 9.sp,
+            fontWeight = FontWeight.Bold, fontFamily = RailTheme.font,
+            modifier = Modifier.rotate(rotation))
+    }
+}
+
+@Composable
+private fun IconTile(
+    icon: ImageVector,
+    stateText: String?,
+    isActive: Boolean,
+    rotation: Float,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier.size(RailTheme.tileSize)
+            .clip(RoundedCornerShape(RailTheme.tileRadius))
+            .background(RailTheme.tileBg)
+            .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(RailTheme.tileRadius))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.rotate(rotation)) {
+            Icon(icon, null,
                 tint = if (isActive) RailTheme.activeColor else RailTheme.iconColor,
-                modifier = Modifier.size(RailTheme.iconSize),
-            )
+                modifier = Modifier.size(RailTheme.iconSize))
             if (stateText != null) {
-                Text(
-                    text = stateText,
+                Text(stateText,
                     color = if (isActive) RailTheme.activeColor else RailTheme.inactiveColor,
-                    fontSize = 9.sp, fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.SansSerif,
-                )
+                    fontSize = 8.sp, fontWeight = FontWeight.Bold, fontFamily = RailTheme.font)
             }
         }
     }
 }
 
 private fun formatRecTime(totalSeconds: Int): String {
-    val h = totalSeconds / 3600
-    val m = (totalSeconds % 3600) / 60
+    val m = totalSeconds / 60
     val s = totalSeconds % 60
-    return "%02d:%02d:%02d".format(h, m, s)
+    return "%02d:%02d".format(m, s)
 }

@@ -113,21 +113,11 @@ fun MainScreen(
         viewModel.cameraManager.setTargetRotation(surfaceRot)
     }
 
-    var showSettings by remember { mutableStateOf(false) }
-    if (showSettings) {
-        SettingsSheet(
-            settings = state.settings,
-            supportedQualities = state.supportedQualities,
-            onSettingsChange = { viewModel.updateSettings(it) },
-            onDismiss = { showSettings = false },
-        )
-    }
-
     // Keep screen on based on setting
     val keepScreenOn = state.settings.keepScreenAwake
     val view = androidx.compose.ui.platform.LocalView.current
     LaunchedEffect(keepScreenOn) {
-        if (keepScreenOn) view.keepScreenOn = true else view.keepScreenOn = false
+        view.keepScreenOn = keepScreenOn
     }
 
     Column(
@@ -147,14 +137,12 @@ fun MainScreen(
         // ── Main content: previews (left) + control rail (right) ──
         val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            // Left: preview panels (same width, different heights)
             PreviewPanels(
                 renderer, viewModel.cameraManager, state.settings.showGuides,
                 Modifier.weight(1f),
                 deviceRotation = deviceRotation, appStatus = state.appStatus,
             )
 
-            // Right: control rail
             ControlRail(
                 isRecording = state.appStatus == AppStatus.RECORDING,
                 recordingSeconds = state.recordingDurationSeconds,
@@ -165,11 +153,17 @@ fun MainScreen(
                 flashOn = state.flashOn,
                 showFlash = !isFrontCamera && state.cameraReady,
                 keepScreenOn = keepScreenOn,
+                selfieEffect = state.settings.frontCameraEffect,
+                isFrontCamera = isFrontCamera,
+                resolution = state.settings.videoQuality.label.substringBefore(" "),
                 deviceRotation = deviceRotation,
                 onAudioToggle = {
                     viewModel.updateSettings(state.settings.copy(audioEnabled = !state.settings.audioEnabled))
                 },
-                onZoomReset = { viewModel.cameraManager.setZoomRatio(1f) },
+                onZoomToggle = {
+                    val target = if (zoomRatio < 0.8f) 1f else 0.6f
+                    viewModel.cameraManager.setZoomRatio(target)
+                },
                 onGuideToggle = {
                     viewModel.updateSettings(state.settings.copy(showGuides = !state.settings.showGuides))
                 },
@@ -183,11 +177,19 @@ fun MainScreen(
                 onKeepScreenToggle = {
                     viewModel.updateSettings(state.settings.copy(keepScreenAwake = !keepScreenOn))
                 },
-                onSettings = { showSettings = true },
+                onSelfieEffectToggle = {
+                    viewModel.updateSettings(state.settings.copy(frontCameraEffect = !state.settings.frontCameraEffect))
+                },
+                onResolutionCycle = {
+                    val qualities = com.dualframe.data.VideoQuality.entries
+                    val idx = qualities.indexOf(state.settings.videoQuality)
+                    val next = qualities[(idx + 1) % qualities.size]
+                    viewModel.updateSettings(state.settings.copy(videoQuality = next))
+                },
             )
         }
 
-        // ── Export status overlay ──
+        // ── Export status ──
         ExportStatusStub(state)
 
         // ── Result actions (shown after export) ──
@@ -196,7 +198,7 @@ fun MainScreen(
             ResultActions(state, viewModel, context)
         }
 
-        // ── Bottom action bar ──
+        // ── Bottom action bar (separated from preview) ──
         if (!showResults) {
             BottomActionBar(
                 appStatus = state.appStatus,
@@ -249,7 +251,6 @@ private fun PreviewPanels(
     deviceRotation: Int = 0,
     appStatus: AppStatus = AppStatus.IDLE,
 ) {
-    val zoomRatio by cameraManager.zoomRatio.collectAsState()
     Column(
         modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -372,20 +373,6 @@ private fun PreviewPanels(
             }
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
-            val zoomed = kotlin.math.abs(zoomRatio - 1f) > 0.01f
-            val hideForExport = appStatus == AppStatus.EXPORT_COMPLETE || appStatus == AppStatus.SAVING
-            if (!cameraManager.isRecording && !hideForExport && zoomed) {
-                val zoomBtnModifier = when (deviceRotation) {
-                    90 -> Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
-                    270 -> Modifier.align(Alignment.CenterStart).padding(start = 8.dp)
-                    else -> Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
-                }
-                ZoomResetButton(
-                    rotation = rot,
-                    onClick = { cameraManager.setZoomRatio(1f) },
-                    modifier = zoomBtnModifier,
-                )
-            }
         }
     }
 }
@@ -500,29 +487,6 @@ private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
     }
 }
 
-/**
- * "1x" zoom reset button. Fixed position; only the text content rotates
- * based on device orientation.
- */
-@Composable
-private fun ZoomResetButton(rotation: Float, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .size(28.dp)
-            .clip(CircleShape)
-            .background(Color(0x66000000))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "1x",
-            color = Color.White.copy(alpha = 0.8f),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.rotate(rotation),
-        )
-    }
-}
 
 @Composable
 private fun CropPositionIndicator(offset: Float) {
