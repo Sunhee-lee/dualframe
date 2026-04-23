@@ -1,10 +1,12 @@
 package com.dualframe.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.graphics.SurfaceTexture
 import android.view.OrientationEventListener
 import android.view.Surface
 import android.view.TextureView
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -63,6 +65,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.util.UnstableApi
 import com.dualframe.data.AppStatus
 import com.dualframe.data.UiState
+import com.dualframe.util.formatDuration
 import com.dualframe.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -120,18 +123,57 @@ fun MainScreen(
         view.keepScreenOn = keepScreenOn
     }
 
+    // Back button confirmation dialog
+    var showExitDialog by remember { mutableStateOf(false) }
+    BackHandler { showExitDialog = true }
+    if (showExitDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            containerColor = Color(0xFF1E1E1E),
+            title = { Text("종료", color = Color.White, fontFamily = FontFamily.SansSerif) },
+            text = { Text("앱을 종료하시겠습니까?", color = Color(0xFFCCCCCC), fontFamily = FontFamily.SansSerif) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showExitDialog = false
+                    (context as? Activity)?.finish()
+                }) { Text("종료", color = Color(0xFFFF5252), fontFamily = FontFamily.SansSerif) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showExitDialog = false }) {
+                    Text("취소", color = Color(0xFF999999), fontFamily = FontFamily.SansSerif)
+                }
+            },
+        )
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
     ) {
-        // ── Top header: DualFrame + Ready pill ──
+        // ── Top header: DualFrame + Ready/REC ──
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("DualFrame", color = Color.White, fontSize = 16.sp,
+            Text("DualFrame", color = Color.White, fontSize = 18.sp,
                 fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif)
-            Spacer(Modifier.width(8.dp))
-            StatusChip(state.appStatus)
+            Spacer(Modifier.width(10.dp))
+            if (state.appStatus == AppStatus.RECORDING) {
+                Row(
+                    Modifier.background(Color(0x44FF1744), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF1744)))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = formatDuration(state.recordingDurationSeconds),
+                        color = Color.White, fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace,
+                    )
+                }
+            } else {
+                StatusChip(state.appStatus)
+            }
         }
 
         // ── Main content: previews (left) + control rail (right) ──
@@ -145,7 +187,6 @@ fun MainScreen(
 
             ControlRail(
                 isRecording = state.appStatus == AppStatus.RECORDING,
-                recordingSeconds = state.recordingDurationSeconds,
                 audioEnabled = state.settings.audioEnabled,
                 zoomRatio = zoomRatio,
                 guidesEnabled = state.settings.showGuides,
@@ -252,8 +293,8 @@ private fun PreviewPanels(
     appStatus: AppStatus = AppStatus.IDLE,
 ) {
     Column(
-        modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier.padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         val isDeviceLandscape = deviceRotation == 90 || deviceRotation == 270
         val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
@@ -355,7 +396,6 @@ private fun PreviewPanels(
                 },
                 modifier = Modifier.fillMaxSize(),
             )
-            GuideBorder()
             if (showGuides) RuleOfThirdsGrid()
             when (deviceRotation) {
                 90 -> {
@@ -547,70 +587,69 @@ private fun ExportStatusStub(state: UiState) {
 @Composable
 private fun ResultActions(state: UiState, viewModel: MainViewModel, context: android.content.Context) {
     if (state.appStatus != AppStatus.EXPORT_COMPLETE && state.appStatus != AppStatus.SAVING) return
-    Spacer(Modifier.height(8.dp))
 
-    // Thumbnail LEFT (with status below it), buttons RIGHT
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.Top,
+    Column(
+        modifier = Modifier.fillMaxWidth().background(Color(0xFF0A0A0A))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Thumbnail + save status stacked
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Thumbnails side by side
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        ) {
             state.thumbnailBitmap?.let { bmp ->
                 Box(
-                    Modifier.width(72.dp).aspectRatio(9f / 16f)
-                        .clip(RoundedCornerShape(6.dp)).background(Color.Black),
+                    Modifier.weight(1f).aspectRatio(9f / 16f)
+                        .clip(RoundedCornerShape(10.dp)).background(Color.Black),
                 ) {
                     Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 }
             }
             state.landscapeThumbnailBitmap?.let { bmp ->
-                Spacer(Modifier.height(4.dp))
                 Box(
-                    Modifier.width(72.dp).aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(6.dp)).background(Color.Black),
+                    Modifier.weight(1f).aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(10.dp)).background(Color.Black),
                 ) {
                     Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 }
             }
-            // Save progress bar
-            if (state.appStatus == AppStatus.SAVING) {
-                Spacer(Modifier.height(4.dp))
-                androidx.compose.material3.LinearProgressIndicator(
-                    modifier = Modifier.width(72.dp).height(3.dp).clip(RoundedCornerShape(2.dp)),
-                    color = Color(0xFF66BB6A), trackColor = Color(0xFF333333),
-                )
-            }
-            // "Saved" text under thumbnail
-            state.saveMessage?.let {
-                Spacer(Modifier.height(3.dp))
-                Text(it, color = Color(0xFF66BB6A), fontSize = 11.sp)
-            }
         }
 
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.height(10.dp))
 
-        // Action buttons stacked vertically on the right
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            ResultButton("Save Both", state.appStatus != AppStatus.SAVING) {
+        // Save progress
+        if (state.appStatus == AppStatus.SAVING) {
+            androidx.compose.material3.LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(0.6f).height(4.dp).clip(RoundedCornerShape(2.dp)),
+                color = Color(0xFF66BB6A), trackColor = Color(0xFF333333),
+            )
+            Spacer(Modifier.height(6.dp))
+        }
+        state.saveMessage?.let {
+            Text(it, color = Color.White, fontSize = 14.sp, fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+        }
+
+        // Action buttons
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ResultButton("Save", Modifier.weight(1f), state.appStatus != AppStatus.SAVING) {
                 viewModel.saveBothWithWatermark()
             }
             if (!com.dualframe.monetize.ProEntitlement.isProOwned(context)) {
-                ResultButton("Remove Watermark", state.appStatus != AppStatus.SAVING) {
+                ResultButton("No WM", Modifier.weight(1f), state.appStatus != AppStatus.SAVING) {
                     viewModel.showRemoveWatermarkDialog()
                 }
             }
-            ResultButton("View Saved", true) {
-                val intent = viewModel.buildOpenGalleryIntent()
-                try {
-                    context.startActivity(intent)
-                } catch (_: Exception) {
-                    try {
-                        context.startActivity(Intent.createChooser(intent, "Open with"))
-                    } catch (_: Exception) {}
-                }
+            ResultButton("Gallery", Modifier.weight(1f), true) {
+                try { context.startActivity(buildGalleryIntent(context)) }
+                catch (_: Exception) {}
             }
-            ResultButton("Retake", true) {
+            ResultButton("Retake", Modifier.weight(1f), true) {
                 viewModel.resetToIdle()
             }
         }
@@ -618,14 +657,15 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 }
 
 @Composable
-private fun ResultButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
     androidx.compose.material3.OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().height(38.dp),
+        modifier = modifier.height(40.dp),
         shape = RoundedCornerShape(8.dp),
     ) {
-        Text(label, fontSize = 16.sp, maxLines = 1)
+        Text(label, color = Color.White, fontSize = 13.sp, maxLines = 1,
+            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
     }
 }
 
