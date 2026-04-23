@@ -28,13 +28,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Cameraswitch
-import androidx.compose.material.icons.outlined.FlashOff
-import androidx.compose.material.icons.outlined.FlashOn
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,7 +63,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.util.UnstableApi
 import com.dualframe.data.AppStatus
 import com.dualframe.data.UiState
-import com.dualframe.util.formatDuration
 import com.dualframe.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -133,55 +125,86 @@ fun MainScreen(
 
     Column(
         modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Header(
-            state = state,
-            showFlash = !isFrontCamera && state.cameraReady,
-            flashOn = state.flashOn,
-            onFlashToggle = { viewModel.toggleFlash() },
-        )
-
-        PreviewPanels(renderer, viewModel.cameraManager, state.settings.showGuides,
-            Modifier.weight(1f), deviceRotation = deviceRotation, appStatus = state.appStatus)
-
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 36.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        // ── Top header ──
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            Arrangement.SpaceBetween, Alignment.CenterVertically,
         ) {
-            ExportStatusStub(state)
-            val showRecordControls = state.appStatus != AppStatus.EXPORT_COMPLETE &&
-                state.appStatus != AppStatus.SAVING
-            if (showRecordControls) {
-                Row(Modifier.fillMaxWidth(), Arrangement.Center, Alignment.CenterVertically) {
-                    if (state.appStatus != AppStatus.RECORDING) {
-                        IconButton(
-                            onClick = { viewModel.switchCamera() },
-                            enabled = state.cameraReady,
-                        ) {
-                            Icon(Icons.Outlined.Cameraswitch, "Switch camera",
-                                tint = if (state.cameraReady) Color.White else Color(0xFF555555),
-                                modifier = Modifier.size(22.dp))
-                        }
-                    } else {
-                        Spacer(Modifier.width(48.dp))
-                    }
-                    RecordControls(state.appStatus, state.cameraReady, state.countdownRemaining) {
-                        viewModel.toggleRecording(hasAudioPermission)
-                    }
-                    if (state.appStatus != AppStatus.RECORDING) {
-                        IconButton({ showSettings = true }) {
-                            Icon(Icons.Outlined.Settings, "Settings",
-                                tint = Color.White, modifier = Modifier.size(22.dp))
-                        }
-                    } else {
-                        Spacer(Modifier.width(48.dp))
-                    }
-                }
+            Text("DualFrame", style = MaterialTheme.typography.titleMedium,
+                color = Color.White, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StatusChip(state.appStatus)
             }
-            ResultActions(state, viewModel, context)
-            ErrorArea(state) { viewModel.clearError() }
         }
+
+        // ── Main content: previews (left) + control rail (right) ──
+        val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
+        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            // Left: preview panels
+            PreviewPanels(
+                renderer, viewModel.cameraManager, state.settings.showGuides,
+                Modifier.weight(1f),
+                deviceRotation = deviceRotation, appStatus = state.appStatus,
+            )
+
+            // Right: control rail
+            ControlRail(
+                isRecording = state.appStatus == AppStatus.RECORDING,
+                recordingSeconds = state.recordingDurationSeconds,
+                audioEnabled = state.settings.audioEnabled,
+                zoomRatio = zoomRatio,
+                guidesEnabled = state.settings.showGuides,
+                timerSeconds = state.settings.countdownSeconds,
+                flashOn = state.flashOn,
+                showFlash = !isFrontCamera && state.cameraReady,
+                deviceRotation = deviceRotation,
+                onAudioToggle = {
+                    viewModel.updateSettings(state.settings.copy(audioEnabled = !state.settings.audioEnabled))
+                },
+                onZoomReset = { viewModel.cameraManager.setZoomRatio(1f) },
+                onGuideToggle = {
+                    viewModel.updateSettings(state.settings.copy(showGuides = !state.settings.showGuides))
+                },
+                onTimerCycle = {
+                    val next = when (state.settings.countdownSeconds) {
+                        0 -> 3; 3 -> 5; 5 -> 10; else -> 0
+                    }
+                    viewModel.updateSettings(state.settings.copy(countdownSeconds = next))
+                },
+                onFlashToggle = { viewModel.toggleFlash() },
+                onSettings = { showSettings = true },
+            )
+        }
+
+        // ── Export status overlay ──
+        ExportStatusStub(state)
+
+        // ── Result actions (shown after export) ──
+        val showResults = state.appStatus == AppStatus.EXPORT_COMPLETE || state.appStatus == AppStatus.SAVING
+        if (showResults) {
+            ResultActions(state, viewModel, context)
+        }
+
+        // ── Bottom action bar ──
+        if (!showResults) {
+            BottomActionBar(
+                appStatus = state.appStatus,
+                cameraReady = state.cameraReady,
+                onSwitchCamera = { viewModel.switchCamera() },
+                onRecord = { viewModel.toggleRecording(hasAudioPermission) },
+                onGallery = {
+                    val intent = viewModel.buildOpenGalleryIntent()
+                    try { context.startActivity(intent) }
+                    catch (_: Exception) {
+                        try { context.startActivity(Intent.createChooser(intent, "Open with")) }
+                        catch (_: Exception) {}
+                    }
+                },
+            )
+        }
+
+        ErrorArea(state) { viewModel.clearError() }
     }
 
     if (state.showRemoveWatermarkDialog) {
@@ -189,41 +212,7 @@ fun MainScreen(
     }
 }
 
-// ── Header ────────────────────────────────────────────────────────────
-
-@Composable
-private fun Header(
-    state: UiState,
-    showFlash: Boolean, flashOn: Boolean, onFlashToggle: () -> Unit,
-) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-        Text("DualFrame", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
-        if (state.appStatus == AppStatus.RECORDING) RecIndicator(state.recordingDurationSeconds)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (state.appStatus != AppStatus.RECORDING) { StatusChip(state.appStatus); Spacer(Modifier.width(4.dp)) }
-            // Flash icon — rear camera only, hidden for front camera
-            if (showFlash) {
-                IconButton(onClick = onFlashToggle) {
-                    Icon(
-                        imageVector = if (flashOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
-                        contentDescription = if (flashOn) "Flash on" else "Flash off",
-                        tint = if (flashOn) Color(0xFFFFD54F) else Color.White,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RecIndicator(seconds: Int) {
-    Row(Modifier.background(Color(0x44FF1744), RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF1744)))
-        Spacer(Modifier.width(6.dp))
-        Text(text = formatDuration(seconds), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-    }
-}
+// ── Status Chip ──────────────────────────────────────────────────────
 
 @Composable
 private fun StatusChip(status: AppStatus) {
