@@ -50,7 +50,7 @@ object RailTheme {
     val tileBg = Color(0xFF151515)
     val tileBorder = Color(0xFF252525)
     val iconColor = Color(0xFFCCCCCC)
-    val iconSize: Dp = 22.dp
+    val iconSize: Dp = 18.dp
     val activeColor = Color(0xFF4CAF50)
     val inactiveColor = Color(0xFF666666)
     val font: FontFamily = FontFamily.SansSerif
@@ -188,7 +188,9 @@ private fun IconTile(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.rotate(rotation)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(1.dp),
+            modifier = Modifier.rotate(rotation)) {
             Icon(icon, null,
                 tint = if (isActive) RailTheme.activeColor else RailTheme.iconColor,
                 modifier = Modifier.size(RailTheme.iconSize))

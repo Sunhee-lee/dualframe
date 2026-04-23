@@ -176,84 +176,91 @@ fun MainScreen(
             }
         }
 
-        // ── Main content: previews (left) + control rail (right) ──
+        // ── Main content ──
         val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
+        val showResults = state.appStatus == AppStatus.EXPORT_COMPLETE || state.appStatus == AppStatus.SAVING
+
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            // Left: preview panels
             PreviewPanels(
                 renderer, viewModel.cameraManager, state.settings.showGuides,
                 Modifier.weight(1f),
                 deviceRotation = deviceRotation, appStatus = state.appStatus,
             )
 
-            ControlRail(
-                isRecording = state.appStatus == AppStatus.RECORDING,
-                audioEnabled = state.settings.audioEnabled,
-                zoomRatio = zoomRatio,
-                guidesEnabled = state.settings.showGuides,
-                timerSeconds = state.settings.countdownSeconds,
-                flashOn = state.flashOn,
-                showFlash = !isFrontCamera && state.cameraReady,
-                keepScreenOn = keepScreenOn,
-                selfieEffect = state.settings.frontCameraEffect,
-                isFrontCamera = isFrontCamera,
-                resolution = state.settings.videoQuality.label.substringBefore(" "),
-                deviceRotation = deviceRotation,
-                onAudioToggle = {
-                    viewModel.updateSettings(state.settings.copy(audioEnabled = !state.settings.audioEnabled))
-                },
-                onZoomToggle = {
-                    val target = if (zoomRatio < 0.8f) 1f else 0.6f
-                    viewModel.cameraManager.setZoomRatio(target)
-                },
-                onGuideToggle = {
-                    viewModel.updateSettings(state.settings.copy(showGuides = !state.settings.showGuides))
-                },
-                onTimerCycle = {
-                    val next = when (state.settings.countdownSeconds) {
-                        0 -> 3; 3 -> 5; 5 -> 10; else -> 0
-                    }
-                    viewModel.updateSettings(state.settings.copy(countdownSeconds = next))
-                },
-                onFlashToggle = { viewModel.toggleFlash() },
-                onKeepScreenToggle = {
-                    viewModel.updateSettings(state.settings.copy(keepScreenAwake = !keepScreenOn))
-                },
-                onSelfieEffectToggle = {
-                    viewModel.updateSettings(state.settings.copy(frontCameraEffect = !state.settings.frontCameraEffect))
-                },
-                onResolutionCycle = {
-                    val qualities = com.dualframe.data.VideoQuality.entries
-                    val idx = qualities.indexOf(state.settings.videoQuality)
-                    val next = qualities[(idx + 1) % qualities.size]
-                    viewModel.updateSettings(state.settings.copy(videoQuality = next))
-                },
-            )
+            // Right column: settings rail (top) + action stack (bottom)
+            Column(
+                modifier = Modifier.fillMaxHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                ControlRail(
+                    isRecording = state.appStatus == AppStatus.RECORDING,
+                    audioEnabled = state.settings.audioEnabled,
+                    zoomRatio = zoomRatio,
+                    guidesEnabled = state.settings.showGuides,
+                    timerSeconds = state.settings.countdownSeconds,
+                    flashOn = state.flashOn,
+                    showFlash = !isFrontCamera && state.cameraReady,
+                    keepScreenOn = keepScreenOn,
+                    selfieEffect = state.settings.frontCameraEffect,
+                    isFrontCamera = isFrontCamera,
+                    resolution = state.settings.videoQuality.label.substringBefore(" "),
+                    deviceRotation = deviceRotation,
+                    onAudioToggle = {
+                        viewModel.updateSettings(state.settings.copy(audioEnabled = !state.settings.audioEnabled))
+                    },
+                    onZoomToggle = {
+                        val target = if (zoomRatio < 0.8f) 1f else 0.6f
+                        viewModel.cameraManager.setZoomRatio(target)
+                    },
+                    onGuideToggle = {
+                        viewModel.updateSettings(state.settings.copy(showGuides = !state.settings.showGuides))
+                    },
+                    onTimerCycle = {
+                        val next = when (state.settings.countdownSeconds) {
+                            0 -> 3; 3 -> 5; 5 -> 10; else -> 0
+                        }
+                        viewModel.updateSettings(state.settings.copy(countdownSeconds = next))
+                    },
+                    onFlashToggle = { viewModel.toggleFlash() },
+                    onKeepScreenToggle = {
+                        viewModel.updateSettings(state.settings.copy(keepScreenAwake = !keepScreenOn))
+                    },
+                    onSelfieEffectToggle = {
+                        viewModel.updateSettings(state.settings.copy(frontCameraEffect = !state.settings.frontCameraEffect))
+                    },
+                    onResolutionCycle = {
+                        val qualities = com.dualframe.data.VideoQuality.entries
+                        val idx = qualities.indexOf(state.settings.videoQuality)
+                        val next = qualities[(idx + 1) % qualities.size]
+                        viewModel.updateSettings(state.settings.copy(videoQuality = next))
+                    },
+                )
+
+                // Action stack: switch / record / gallery — right-bottom vertical
+                if (!showResults) {
+                    ActionStack(
+                        appStatus = state.appStatus,
+                        cameraReady = state.cameraReady,
+                        onSwitchCamera = { viewModel.switchCamera() },
+                        onRecord = { viewModel.toggleRecording(hasAudioPermission) },
+                        onGallery = {
+                            try { context.startActivity(buildGalleryIntent(context)) }
+                            catch (_: Exception) {}
+                        },
+                    )
+                }
+            }
         }
 
-        // ── Export status ──
         ExportStatusStub(state)
-
-        // ── Result actions (shown after export) ──
-        val showResults = state.appStatus == AppStatus.EXPORT_COMPLETE || state.appStatus == AppStatus.SAVING
-        if (showResults) {
-            ResultActions(state, viewModel, context)
-        }
-
-        // ── Bottom action bar (separated from preview) ──
-        if (!showResults) {
-            BottomActionBar(
-                appStatus = state.appStatus,
-                cameraReady = state.cameraReady,
-                onSwitchCamera = { viewModel.switchCamera() },
-                onRecord = { viewModel.toggleRecording(hasAudioPermission) },
-                onGallery = {
-                    try { context.startActivity(buildGalleryIntent(context)) }
-                    catch (_: Exception) {}
-                },
-            )
-        }
-
         ErrorArea(state) { viewModel.clearError() }
+    }
+
+    // Fullscreen result overlay (outside main Column, covers entire screen)
+    if (state.appStatus == AppStatus.EXPORT_COMPLETE || state.appStatus == AppStatus.SAVING) {
+        ResultActions(state, viewModel, context)
     }
 
     if (state.showRemoveWatermarkDialog) {
@@ -275,7 +282,7 @@ private fun StatusChip(status: AppStatus) {
         AppStatus.SAVING -> "Saving" to Color(0xFFFFA726)
         AppStatus.ERROR -> "Error" to Color(0xFFCF6679)
     }
-    Text(text = text, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+    Text(text = text, color = color, fontSize = 13.sp, fontWeight = FontWeight.Normal,
         fontFamily = FontFamily.SansSerif,
         modifier = Modifier.background(color.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp))
@@ -588,51 +595,61 @@ private fun ExportStatusStub(state: UiState) {
 private fun ResultActions(state: UiState, viewModel: MainViewModel, context: android.content.Context) {
     if (state.appStatus != AppStatus.EXPORT_COMPLETE && state.appStatus != AppStatus.SAVING) return
 
+    // Fullscreen floating result card
     Column(
-        modifier = Modifier.fillMaxWidth().background(Color(0xFF0A0A0A))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        // Thumbnails side by side
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        // Floating card area
+        Column(
+            modifier = Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF141414))
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Portrait thumbnail (large)
             state.thumbnailBitmap?.let { bmp ->
                 Box(
-                    Modifier.weight(1f).aspectRatio(9f / 16f)
-                        .clip(RoundedCornerShape(10.dp)).background(Color.Black),
+                    Modifier.fillMaxWidth(0.7f).aspectRatio(9f / 16f)
+                        .clip(RoundedCornerShape(12.dp)).background(Color.Black),
                 ) {
                     Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 }
             }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Landscape thumbnail (large)
             state.landscapeThumbnailBitmap?.let { bmp ->
                 Box(
-                    Modifier.weight(1f).aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(10.dp)).background(Color.Black),
+                    Modifier.fillMaxWidth(0.85f).aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(12.dp)).background(Color.Black),
                 ) {
                     Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 }
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(14.dp))
 
         // Save progress
         if (state.appStatus == AppStatus.SAVING) {
             androidx.compose.material3.LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth(0.6f).height(4.dp).clip(RoundedCornerShape(2.dp)),
+                modifier = Modifier.fillMaxWidth(0.5f).height(4.dp).clip(RoundedCornerShape(2.dp)),
                 color = Color(0xFF66BB6A), trackColor = Color(0xFF333333),
             )
-            Spacer(Modifier.height(6.dp))
-        }
-        state.saveMessage?.let {
-            Text(it, color = Color.White, fontSize = 14.sp, fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(8.dp))
         }
+        state.saveMessage?.let {
+            Text(it, color = Color.White, fontSize = 16.sp, fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(10.dp))
+        }
 
-        // Action buttons
+        // Action buttons row
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -661,10 +678,10 @@ private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, on
     androidx.compose.material3.OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(40.dp),
-        shape = RoundedCornerShape(8.dp),
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(10.dp),
     ) {
-        Text(label, color = Color.White, fontSize = 13.sp, maxLines = 1,
+        Text(label, color = Color.White, fontSize = 15.sp, maxLines = 1,
             fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
     }
 }

@@ -2,14 +2,12 @@ package com.dualframe.ui
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -31,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.dualframe.data.AppStatus
 
 @Composable
-fun BottomActionBar(
+fun ActionStack(
     appStatus: AppStatus,
     cameraReady: Boolean,
     onSwitchCamera: () -> Unit,
@@ -44,39 +42,33 @@ fun BottomActionBar(
     val isExporting = appStatus == AppStatus.EXPORTING_NATIVE || appStatus == AppStatus.EXPORTING_CROPPED
     val enabled = cameraReady && !isExporting
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(28.dp))
-            .background(Color(0xFF1A1A1A))
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+    Column(
+        modifier = modifier.padding(end = 8.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        // Camera switch (small)
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
+                .clickable(enabled = enabled && !isRecording) { onSwitchCamera() },
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF2A2A2A))
-                    .clickable(enabled = enabled && !isRecording) { onSwitchCamera() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.Cameraswitch, "Switch",
-                    tint = if (enabled && !isRecording) Color.White else Color(0xFF555555),
-                    modifier = Modifier.size(22.dp))
-            }
+            Icon(Icons.Outlined.Cameraswitch, "Switch",
+                tint = if (enabled && !isRecording) Color.White else Color(0xFF555555),
+                modifier = Modifier.size(20.dp))
+        }
 
-            RecordDot(isRecording, isCountdown, isExporting, enabled, onRecord)
+        // Record button (largest, emphasized)
+        RecordDot(isRecording, isCountdown, isExporting, enabled, onRecord)
 
-            Box(
-                Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF2A2A2A))
-                    .clickable { onGallery() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.PhotoLibrary, "Gallery",
-                    tint = Color.White, modifier = Modifier.size(22.dp))
-            }
+        // Gallery (small)
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
+                .clickable { onGallery() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.PhotoLibrary, "Gallery",
+                tint = Color.White, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -96,41 +88,35 @@ private fun RecordDot(
             isExporting -> Color(0xFF555555)
             else -> Color.White
         },
-        label = "rec_outer",
+        label = "rec",
     )
 
     Box(
-        modifier = Modifier.size(64.dp).clip(CircleShape).background(outerColor)
+        modifier = Modifier.size(60.dp).clip(CircleShape).background(outerColor)
             .clickable(enabled = enabled) { onClick() },
         contentAlignment = Alignment.Center,
     ) {
         when {
-            isRecording -> Box(Modifier.size(22.dp).clip(RoundedCornerShape(4.dp)).background(Color.White))
-            isCountdown -> Text("X", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            isExporting -> Box(Modifier.size(22.dp).clip(CircleShape).background(Color(0xFF888888)))
-            else -> Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFFFF1744)))
+            isRecording -> Box(Modifier.size(20.dp).clip(RoundedCornerShape(4.dp)).background(Color.White))
+            isCountdown -> Text("X", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            isExporting -> Box(Modifier.size(20.dp).clip(CircleShape).background(Color(0xFF888888)))
+            else -> Box(Modifier.size(22.dp).clip(CircleShape).background(Color(0xFFFF1744)))
         }
     }
 }
 
 fun buildGalleryIntent(context: Context): Intent {
-    // Samsung Gallery package names
-    val samsungPackages = listOf(
-        "com.sec.android.gallery3d",
-        "com.samsung.android.gallery",
-    )
+    val samsungPackages = listOf("com.sec.android.gallery3d", "com.samsung.android.gallery")
     val pm = context.packageManager
     for (pkg in samsungPackages) {
         val launchIntent = pm.getLaunchIntentForPackage(pkg)
         if (launchIntent != null) return launchIntent
     }
-    // Fallback: open default gallery via CATEGORY_APP_GALLERY
     val galleryIntent = Intent(Intent.ACTION_MAIN).apply {
         addCategory(Intent.CATEGORY_APP_GALLERY)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     if (galleryIntent.resolveActivity(pm) != null) return galleryIntent
-    // Last fallback: generic video view
     return Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*")
     }
