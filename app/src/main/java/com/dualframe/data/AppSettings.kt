@@ -15,7 +15,7 @@ data class AppSettings(
 )
 
 enum class VideoQuality(val label: String) {
-    UHD("UHD (4K)"),
+    UHD("4K UHD"),
     FHD("FHD (1080p)"),
     HD("HD (720p)"),
 }
