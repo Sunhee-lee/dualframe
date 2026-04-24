@@ -261,7 +261,11 @@ class CameraManager(private val context: Context) {
         cam.cameraControl.setZoomRatio(clamped)
     }
 
+    var currentTargetRotation: Int = android.view.Surface.ROTATION_0
+        private set
+
     fun setTargetRotation(surfaceRotation: Int) {
+        currentTargetRotation = surfaceRotation
         preview?.targetRotation = surfaceRotation
         videoCapture?.targetRotation = surfaceRotation
     }

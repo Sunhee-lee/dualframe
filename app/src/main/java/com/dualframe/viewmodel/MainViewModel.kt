@@ -386,13 +386,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_CROPPED, exportProgress = 0f) }
 
             val cropOffset = cameraManager.renderer.landscapeCropOffsetY
+            val targetRot = cameraManager.currentTargetRotation
             val masterRotation = masterMeta?.rotation ?: 0
-            // rotation=90 (left turn): Transformer's 90° CW rotation inverts the
-            // horizontal axis vs rotation=270 (right turn). Negate offset to match
-            // the preview's visual crop direction.
-            val exportOffset = if (masterRotation == 90) -cropOffset else cropOffset
-            Log.i("DualFrameCameraDiag", "Crop offset: raw=${"%.3f".format(cropOffset)} " +
-                "rotation=$masterRotation export=${"%.3f".format(exportOffset)}")
+            // Preview crops the raw 9:16 buffer → 16:9 panel using vertical offset.
+            // Export crops the display 16:9 → 9:16 using horizontal offset.
+            // The mapping between preview-vertical and export-horizontal depends on
+            // which Surface.ROTATION was used for recording:
+            //   ROTATION_90 (left turn): preview vertical ↔ export horizontal INVERTED
+            //   ROTATION_270 (right turn): preview vertical ↔ export horizontal SAME
+            // Use currentTargetRotation (what was set on CameraX) to decide.
+            val exportOffset = if (!isPortrait && targetRot == android.view.Surface.ROTATION_90)
+                -cropOffset else cropOffset
+            Log.i("DualFrameCameraDiag", "=== CROP OFFSET DEBUG ===")
+            Log.i("DualFrameCameraDiag", "  cropOffset (raw): ${"%.4f".format(cropOffset)}")
+            Log.i("DualFrameCameraDiag", "  targetRotation: $targetRot (0=portrait, 1=left, 3=right)")
+            Log.i("DualFrameCameraDiag", "  masterRotation (file): $masterRotation")
+            Log.i("DualFrameCameraDiag", "  isPortrait: $isPortrait")
+            Log.i("DualFrameCameraDiag", "  exportOffset: ${"%.4f".format(exportOffset)}")
+            Log.i("DualFrameCameraDiag", "========================")
             val croppedFile = exportManager.exportCropped(
                 file, croppedAspect, croppedSuffix,
                 verticalOffset = exportOffset,
