@@ -149,15 +149,17 @@ fun MainScreen(
         )
     }
 
+    val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
+
     Column(
         modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
     ) {
-        // ── Top header: DualFrame + Ready/REC ──
+        // ── Top header: DualFrame + Ready/REC + Settings ──
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("DualFrame", color = Color.White, fontSize = 18.sp,
+            Text("DualFrame", color = Color.White, fontSize = 22.sp,
                 fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif)
             Spacer(Modifier.width(10.dp))
             if (state.appStatus == AppStatus.RECORDING) {
@@ -170,32 +172,14 @@ fun MainScreen(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = formatDuration(state.recordingDurationSeconds),
-                        color = Color.White, fontSize = 13.sp,
+                        color = Color.White, fontSize = 15.sp,
                         fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace,
                     )
                 }
             } else {
                 StatusChip(state.appStatus)
             }
-        }
-
-        // ── Main content: previews centered, settings floating top-right ──
-        val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
-
-        BoxWithConstraints(
-            modifier = Modifier.weight(1f).fillMaxWidth()
-                .padding(start = 8.dp, end = 8.dp, bottom = 12.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            val fitWidth = ((maxHeight.value - 8f) / (16f / 9f + 9f / 16f))
-                .coerceAtLeast(0f).dp.coerceAtMost(maxWidth)
-
-            PreviewPanels(
-                renderer, viewModel.cameraManager, state.settings.showGuides,
-                Modifier.width(fitWidth),
-                deviceRotation = deviceRotation, appStatus = state.appStatus,
-            )
-
+            Spacer(Modifier.weight(1f))
             SettingsButton(
                 isRecording = state.appStatus == AppStatus.RECORDING,
                 audioEnabled = state.settings.audioEnabled,
@@ -238,7 +222,22 @@ fun MainScreen(
                     val next = qualities[(idx + 1) % qualities.size]
                     viewModel.updateSettings(state.settings.copy(videoQuality = next))
                 },
-                modifier = Modifier.align(Alignment.TopEnd),
+            )
+        }
+
+        // ── Main content: previews centered ──
+        BoxWithConstraints(
+            modifier = Modifier.weight(1f).fillMaxWidth()
+                .padding(start = 8.dp, end = 8.dp, bottom = 12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val fitWidth = ((maxHeight.value - 8f) / (16f / 9f + 9f / 16f))
+                .coerceAtLeast(0f).dp.coerceAtMost(maxWidth)
+
+            PreviewPanels(
+                renderer, viewModel.cameraManager, state.settings.showGuides,
+                Modifier.width(fitWidth),
+                deviceRotation = deviceRotation, appStatus = state.appStatus,
             )
         }
 
@@ -282,7 +281,7 @@ private fun StatusChip(status: AppStatus) {
         AppStatus.SAVING -> "Saving" to Color(0xFFFFA726)
         AppStatus.ERROR -> "Error" to Color(0xFFCF6679)
     }
-    Text(text = text, color = color, fontSize = 13.sp, fontWeight = FontWeight.Normal,
+    Text(text = text, color = color, fontSize = 15.sp, fontWeight = FontWeight.Normal,
         fontFamily = FontFamily.SansSerif,
         modifier = Modifier.background(color.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp))
@@ -615,22 +614,22 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         contentAlignment = Alignment.Center,
     ) {
         if (isLandscapeRecording) {
-            // ── Landscape: Row layout, 180° rotated, previews left + buttons right ──
+            // ── Landscape: Row with 180° rotation, previews left (stacked) + buttons right ──
             Row(
                 modifier = Modifier.fillMaxSize()
                     .rotate(180f)
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Left: previews side by side
-                Row(
-                    modifier = Modifier.weight(0.6f),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
+                // Left: previews stacked vertically (like camera view)
+                Column(
+                    modifier = Modifier.weight(0.55f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
                 ) {
                     landscapeBmp?.let { bmp ->
                         Box(
-                            Modifier.fillMaxHeight(0.75f).aspectRatio(16f / 9f)
+                            Modifier.fillMaxWidth(0.85f).aspectRatio(16f / 9f)
                                 .clip(RoundedCornerShape(10.dp)).background(Color.Black)
                         ) {
                             Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -639,7 +638,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     }
                     portraitBmp?.let { bmp ->
                         Box(
-                            Modifier.fillMaxHeight(0.75f).aspectRatio(9f / 16f)
+                            Modifier.fillMaxWidth(0.45f).aspectRatio(9f / 16f)
                                 .clip(RoundedCornerShape(10.dp)).background(Color.Black)
                         ) {
                             Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -648,26 +647,26 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     }
                 }
 
-                // Right: buttons
+                // Right: buttons centered vertically
                 Column(
-                    modifier = Modifier.weight(0.4f).padding(start = 12.dp),
+                    modifier = Modifier.weight(0.45f).padding(start = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
                     SaveStatusArea(state)
-                    PrimaryResultButton("Save Videos", Modifier.fillMaxWidth(0.85f), state.appStatus != AppStatus.SAVING) {
+                    PrimaryResultButton("Save Videos", Modifier.fillMaxWidth(0.9f), state.appStatus != AppStatus.SAVING) {
                         viewModel.saveBothWithWatermark()
                     }
                     if (!isPro) {
-                        RemoveWatermarkResultButton(Modifier.fillMaxWidth(0.85f), state.appStatus != AppStatus.SAVING) {
+                        RemoveWatermarkResultButton(Modifier.fillMaxWidth(0.9f), state.appStatus != AppStatus.SAVING) {
                             viewModel.showRemoveWatermarkDialog()
                         }
                     }
-                    ResultButton("View in Gallery", Modifier.fillMaxWidth(0.85f), true) {
+                    ResultButton("View in Gallery", Modifier.fillMaxWidth(0.9f), true) {
                         try { context.startActivity(buildGalleryIntent(context)) }
                         catch (_: Exception) {}
                     }
-                    ResultButton("Retake", Modifier.fillMaxWidth(0.85f), true) {
+                    ResultButton("Retake", Modifier.fillMaxWidth(0.9f), true) {
                         viewModel.resetToIdle()
                     }
                 }
@@ -859,13 +858,13 @@ private fun RemoveWatermarkDialog(
                         contentColor = Color.White,
                     ),
                 ) {
-                    Text("Upgrade to PRO", fontSize = 18.sp,
+                    Text("Go PRO", fontSize = 18.sp,
                         fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(6.dp))
                     Text("♕", color = Color(0xFFFFD700), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
-                    "Save videos without watermarks and enjoy an ad-free experience.",
+                    "One-time purchase.\nRemove watermarks forever and enjoy an ad-free experience.",
                     color = Color(0xFFBBBBBB), fontSize = 14.sp,
                     fontFamily = FontFamily.SansSerif,
                 )

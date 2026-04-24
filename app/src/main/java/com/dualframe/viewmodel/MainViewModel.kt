@@ -465,8 +465,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val isFront = cameraManager.useFrontCamera.value
             val beauty = isFront && _uiState.value.settings.frontCameraEffect
-            // Mirror saved selfie when setting is OFF (user wants mirrored save)
-            val mirror = isFront && !_uiState.value.settings.saveSelfieUnmirrored
+            val mirror = isFront
             val wmNative = FileStorage.createExportFile(app, "wm_portrait")
             val wmCropped = FileStorage.createExportFile(app, "wm_landscape")
 

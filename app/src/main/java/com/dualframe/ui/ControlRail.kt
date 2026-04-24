@@ -48,13 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 object RailTheme {
-    val tileSize: Dp = 44.dp
-    val tileRadius: Dp = 10.dp
-    val tileGap: Dp = 4.dp
+    val tileSize: Dp = 56.dp
+    val tileRadius: Dp = 12.dp
+    val tileGap: Dp = 5.dp
     val tileBg = Color(0xFF151515)
     val tileBorder = Color(0xFF252525)
     val iconColor = Color(0xFFCCCCCC)
-    val iconSize: Dp = 17.dp
+    val iconSize: Dp = 22.dp
     val activeColor = Color(0xFF4CAF50)
     val inactiveColor = Color(0xFF666666)
     val font: FontFamily = FontFamily.SansSerif
@@ -90,20 +90,20 @@ fun SettingsButton(
     if (isRecording) return
 
     Column(
-        modifier = modifier.padding(6.dp),
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
-            Modifier.size(36.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(RailTheme.tileBg.copy(alpha = 0.85f))
-                .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(8.dp))
+            Modifier.size(44.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(RailTheme.tileBg.copy(alpha = 0.9f))
+                .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(10.dp))
                 .clickable { expanded = !expanded },
             contentAlignment = Alignment.Center,
         ) {
             Icon(Icons.Outlined.Settings, null,
                 tint = if (expanded) RailTheme.activeColor else RailTheme.iconColor,
-                modifier = Modifier.size(16.dp))
+                modifier = Modifier.size(22.dp))
         }
 
         AnimatedVisibility(
@@ -129,7 +129,7 @@ fun SettingsButton(
 
                 ZoomTile(zoomRatio, rot, onZoomToggle)
 
-                TextTile(resolution, rot, onResolutionCycle, fontSize = 12.sp)
+                TextTile(resolution, rot, onResolutionCycle, fontSize = 14.sp)
 
                 IconTile(Icons.Outlined.Timer,
                     if (timerSeconds > 0) "${timerSeconds}s" else "OFF",
@@ -142,7 +142,6 @@ fun SettingsButton(
                     )
                 }
 
-                // Flash at bottom
                 if (showFlash) {
                     IconTile(if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
                         if (flashOn) "ON" else "OFF", flashOn, rot, onFlashToggle)
@@ -163,7 +162,7 @@ private fun ZoomTile(zoomRatio: Float, rotation: Float, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(displayText, color = RailTheme.activeColor, fontSize = 11.sp,
+        Text(displayText, color = RailTheme.activeColor, fontSize = 13.sp,
             fontWeight = FontWeight.Bold, fontFamily = RailTheme.font,
             modifier = Modifier.rotate(rotation))
     }
@@ -175,7 +174,7 @@ private fun TextTile(
     rotation: Float,
     onClick: () -> Unit,
     isActive: Boolean = false,
-    fontSize: TextUnit = 10.sp,
+    fontSize: TextUnit = 12.sp,
 ) {
     Box(
         modifier = Modifier.size(RailTheme.tileSize)
@@ -213,7 +212,7 @@ private fun IconTile(
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(0.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
             modifier = Modifier.rotate(rotation)) {
             Icon(icon, null,
                 tint = if (isActive) RailTheme.activeColor else RailTheme.iconColor,
@@ -221,7 +220,7 @@ private fun IconTile(
             if (stateText != null) {
                 Text(stateText,
                     color = if (isActive) RailTheme.activeColor else RailTheme.inactiveColor,
-                    fontSize = 9.sp, lineHeight = 9.sp,
+                    fontSize = 11.sp, lineHeight = 11.sp,
                     fontWeight = FontWeight.Bold, fontFamily = RailTheme.font)
             }
         }
