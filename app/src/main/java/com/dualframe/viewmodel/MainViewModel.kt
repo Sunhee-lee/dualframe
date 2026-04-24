@@ -387,21 +387,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val cropOffset = cameraManager.renderer.landscapeCropOffsetY
             val targetRot = cameraManager.currentTargetRotation
+            val isFront = cameraManager.useFrontCamera.value
             val masterRotation = masterMeta?.rotation ?: 0
-            // Preview crops the raw 9:16 buffer → 16:9 panel using vertical offset.
-            // Export crops the display 16:9 → 9:16 using horizontal offset.
-            // The mapping between preview-vertical and export-horizontal depends on
-            // which Surface.ROTATION was used for recording:
-            //   ROTATION_90 (left turn): preview vertical ↔ export horizontal INVERTED
-            //   ROTATION_270 (right turn): preview vertical ↔ export horizontal SAME
-            // Use currentTargetRotation (what was set on CameraX) to decide.
-            val exportOffset = if (!isPortrait && targetRot == android.view.Surface.ROTATION_90)
-                -cropOffset else cropOffset
+            // For landscape recordings, the preview vertical offset maps to export
+            // horizontal offset. The direction depends on rotation:
+            //   ROTATION_90 (left turn): invert
+            //   ROTATION_270 (right turn): same
+            // Front camera adds mirror flip in preview, so the offset direction
+            // is inverted again for both rotation directions.
+            var exportOffset = cropOffset
+            if (!isPortrait) {
+                val invertForRotation = targetRot == android.view.Surface.ROTATION_90
+                val invertForMirror = isFront
+                if (invertForRotation != invertForMirror) exportOffset = -cropOffset
+            }
             Log.i("DualFrameCameraDiag", "=== CROP OFFSET DEBUG ===")
             Log.i("DualFrameCameraDiag", "  cropOffset (raw): ${"%.4f".format(cropOffset)}")
-            Log.i("DualFrameCameraDiag", "  targetRotation: $targetRot (0=portrait, 1=left, 3=right)")
-            Log.i("DualFrameCameraDiag", "  masterRotation (file): $masterRotation")
-            Log.i("DualFrameCameraDiag", "  isPortrait: $isPortrait")
+            Log.i("DualFrameCameraDiag", "  targetRot: $targetRot isFront: $isFront isPortrait: $isPortrait")
             Log.i("DualFrameCameraDiag", "  exportOffset: ${"%.4f".format(exportOffset)}")
             Log.i("DualFrameCameraDiag", "========================")
             val croppedFile = exportManager.exportCropped(
