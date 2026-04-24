@@ -597,6 +597,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
     val isPro = com.dualframe.monetize.ProEntitlement.isProOwned(context)
     val isLandscapeRecording = !state.masterIsPortrait
+    val mirrorMod = if (state.wasFrontCamera) Modifier.graphicsLayer { scaleX = -1f } else Modifier
 
     val portraitBmp = if (state.masterIsPortrait) state.thumbnailBitmap else state.landscapeThumbnailBitmap
     val landscapeBmp = if (state.masterIsPortrait) state.landscapeThumbnailBitmap else state.thumbnailBitmap
@@ -621,28 +622,37 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Left: previews stacked vertically (like camera view)
-                Column(
+                // Left: previews stacked like camera view, fitted to height
+                BoxWithConstraints(
                     modifier = Modifier.weight(0.55f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    landscapeBmp?.let { bmp ->
-                        Box(
-                            Modifier.fillMaxWidth(0.85f).aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                        ) {
-                            Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
+                    val gap = 6f
+                    val combinedRatio = 16f / 9f + 9f / 16f
+                    val thumbW = ((maxHeight.value - gap) / combinedRatio)
+                        .coerceAtLeast(0f).dp.coerceAtMost(maxWidth)
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        landscapeBmp?.let { bmp ->
+                            Box(
+                                Modifier.width(thumbW).aspectRatio(16f / 9f)
+                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                            ) {
+                                Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                                if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
+                            }
                         }
-                    }
-                    portraitBmp?.let { bmp ->
-                        Box(
-                            Modifier.fillMaxWidth(0.45f).aspectRatio(9f / 16f)
-                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                        ) {
-                            Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
+                        portraitBmp?.let { bmp ->
+                            Box(
+                                Modifier.width(thumbW).aspectRatio(9f / 16f)
+                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                            ) {
+                                Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                                if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
+                            }
                         }
                     }
                 }
@@ -682,7 +692,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                         Modifier.fillMaxWidth(0.50f).aspectRatio(9f / 16f)
                             .clip(RoundedCornerShape(12.dp)).background(Color.Black),
                     ) {
-                        Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
                         if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
                     }
                 }
@@ -694,7 +704,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                         Modifier.fillMaxWidth(0.50f).aspectRatio(16f / 9f)
                             .clip(RoundedCornerShape(12.dp)).background(Color.Black),
                     ) {
-                        Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
                         if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
                     }
                 }

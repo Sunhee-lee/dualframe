@@ -419,6 +419,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appStatus = AppStatus.EXPORT_COMPLETE,
                     exportProgress = 1f,
                     masterIsPortrait = isPortrait,
+                    wasFrontCamera = cameraManager.useFrontCamera.value,
                     thumbnailBitmap = thumbnail,
                     landscapeThumbnailBitmap = landscapeThumbnail,
                     nativeExportInfo = buildOutputLine(nativeLabel, nativeRes, nativeFps),
@@ -519,7 +520,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val isFront = cameraManager.useFrontCamera.value
             val beauty = isFront && _uiState.value.settings.frontCameraEffect
-            val mirror = isFront && !_uiState.value.settings.saveSelfieUnmirrored
+            val mirror = isFront
             val needsTransform = beauty || mirror
 
             val sourceNative: File = if (needsTransform) {

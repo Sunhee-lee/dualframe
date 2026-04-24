@@ -1,10 +1,5 @@
 package com.dualframe.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,13 +34,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
 
 object RailTheme {
     val tileSize: Dp = 56.dp
@@ -89,10 +87,7 @@ fun SettingsButton(
 
     if (isRecording) return
 
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+    Box(modifier = modifier) {
         Box(
             Modifier.size(44.dp)
                 .clip(RoundedCornerShape(10.dp))
@@ -106,45 +101,49 @@ fun SettingsButton(
                 modifier = Modifier.size(22.dp))
         }
 
-        AnimatedVisibility(
-            visible = expanded,
-            enter = fadeIn() + slideInVertically(),
-            exit = fadeOut() + slideOutVertically(),
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(top = RailTheme.tileGap)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
+        if (expanded) {
+            val offsetY = with(LocalDensity.current) { 48.dp.roundToPx() }
+            Popup(
+                alignment = Alignment.TopEnd,
+                offset = IntOffset(0, offsetY),
             ) {
-                IconTile(if (audioEnabled) Icons.Outlined.Mic else Icons.Outlined.MicOff,
-                    if (audioEnabled) "ON" else "OFF", audioEnabled, rot, onAudioToggle)
+                Column(
+                    modifier = Modifier
+                        .background(Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
+                        .border(0.5.dp, Color(0xFF333333), RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
+                ) {
+                    IconTile(if (audioEnabled) Icons.Outlined.Mic else Icons.Outlined.MicOff,
+                        if (audioEnabled) "ON" else "OFF", audioEnabled, rot, onAudioToggle)
 
-                IconTile(Icons.Outlined.GridOn,
-                    if (guidesEnabled) "ON" else "OFF", guidesEnabled, rot, onGuideToggle)
+                    IconTile(Icons.Outlined.GridOn,
+                        if (guidesEnabled) "ON" else "OFF", guidesEnabled, rot, onGuideToggle)
 
-                IconTile(if (keepScreenOn) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                    if (keepScreenOn) "ON" else "OFF", keepScreenOn, rot, onKeepScreenToggle)
+                    IconTile(if (keepScreenOn) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                        if (keepScreenOn) "ON" else "OFF", keepScreenOn, rot, onKeepScreenToggle)
 
-                ZoomTile(zoomRatio, rot, onZoomToggle)
+                    ZoomTile(zoomRatio, rot, onZoomToggle)
 
-                TextTile(resolution, rot, onResolutionCycle, fontSize = 14.sp)
+                    TextTile(resolution, rot, onResolutionCycle, fontSize = 14.sp)
 
-                IconTile(Icons.Outlined.Timer,
-                    if (timerSeconds > 0) "${timerSeconds}s" else "OFF",
-                    timerSeconds > 0, rot, onTimerCycle)
+                    IconTile(Icons.Outlined.Timer,
+                        if (timerSeconds > 0) "${timerSeconds}s" else "OFF",
+                        timerSeconds > 0, rot, onTimerCycle)
 
-                if (isFrontCamera) {
-                    TextTile(
-                        if (selfieEffect) "Beauty\non" else "Beauty\noff",
-                        rot, onSelfieEffectToggle, isActive = selfieEffect,
-                    )
-                }
+                    if (isFrontCamera) {
+                        TextTile(
+                            if (selfieEffect) "Beauty\non" else "Beauty\noff",
+                            rot, onSelfieEffectToggle, isActive = selfieEffect,
+                        )
+                    }
 
-                if (showFlash) {
-                    IconTile(if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
-                        if (flashOn) "ON" else "OFF", flashOn, rot, onFlashToggle)
+                    if (showFlash) {
+                        IconTile(if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
+                            if (flashOn) "ON" else "OFF", flashOn, rot, onFlashToggle)
+                    }
                 }
             }
         }
