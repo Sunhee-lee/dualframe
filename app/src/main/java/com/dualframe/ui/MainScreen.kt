@@ -213,10 +213,7 @@ fun MainScreen(
                 // Gear icon — always occupies space, invisible during recording
                 Box(
                     Modifier.size(44.dp)
-                        .clip(RoundedCornerShape(10.dp))
                         .then(if (!isRecording) Modifier
-                            .background(RailTheme.tileBg.copy(alpha = 0.9f))
-                            .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(10.dp))
                             .clickable { settingsExpanded = !settingsExpanded }
                         else Modifier),
                     contentAlignment = Alignment.Center,
@@ -679,37 +676,28 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Left: previews stacked like camera view, fitted to height
-                BoxWithConstraints(
+                // Left: previews side by side (portrait left, landscape right, same height)
+                Row(
                     modifier = Modifier.weight(0.55f),
-                    contentAlignment = Alignment.Center,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val gap = 6f
-                    val combinedRatio = 16f / 9f + 9f / 16f
-                    val thumbW = ((maxHeight.value - gap) / combinedRatio)
-                        .coerceAtLeast(0f).dp.coerceAtMost(maxWidth)
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        portraitBmp?.let { bmp ->
-                            Box(
-                                Modifier.width(thumbW).aspectRatio(9f / 16f)
-                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                            ) {
-                                Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                                if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
-                            }
+                    portraitBmp?.let { bmp ->
+                        Box(
+                            Modifier.fillMaxHeight(0.7f).aspectRatio(9f / 16f)
+                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                        ) {
+                            Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                            if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
                         }
-                        landscapeBmp?.let { bmp ->
-                            Box(
-                                Modifier.width(thumbW).aspectRatio(16f / 9f)
-                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                            ) {
-                                Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                                if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
-                            }
+                    }
+                    landscapeBmp?.let { bmp ->
+                        Box(
+                            Modifier.fillMaxHeight(0.7f).aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                        ) {
+                            Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                            if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
                         }
                     }
                 }
@@ -888,7 +876,7 @@ private fun RemoveWatermarkDialog(
                 fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold)
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
                         onDismiss()
@@ -901,7 +889,7 @@ private fun RemoveWatermarkDialog(
                             )
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(10.dp),
                 ) {
                     Text("Watch Ad to Remove", color = Color.White, fontSize = 18.sp,
@@ -918,7 +906,7 @@ private fun RemoveWatermarkDialog(
                                 }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF2A2A2A),
@@ -927,26 +915,24 @@ private fun RemoveWatermarkDialog(
                 ) {
                     Text("Go PRO", fontSize = 18.sp,
                         fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.width(6.dp))
-                    Text("♕", color = Color(0xFFFFD700), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(4.dp))
+                    Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
-                    "One-time purchase.\nRemove watermarks forever and enjoy an ad-free experience.",
+                    "One-time purchase.\nRemove watermarks forever.",
                     color = Color(0xFFBBBBBB), fontSize = 14.sp,
                     fontFamily = FontFamily.SansSerif,
                 )
+                androidx.compose.material3.TextButton(
+                    onClick = onDismiss,
+                ) {
+                    Text("Cancel", color = Color(0xFF999999), fontSize = 15.sp,
+                        fontFamily = FontFamily.SansSerif)
+                }
             }
         },
         confirmButton = {},
-        dismissButton = {
-            androidx.compose.material3.TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.padding(top = 4.dp),
-            ) {
-                Text("Cancel", color = Color(0xFF888888), fontSize = 15.sp,
-                    fontFamily = FontFamily.SansSerif)
-            }
-        },
+        dismissButton = {},
     )
 }
 
