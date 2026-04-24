@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicOff
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -24,26 +23,19 @@ import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
 
 object RailTheme {
     val tileSize: Dp = 56.dp
@@ -59,8 +51,7 @@ object RailTheme {
 }
 
 @Composable
-fun SettingsButton(
-    isRecording: Boolean,
+fun SettingsPanel(
     audioEnabled: Boolean,
     zoomRatio: Float,
     guidesEnabled: Boolean,
@@ -83,69 +74,40 @@ fun SettingsButton(
     modifier: Modifier = Modifier,
 ) {
     val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
-    var expanded by remember { mutableStateOf(false) }
 
-    if (isRecording) return
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
+    ) {
+        IconTile(if (audioEnabled) Icons.Outlined.Mic else Icons.Outlined.MicOff,
+            if (audioEnabled) "ON" else "OFF", audioEnabled, rot, onAudioToggle)
 
-    Box(modifier = modifier) {
-        Box(
-            Modifier.size(44.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(RailTheme.tileBg.copy(alpha = 0.9f))
-                .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(10.dp))
-                .clickable { expanded = !expanded },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.Settings, null,
-                tint = if (expanded) RailTheme.activeColor else RailTheme.iconColor,
-                modifier = Modifier.size(22.dp))
+        IconTile(Icons.Outlined.GridOn,
+            if (guidesEnabled) "ON" else "OFF", guidesEnabled, rot, onGuideToggle)
+
+        IconTile(if (keepScreenOn) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+            if (keepScreenOn) "ON" else "OFF", keepScreenOn, rot, onKeepScreenToggle)
+
+        ZoomTile(zoomRatio, rot, onZoomToggle)
+
+        TextTile(resolution, rot, onResolutionCycle, fontSize = 14.sp)
+
+        IconTile(Icons.Outlined.Timer,
+            if (timerSeconds > 0) "${timerSeconds}s" else "OFF",
+            timerSeconds > 0, rot, onTimerCycle)
+
+        if (isFrontCamera) {
+            TextTile(
+                if (selfieEffect) "Beauty\non" else "Beauty\noff",
+                rot, onSelfieEffectToggle, isActive = selfieEffect,
+            )
         }
 
-        if (expanded) {
-            val offsetY = with(LocalDensity.current) { 48.dp.roundToPx() }
-            Popup(
-                alignment = Alignment.TopEnd,
-                offset = IntOffset(0, offsetY),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
-                        .border(0.5.dp, Color(0xFF333333), RoundedCornerShape(12.dp))
-                        .padding(8.dp)
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
-                ) {
-                    IconTile(if (audioEnabled) Icons.Outlined.Mic else Icons.Outlined.MicOff,
-                        if (audioEnabled) "ON" else "OFF", audioEnabled, rot, onAudioToggle)
-
-                    IconTile(Icons.Outlined.GridOn,
-                        if (guidesEnabled) "ON" else "OFF", guidesEnabled, rot, onGuideToggle)
-
-                    IconTile(if (keepScreenOn) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                        if (keepScreenOn) "ON" else "OFF", keepScreenOn, rot, onKeepScreenToggle)
-
-                    ZoomTile(zoomRatio, rot, onZoomToggle)
-
-                    TextTile(resolution, rot, onResolutionCycle, fontSize = 14.sp)
-
-                    IconTile(Icons.Outlined.Timer,
-                        if (timerSeconds > 0) "${timerSeconds}s" else "OFF",
-                        timerSeconds > 0, rot, onTimerCycle)
-
-                    if (isFrontCamera) {
-                        TextTile(
-                            if (selfieEffect) "Beauty\non" else "Beauty\noff",
-                            rot, onSelfieEffectToggle, isActive = selfieEffect,
-                        )
-                    }
-
-                    if (showFlash) {
-                        IconTile(if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
-                            if (flashOn) "ON" else "OFF", flashOn, rot, onFlashToggle)
-                    }
-                }
-            }
+        if (showFlash) {
+            IconTile(if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
+                if (flashOn) "ON" else "OFF", flashOn, rot, onFlashToggle)
         }
     }
 }

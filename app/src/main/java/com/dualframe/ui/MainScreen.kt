@@ -8,13 +8,19 @@ import android.view.OrientationEventListener
 import android.view.Surface
 import android.view.TextureView
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -31,8 +37,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -129,60 +139,137 @@ fun MainScreen(
 
     // Back button confirmation dialog
     var showExitDialog by remember { mutableStateOf(false) }
+    var settingsExpanded by remember { mutableStateOf(false) }
     BackHandler { showExitDialog = true }
     if (showExitDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showExitDialog = false },
-            containerColor = Color(0xFF1E1E1E),
-            title = { Text("종료", color = Color.White, fontFamily = FontFamily.SansSerif) },
-            text = { Text("앱을 종료하시겠습니까?", color = Color(0xFFCCCCCC), fontFamily = FontFamily.SansSerif) },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    showExitDialog = false
-                    (context as? Activity)?.finish()
-                }) { Text("종료", color = Color(0xFFFF5252), fontFamily = FontFamily.SansSerif) }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showExitDialog = false }) {
-                    Text("취소", color = Color(0xFF999999), fontFamily = FontFamily.SansSerif)
+        val dialogRot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
+                .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { showExitDialog = false },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier.rotate(dialogRot)
+                    .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
+                    .padding(24.dp)
+                    .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {},
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("종료", color = Color.White, fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif)
+                Spacer(Modifier.height(12.dp))
+                Text("앱을 종료하시겠습니까?", color = Color(0xFFCCCCCC),
+                    fontSize = 15.sp, fontFamily = FontFamily.SansSerif)
+                Spacer(Modifier.height(20.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    androidx.compose.material3.TextButton(onClick = { showExitDialog = false }) {
+                        Text("취소", color = Color(0xFF999999), fontFamily = FontFamily.SansSerif)
+                    }
+                    androidx.compose.material3.TextButton(onClick = {
+                        showExitDialog = false
+                        (context as? Activity)?.finish()
+                    }) {
+                        Text("종료", color = Color(0xFFFF5252), fontFamily = FontFamily.SansSerif)
+                    }
                 }
-            },
-        )
+            }
+        }
     }
 
     val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
+    val isRecording = state.appStatus == AppStatus.RECORDING
 
-    Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
-    ) {
-        // ── Top header: DualFrame + Ready/REC + Settings ──
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
         ) {
-            Text("DualFrame", color = Color.White, fontSize = 22.sp,
-                fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif)
-            Spacer(Modifier.width(10.dp))
-            if (state.appStatus == AppStatus.RECORDING) {
-                Row(
-                    Modifier.background(Color(0x44FF1744), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF1744)))
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = formatDuration(state.recordingDurationSeconds),
-                        color = Color.White, fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace,
-                    )
+            // ── Top header: DualFrame + Ready/REC + Settings gear ──
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("DualFrame", color = Color.White, fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif)
+                Spacer(Modifier.width(10.dp))
+                if (isRecording) {
+                    Row(
+                        Modifier.background(Color(0x44FF1744), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF1744)))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = formatDuration(state.recordingDurationSeconds),
+                            color = Color.White, fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace,
+                        )
+                    }
+                } else {
+                    StatusChip(state.appStatus)
                 }
-            } else {
-                StatusChip(state.appStatus)
+                Spacer(Modifier.weight(1f))
+                // Gear icon — always occupies space, invisible during recording
+                Box(
+                    Modifier.size(44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .then(if (!isRecording) Modifier
+                            .background(RailTheme.tileBg.copy(alpha = 0.9f))
+                            .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(10.dp))
+                            .clickable { settingsExpanded = !settingsExpanded }
+                        else Modifier),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (!isRecording) {
+                        Icon(Icons.Outlined.Settings, null,
+                            tint = if (settingsExpanded) RailTheme.activeColor else RailTheme.iconColor,
+                            modifier = Modifier.size(22.dp))
+                    }
+                }
             }
-            Spacer(Modifier.weight(1f))
-            SettingsButton(
-                isRecording = state.appStatus == AppStatus.RECORDING,
+
+            // ── Main content: previews centered ──
+            BoxWithConstraints(
+            modifier = Modifier.weight(1f).fillMaxWidth()
+                .padding(start = 8.dp, end = 8.dp, bottom = 12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val fitWidth = ((maxHeight.value - 8f) / (16f / 9f + 9f / 16f))
+                .coerceAtLeast(0f).dp.coerceAtMost(maxWidth)
+
+            PreviewPanels(
+                renderer, viewModel.cameraManager, state.settings.showGuides,
+                Modifier.width(fitWidth),
+                deviceRotation = deviceRotation, appStatus = state.appStatus,
+            )
+        }
+
+        ExportStatusStub(state)
+
+        BottomActionBar(
+            appStatus = state.appStatus,
+            cameraReady = state.cameraReady,
+            onGallery = {
+                try { context.startActivity(buildGalleryIntent(context)) }
+                catch (_: Exception) {}
+            },
+            onRecord = { viewModel.toggleRecording(hasAudioPermission) },
+            onSwitchCamera = { viewModel.switchCamera() },
+        )
+
+        ErrorArea(state) { viewModel.clearError() }
+        }
+
+        // Settings overlay — slides down from top-right, no container background
+        AnimatedVisibility(
+            visible = settingsExpanded && !isRecording,
+            modifier = Modifier.align(Alignment.TopEnd)
+                .padding(top = 56.dp, end = 8.dp),
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+        ) {
+            SettingsPanel(
                 audioEnabled = state.settings.audioEnabled,
                 zoomRatio = zoomRatio,
                 guidesEnabled = state.settings.showGuides,
@@ -225,40 +312,9 @@ fun MainScreen(
                 },
             )
         }
-
-        // ── Main content: previews centered ──
-        BoxWithConstraints(
-            modifier = Modifier.weight(1f).fillMaxWidth()
-                .padding(start = 8.dp, end = 8.dp, bottom = 12.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            val fitWidth = ((maxHeight.value - 8f) / (16f / 9f + 9f / 16f))
-                .coerceAtLeast(0f).dp.coerceAtMost(maxWidth)
-
-            PreviewPanels(
-                renderer, viewModel.cameraManager, state.settings.showGuides,
-                Modifier.width(fitWidth),
-                deviceRotation = deviceRotation, appStatus = state.appStatus,
-            )
-        }
-
-        ExportStatusStub(state)
-
-        BottomActionBar(
-            appStatus = state.appStatus,
-            cameraReady = state.cameraReady,
-            onGallery = {
-                try { context.startActivity(buildGalleryIntent(context)) }
-                catch (_: Exception) {}
-            },
-            onRecord = { viewModel.toggleRecording(hasAudioPermission) },
-            onSwitchCamera = { viewModel.switchCamera() },
-        )
-
-        ErrorArea(state) { viewModel.clearError() }
     }
 
-    // Fullscreen result overlay (outside main Column, covers entire screen)
+    // Fullscreen result overlay
     if (state.appStatus == AppStatus.EXPORT_COMPLETE || state.appStatus == AppStatus.SAVING) {
         ResultActions(state, viewModel, context)
     }
@@ -637,15 +693,6 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        landscapeBmp?.let { bmp ->
-                            Box(
-                                Modifier.width(thumbW).aspectRatio(16f / 9f)
-                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                            ) {
-                                Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                                if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
-                            }
-                        }
                         portraitBmp?.let { bmp ->
                             Box(
                                 Modifier.width(thumbW).aspectRatio(9f / 16f)
@@ -653,6 +700,15 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                             ) {
                                 Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
                                 if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
+                            }
+                        }
+                        landscapeBmp?.let { bmp ->
+                            Box(
+                                Modifier.width(thumbW).aspectRatio(16f / 9f)
+                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                            ) {
+                                Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                                if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
                             }
                         }
                     }
