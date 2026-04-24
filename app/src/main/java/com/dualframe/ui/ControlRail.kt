@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicOff
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -73,6 +75,7 @@ fun SettingsButton(
     isFrontCamera: Boolean,
     resolution: String,
     deviceRotation: Int,
+    layoutSwapped: Boolean,
     onAudioToggle: () -> Unit,
     onZoomToggle: () -> Unit,
     onGuideToggle: () -> Unit,
@@ -81,6 +84,7 @@ fun SettingsButton(
     onKeepScreenToggle: () -> Unit,
     onSelfieEffectToggle: () -> Unit,
     onResolutionCycle: () -> Unit,
+    onSwapToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
@@ -117,6 +121,10 @@ fun SettingsButton(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
             ) {
+                // Swap at top
+                IconTile(Icons.Outlined.SwapHoriz,
+                    null, layoutSwapped, rot, onSwapToggle)
+
                 IconTile(if (audioEnabled) Icons.Outlined.Mic else Icons.Outlined.MicOff,
                     if (audioEnabled) "ON" else "OFF", audioEnabled, rot, onAudioToggle)
 
@@ -128,7 +136,7 @@ fun SettingsButton(
 
                 ZoomTile(zoomRatio, rot, onZoomToggle)
 
-                TextTile(resolution, rot, onResolutionCycle)
+                TextTile(resolution, rot, onResolutionCycle, fontSize = 12.sp)
 
                 IconTile(Icons.Outlined.Timer,
                     if (timerSeconds > 0) "${timerSeconds}s" else "OFF",
@@ -141,6 +149,7 @@ fun SettingsButton(
                     )
                 }
 
+                // Flash at bottom
                 if (showFlash) {
                     IconTile(if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
                         if (flashOn) "ON" else "OFF", flashOn, rot, onFlashToggle)
@@ -168,7 +177,13 @@ private fun ZoomTile(zoomRatio: Float, rotation: Float, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TextTile(text: String, rotation: Float, onClick: () -> Unit, isActive: Boolean = false) {
+private fun TextTile(
+    text: String,
+    rotation: Float,
+    onClick: () -> Unit,
+    isActive: Boolean = false,
+    fontSize: TextUnit = 10.sp,
+) {
     Box(
         modifier = Modifier.size(RailTheme.tileSize)
             .clip(RoundedCornerShape(RailTheme.tileRadius))
@@ -179,11 +194,11 @@ private fun TextTile(text: String, rotation: Float, onClick: () -> Unit, isActiv
     ) {
         Text(text,
             color = if (isActive) RailTheme.activeColor else RailTheme.iconColor,
-            fontSize = 10.sp,
+            fontSize = fontSize,
             fontWeight = FontWeight.Bold,
             fontFamily = RailTheme.font,
             textAlign = TextAlign.Center,
-            lineHeight = 12.sp,
+            lineHeight = (fontSize.value + 2f).sp,
             modifier = Modifier.rotate(rotation))
     }
 }
@@ -213,7 +228,8 @@ private fun IconTile(
             if (stateText != null) {
                 Text(stateText,
                     color = if (isActive) RailTheme.activeColor else RailTheme.inactiveColor,
-                    fontSize = 9.sp, fontWeight = FontWeight.Bold, fontFamily = RailTheme.font)
+                    fontSize = 9.sp, lineHeight = 9.sp,
+                    fontWeight = FontWeight.Bold, fontFamily = RailTheme.font)
             }
         }
     }

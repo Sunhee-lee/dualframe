@@ -126,6 +126,7 @@ fun MainScreen(
 
     // Back button confirmation dialog
     var showExitDialog by remember { mutableStateOf(false) }
+    var layoutSwapped by remember { mutableStateOf(false) }
     BackHandler { showExitDialog = true }
     if (showExitDialog) {
         androidx.compose.material3.AlertDialog(
@@ -205,8 +206,9 @@ fun MainScreen(
                 keepScreenOn = keepScreenOn,
                 selfieEffect = state.settings.frontCameraEffect,
                 isFrontCamera = isFrontCamera,
-                resolution = state.settings.videoQuality.label.substringBefore(" ("),
+                resolution = state.settings.videoQuality.label.substringBefore(" (").replace(" ", "\n"),
                 deviceRotation = deviceRotation,
+                layoutSwapped = layoutSwapped,
                 onAudioToggle = {
                     viewModel.updateSettings(state.settings.copy(audioEnabled = !state.settings.audioEnabled))
                 },
@@ -236,6 +238,7 @@ fun MainScreen(
                     val next = qualities[(idx + 1) % qualities.size]
                     viewModel.updateSettings(state.settings.copy(videoQuality = next))
                 },
+                onSwapToggle = { layoutSwapped = !layoutSwapped },
                 modifier = Modifier.align(Alignment.TopEnd),
             )
         }
@@ -245,6 +248,7 @@ fun MainScreen(
         BottomActionBar(
             appStatus = state.appStatus,
             cameraReady = state.cameraReady,
+            layoutSwapped = layoutSwapped,
             onGallery = {
                 try { context.startActivity(buildGalleryIntent(context)) }
                 catch (_: Exception) {}
@@ -606,27 +610,27 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         ) {
             val thumbWidth = 0.45f
 
-            // Portrait thumbnail — same width as landscape
+            // Portrait thumbnail — watermark top-right (matches saved output)
             state.thumbnailBitmap?.let { bmp ->
                 Box(
                     Modifier.fillMaxWidth(thumbWidth).aspectRatio(9f / 16f)
                         .clip(RoundedCornerShape(12.dp)).background(Color.Black),
                 ) {
                     Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    if (!isPro) ThumbnailWatermark()
+                    if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
                 }
             }
 
             Spacer(Modifier.height(8.dp))
 
-            // Landscape thumbnail — same width as portrait
+            // Landscape thumbnail — watermark bottom-right (matches saved output)
             state.landscapeThumbnailBitmap?.let { bmp ->
                 Box(
                     Modifier.fillMaxWidth(thumbWidth).aspectRatio(16f / 9f)
                         .clip(RoundedCornerShape(12.dp)).background(Color.Black),
                 ) {
                     Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    if (!isPro) ThumbnailWatermark()
+                    if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
                 }
             }
 
@@ -651,15 +655,24 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 modifier = Modifier.fillMaxWidth(0.7f),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                ResultButton("Save", Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
+                ResultButton("Save Image", Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
                     viewModel.saveBothWithWatermark()
                 }
                 if (!isPro) {
-                    ResultButton("No WM", Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
-                        viewModel.showRemoveWatermarkDialog()
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = { viewModel.showRemoveWatermarkDialog() },
+                        enabled = state.appStatus != AppStatus.SAVING,
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        shape = RoundedCornerShape(10.dp),
+                    ) {
+                        Text("Remove Watermark", color = Color.White, fontSize = 15.sp,
+                            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.width(6.dp))
+                        Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold)
                     }
                 }
-                ResultButton("Gallery", Modifier.fillMaxWidth(), true) {
+                ResultButton("View in Gallery", Modifier.fillMaxWidth(), true) {
                     try { context.startActivity(buildGalleryIntent(context)) }
                     catch (_: Exception) {}
                 }
@@ -672,14 +685,16 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 }
 
 @Composable
-private fun ThumbnailWatermark() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+private fun ThumbnailWatermark(anchor: Alignment) {
+    Box(Modifier.fillMaxSize()) {
         Text(
             "DualFrame",
-            color = Color.White.copy(alpha = 0.4f),
-            fontSize = 14.sp,
+            color = Color.White.copy(alpha = 0.35f),
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.SansSerif,
+            modifier = Modifier.align(anchor)
+                .padding(horizontal = 6.dp, vertical = 4.dp),
         )
     }
 }
@@ -697,7 +712,6 @@ private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, on
     }
 }
 
-/** Remove Watermark dialog with two options: Watch Ad or Go PRO. */
 @Composable
 private fun RemoveWatermarkDialog(
     viewModel: MainViewModel,
@@ -706,30 +720,30 @@ private fun RemoveWatermarkDialog(
 ) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF1E1E1E),
-        title = { Text("Remove Watermark", color = Color.White) },
+        containerColor = Color(0xFF121212),
+        title = {
+            Text("Remove Watermark", color = Color.White, fontSize = 18.sp,
+                fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold)
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
                         onDismiss()
-                        // Show rewarded ad — on reward, save clean
                         val activity = context as? android.app.Activity
                         if (activity != null) {
                             com.dualframe.monetize.AdRewardManager.showAd(
                                 activity = activity,
                                 onRewarded = { viewModel.saveBothClean() },
-                                onFailed = { msg ->
-                                    viewModel.clearError()
-                                    // Show error briefly via saveMessage
-                                },
+                                onFailed = { viewModel.clearError() },
                             )
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(10.dp),
                 ) {
-                    Text("Watch Ad", fontSize = 16.sp)
+                    Text("Watch Ad to Remove", color = Color.White, fontSize = 15.sp,
+                        fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
                 }
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
@@ -742,17 +756,23 @@ private fun RemoveWatermarkDialog(
                                 }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(10.dp),
                 ) {
-                    Text("Go Pro", fontSize = 16.sp)
+                    Text("Upgrade to PRO", color = Color.White, fontSize = 15.sp,
+                        fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
                 }
+                Text(
+                    "Unlock permanent watermark removal and an ad-free experience.",
+                    color = Color(0xFF999999), fontSize = 13.sp,
+                    fontFamily = FontFamily.SansSerif,
+                )
             }
         },
         confirmButton = {},
         dismissButton = {
             androidx.compose.material3.TextButton(onDismiss) {
-                Text("Cancel", color = Color(0xFF999999))
+                Text("Cancel", color = Color(0xFF666666), fontFamily = FontFamily.SansSerif)
             }
         },
     )

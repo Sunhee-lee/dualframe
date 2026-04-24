@@ -33,6 +33,7 @@ import com.dualframe.data.AppStatus
 fun BottomActionBar(
     appStatus: AppStatus,
     cameraReady: Boolean,
+    layoutSwapped: Boolean,
     onGallery: () -> Unit,
     onRecord: () -> Unit,
     onSwitchCamera: () -> Unit,
@@ -50,26 +51,47 @@ fun BottomActionBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
-                .clickable { onGallery() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.PhotoLibrary, "Gallery",
-                tint = Color.White, modifier = Modifier.size(22.dp))
+        // Left button
+        if (!layoutSwapped) {
+            SwitchCameraButton(enabled && !isRecording, onSwitchCamera)
+        } else {
+            GalleryButton(onGallery)
         }
 
+        // Center: Record (always)
         RecordDot(isRecording, isCountdown, isExporting, enabled, onRecord)
 
-        Box(
-            Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
-                .clickable(enabled = enabled && !isRecording) { onSwitchCamera() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.Cameraswitch, "Switch",
-                tint = if (enabled && !isRecording) Color.White else Color(0xFF555555),
-                modifier = Modifier.size(22.dp))
+        // Right button
+        if (!layoutSwapped) {
+            GalleryButton(onGallery)
+        } else {
+            SwitchCameraButton(enabled && !isRecording, onSwitchCamera)
         }
+    }
+}
+
+@Composable
+private fun SwitchCameraButton(enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
+            .clickable(enabled = enabled) { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Outlined.Cameraswitch, "Switch",
+            tint = if (enabled) Color.White else Color(0xFF555555),
+            modifier = Modifier.size(22.dp))
+    }
+}
+
+@Composable
+private fun GalleryButton(onClick: () -> Unit) {
+    Box(
+        Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Outlined.PhotoLibrary, "Gallery",
+            tint = Color.White, modifier = Modifier.size(22.dp))
     }
 }
 
