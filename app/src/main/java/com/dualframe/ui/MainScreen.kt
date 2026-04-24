@@ -697,29 +697,20 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Left: both thumbnails same height
+                // Thumbnails: same height, order swapped based on rotation
                 Row(
                     modifier = Modifier.weight(0.55f),
                     horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    portraitBmp?.let { bmp ->
-                        Box(
-                            Modifier.fillMaxHeight(0.65f).aspectRatio(9f / 16f)
-                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                        ) {
-                            Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                            if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
-                        }
-                    }
-                    landscapeBmp?.let { bmp ->
-                        Box(
-                            Modifier.fillMaxHeight(0.65f).aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                        ) {
-                            Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                            if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
-                        }
+                    if (deviceRotation == 270) {
+                        // Left turn: landscape first, portrait second
+                        LandscapeThumb(landscapeBmp, mirrorMod, isPro)
+                        PortraitThumb(portraitBmp, mirrorMod, isPro)
+                    } else {
+                        // Right turn (180° flipped): portrait first, landscape second
+                        PortraitThumb(portraitBmp, mirrorMod, isPro)
+                        LandscapeThumb(landscapeBmp, mirrorMod, isPro)
                     }
                 }
 
@@ -817,6 +808,32 @@ private fun ThumbnailWatermark(anchor: Alignment) {
 }
 
 @Composable
+private fun PortraitThumb(bmp: android.graphics.Bitmap?, mirrorMod: Modifier, isPro: Boolean) {
+    bmp?.let {
+        Box(
+            Modifier.fillMaxHeight(0.65f).aspectRatio(9f / 16f)
+                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+        ) {
+            Image(it.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+            if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
+        }
+    }
+}
+
+@Composable
+private fun LandscapeThumb(bmp: android.graphics.Bitmap?, mirrorMod: Modifier, isPro: Boolean) {
+    bmp?.let {
+        Box(
+            Modifier.fillMaxHeight(0.65f).aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+        ) {
+            Image(it.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+            if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
+        }
+    }
+}
+
+@Composable
 private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Boolean, isSaved: Boolean = false, onClick: () -> Unit) {
     androidx.compose.material3.Button(
         onClick = onClick,
@@ -882,7 +899,7 @@ private fun RemoveWatermarkDialog(
                 fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold)
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
                         onDismiss()
@@ -895,7 +912,7 @@ private fun RemoveWatermarkDialog(
                             )
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
                     shape = RoundedCornerShape(10.dp),
                 ) {
                     Text("Watch Ad to Remove", color = Color.White, fontSize = 18.sp,
@@ -912,7 +929,7 @@ private fun RemoveWatermarkDialog(
                                 }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF2A2A2A),

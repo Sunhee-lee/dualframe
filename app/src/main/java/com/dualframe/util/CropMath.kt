@@ -56,11 +56,13 @@ object CropMath {
     }
 
     /**
-     * Center-crop with a vertical offset for user-adjustable landscape framing.
+     * Center-crop with an offset for user-adjustable framing.
      *
-     * @param verticalOffset normalized [-1, 1] where -1 = crop window at bottom,
-     *   0 = center (default), +1 = crop window at top of the source frame.
-     *   Only affects crops that remove top/bottom (target wider than source).
+     * @param verticalOffset normalized [-1, 1] where -1 = one edge,
+     *   0 = center (default), +1 = opposite edge.
+     *   Applied to whichever axis is being cropped:
+     *   - vertical shift when top/bottom are removed (target wider than source)
+     *   - horizontal shift when left/right are removed (target taller than source)
      */
     fun centerCropWithVerticalOffset(
         sourceAspect: Float,
@@ -68,14 +70,27 @@ object CropMath {
         verticalOffset: Float = 0f,
     ): CropResult {
         val base = centerCrop(sourceAspect, targetAspect)
-        if (verticalOffset == 0f || base.keepFractionY >= 1f) return base
+        if (verticalOffset == 0f) return base
 
-        val maxShift = 1f - base.keepFractionY
-        val shift = verticalOffset.coerceIn(-1f, 1f) * maxShift
-        return base.copy(
-            bottom = base.bottom + shift,
-            top = base.top + shift,
-        )
+        if (base.keepFractionY < 1f) {
+            val maxShift = 1f - base.keepFractionY
+            val shift = verticalOffset.coerceIn(-1f, 1f) * maxShift
+            return base.copy(
+                bottom = base.bottom + shift,
+                top = base.top + shift,
+            )
+        }
+
+        if (base.keepFractionX < 1f) {
+            val maxShift = 1f - base.keepFractionX
+            val shift = verticalOffset.coerceIn(-1f, 1f) * maxShift
+            return base.copy(
+                left = base.left + shift,
+                right = base.right + shift,
+            )
+        }
+
+        return base
     }
 
     /**
