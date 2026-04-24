@@ -182,7 +182,7 @@ fun MainScreen(
 
         BoxWithConstraints(
             modifier = Modifier.weight(1f).fillMaxWidth()
-                .padding(horizontal = 8.dp, bottom = 12.dp),
+                .padding(start = 8.dp, end = 8.dp, bottom = 12.dp),
             contentAlignment = Alignment.Center,
         ) {
             val fitWidth = ((maxHeight.value - 8f) / (16f / 9f + 9f / 16f))
