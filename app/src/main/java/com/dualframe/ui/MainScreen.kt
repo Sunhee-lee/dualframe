@@ -72,6 +72,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -689,28 +690,45 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         contentAlignment = Alignment.Center,
     ) {
         if (isLandscapeRecording) {
-            // ── Landscape: right turn 180°, left turn 0° ──
+            // ── Landscape: consistent layout for both rotation directions ──
             val landscapeRot = if (deviceRotation == 90) 180f else 0f
+
+            // Back handler for landscape save screen
+            BackHandler { viewModel.resetToIdle() }
+
             Row(
                 modifier = Modifier.fillMaxSize()
                     .rotate(landscapeRot)
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Thumbnails: same height, order swapped based on rotation
-                Row(
+                // Thumbnails: shared height computed from constraints
+                BoxWithConstraints(
                     modifier = Modifier.weight(0.55f),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
+                    contentAlignment = Alignment.Center,
                 ) {
-                    if (deviceRotation == 270) {
-                        // Left turn: landscape first, portrait second
-                        LandscapeThumb(landscapeBmp, mirrorMod, isPro)
-                        PortraitThumb(portraitBmp, mirrorMod, isPro)
+                    val spacing = 6.dp
+                    val maxH = maxHeight * 0.7f
+                    val widthNeeded16x9 = maxH * 16f / 9f
+                    val widthNeeded9x16 = maxH * 9f / 16f
+                    val totalW = widthNeeded16x9 + widthNeeded9x16 + spacing
+                    val thumbH = if (totalW > maxWidth) {
+                        (maxWidth - spacing) / (16f / 9f + 9f / 16f)
                     } else {
-                        // Right turn (180° flipped): portrait first, landscape second
-                        PortraitThumb(portraitBmp, mirrorMod, isPro)
-                        LandscapeThumb(landscapeBmp, mirrorMod, isPro)
+                        maxH
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(spacing, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (deviceRotation == 270) {
+                            LandscapeThumbFixed(landscapeBmp, thumbH, mirrorMod, isPro)
+                            PortraitThumbFixed(portraitBmp, thumbH, mirrorMod, isPro)
+                        } else {
+                            PortraitThumbFixed(portraitBmp, thumbH, mirrorMod, isPro)
+                            LandscapeThumbFixed(landscapeBmp, thumbH, mirrorMod, isPro)
+                        }
                     }
                 }
 
@@ -739,6 +757,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
             }
         } else {
             // ── Portrait: centered vertical layout ──
+            BackHandler { viewModel.resetToIdle() }
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -808,10 +827,10 @@ private fun ThumbnailWatermark(anchor: Alignment) {
 }
 
 @Composable
-private fun PortraitThumb(bmp: android.graphics.Bitmap?, mirrorMod: Modifier, isPro: Boolean) {
+private fun PortraitThumbFixed(bmp: android.graphics.Bitmap?, thumbH: Dp, mirrorMod: Modifier, isPro: Boolean) {
     bmp?.let {
         Box(
-            Modifier.fillMaxHeight(0.65f).aspectRatio(9f / 16f)
+            Modifier.height(thumbH).aspectRatio(9f / 16f)
                 .clip(RoundedCornerShape(10.dp)).background(Color.Black)
         ) {
             Image(it.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
@@ -821,10 +840,10 @@ private fun PortraitThumb(bmp: android.graphics.Bitmap?, mirrorMod: Modifier, is
 }
 
 @Composable
-private fun LandscapeThumb(bmp: android.graphics.Bitmap?, mirrorMod: Modifier, isPro: Boolean) {
+private fun LandscapeThumbFixed(bmp: android.graphics.Bitmap?, thumbH: Dp, mirrorMod: Modifier, isPro: Boolean) {
     bmp?.let {
         Box(
-            Modifier.fillMaxHeight(0.65f).aspectRatio(16f / 9f)
+            Modifier.height(thumbH).aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(10.dp)).background(Color.Black)
         ) {
             Image(it.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
@@ -900,6 +919,7 @@ private fun RemoveWatermarkDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Spacer(Modifier.height(8.dp))
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
                         onDismiss()
