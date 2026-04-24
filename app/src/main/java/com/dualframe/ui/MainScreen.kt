@@ -689,45 +689,36 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         contentAlignment = Alignment.Center,
     ) {
         if (isLandscapeRecording) {
-            // ── Landscape: 180° rotated for both rotation directions ──
+            // ── Landscape: right turn 180°, left turn 0° ──
+            val landscapeRot = if (deviceRotation == 90) 180f else 0f
             Row(
                 modifier = Modifier.fillMaxSize()
-                    .rotate(180f)
+                    .rotate(landscapeRot)
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Left: portrait width = landscape height (shared dimension S)
-                BoxWithConstraints(
+                // Left: both thumbnails same height
+                Row(
                     modifier = Modifier.weight(0.55f),
-                    contentAlignment = Alignment.Center,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val gap = 6f
-                    val s = minOf(
-                        maxHeight.value * 9f / 16f,
-                        (maxWidth.value - gap) * 9f / 25f
-                    ).coerceAtLeast(0f).dp
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        portraitBmp?.let { bmp ->
-                            Box(
-                                Modifier.width(s).aspectRatio(9f / 16f)
-                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                            ) {
-                                Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                                if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
-                            }
+                    portraitBmp?.let { bmp ->
+                        Box(
+                            Modifier.fillMaxHeight(0.65f).aspectRatio(9f / 16f)
+                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                        ) {
+                            Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                            if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
                         }
-                        landscapeBmp?.let { bmp ->
-                            Box(
-                                Modifier.height(s).aspectRatio(16f / 9f)
-                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                            ) {
-                                Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                                if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
-                            }
+                    }
+                    landscapeBmp?.let { bmp ->
+                        Box(
+                            Modifier.fillMaxHeight(0.65f).aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                        ) {
+                            Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                            if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
                         }
                     }
                 }
