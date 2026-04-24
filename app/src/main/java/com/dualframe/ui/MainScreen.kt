@@ -313,7 +313,7 @@ fun MainScreen(
 
     // Fullscreen result overlay
     if (state.appStatus == AppStatus.EXPORT_COMPLETE || state.appStatus == AppStatus.SAVING) {
-        ResultActions(state, viewModel, context)
+        ResultActions(state, viewModel, context, deviceRotation)
     }
 
     if (state.showRemoveWatermarkDialog) {
@@ -646,7 +646,7 @@ private fun ExportStatusStub(state: UiState) {
 }
 
 @Composable
-private fun ResultActions(state: UiState, viewModel: MainViewModel, context: android.content.Context) {
+private fun ResultActions(state: UiState, viewModel: MainViewModel, context: android.content.Context, deviceRotation: Int = 0) {
     if (state.appStatus != AppStatus.EXPORT_COMPLETE && state.appStatus != AppStatus.SAVING) return
 
     val isPro = com.dualframe.monetize.ProEntitlement.isProOwned(context)
@@ -679,7 +679,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
     val saveLabel = when {
         state.appStatus == AppStatus.SAVING -> "Saving..."
-        state.saveMessage != null -> "Saved ✓"
+        state.saveMessage != null -> "Saved"
         else -> "Save Videos"
     }
     val saveEnabled = state.appStatus == AppStatus.EXPORT_COMPLETE && state.saveMessage == null
@@ -689,45 +689,36 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         contentAlignment = Alignment.Center,
     ) {
         if (isLandscapeRecording) {
-            // ── Landscape: Row with 180° rotation, previews left (stacked) + buttons right ──
+            // ── Landscape: rotation depends on which way device was held ──
+            val landscapeRot = if (deviceRotation == 90) 0f else 180f
             Row(
                 modifier = Modifier.fillMaxSize()
-                    .rotate(180f)
+                    .rotate(landscapeRot)
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Left: portrait (left) + landscape (right), portrait width = landscape height
-                BoxWithConstraints(
+                // Left: portrait + landscape side by side, same height
+                Row(
                     modifier = Modifier.weight(0.55f),
-                    contentAlignment = Alignment.Center,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val gap = 6f
-                    val s = minOf(
-                        maxHeight.value * 9f / 16f,
-                        (maxWidth.value - gap) * 9f / 25f
-                    ).coerceAtLeast(0f).dp
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        portraitBmp?.let { bmp ->
-                            Box(
-                                Modifier.width(s).aspectRatio(9f / 16f)
-                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                            ) {
-                                Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                                if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
-                            }
+                    portraitBmp?.let { bmp ->
+                        Box(
+                            Modifier.fillMaxHeight(0.65f).aspectRatio(9f / 16f)
+                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                        ) {
+                            Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                            if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
                         }
-                        landscapeBmp?.let { bmp ->
-                            Box(
-                                Modifier.height(s).aspectRatio(16f / 9f)
-                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                            ) {
-                                Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                                if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
-                            }
+                    }
+                    landscapeBmp?.let { bmp ->
+                        Box(
+                            Modifier.fillMaxHeight(0.65f).aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                        ) {
+                            Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                            if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
                         }
                     }
                 }
@@ -738,7 +729,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(0.9f), saveEnabled) {
+                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(0.9f), saveEnabled, isSaved = state.saveMessage != null) {
                         viewModel.saveBothWithWatermark()
                     }
                     if (!isPro) {
@@ -789,7 +780,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     modifier = Modifier.fillMaxWidth(0.75f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(), saveEnabled) {
+                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(), saveEnabled, isSaved = state.saveMessage != null) {
                         viewModel.saveBothWithWatermark()
                     }
                     if (!isPro) {
@@ -826,22 +817,26 @@ private fun ThumbnailWatermark(anchor: Alignment) {
 }
 
 @Composable
-private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
+private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Boolean, isSaved: Boolean = false, onClick: () -> Unit) {
     androidx.compose.material3.Button(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.height(48.dp)
-            .border(1.dp, if (enabled) Color.White.copy(alpha = 0.85f) else Color(0xFF444444), RoundedCornerShape(10.dp)),
+            .border(1.dp, if (enabled || isSaved) Color.White.copy(alpha = 0.85f) else Color(0xFF444444), RoundedCornerShape(10.dp)),
         shape = RoundedCornerShape(10.dp),
         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
             containerColor = Color(0xFF2A2A2A),
             contentColor = Color.White,
-            disabledContainerColor = Color(0xFF1A1A1A),
-            disabledContentColor = Color(0xFF666666),
+            disabledContainerColor = if (isSaved) Color(0xFF2A2A2A) else Color(0xFF1A1A1A),
+            disabledContentColor = if (isSaved) Color.White else Color(0xFF666666),
         ),
     ) {
-        Text(label, color = Color.White, fontSize = 20.sp, maxLines = 1,
+        Text(label, fontSize = 20.sp, maxLines = 1,
             fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
+        if (isSaved) {
+            Spacer(Modifier.width(6.dp))
+            Text("✓", color = Color(0xFF66BB6A), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }
 
@@ -850,12 +845,12 @@ private fun RemoveWatermarkResultButton(modifier: Modifier, enabled: Boolean, on
     androidx.compose.material3.OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(46.dp),
+        modifier = modifier.height(48.dp),
         shape = RoundedCornerShape(10.dp),
     ) {
-        Text("Remove Watermark", color = Color.White, fontSize = 16.sp,
+        Text("Remove Watermark", color = Color.White, fontSize = 19.sp,
             fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.width(5.dp))
+        Spacer(Modifier.width(4.dp))
         Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }

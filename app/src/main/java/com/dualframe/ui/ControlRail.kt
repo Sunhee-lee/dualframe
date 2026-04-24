@@ -41,7 +41,7 @@ object RailTheme {
     val tileSize: Dp = 56.dp
     val tileRadius: Dp = 12.dp
     val tileGap: Dp = 5.dp
-    val tileBg = Color.Black.copy(alpha = 0.15f)
+    val tileBg = Color(0xFF151515).copy(alpha = 0.85f)
     val tileBorder = Color(0xFF252525)
     val iconColor = Color(0xFFCCCCCC)
     val iconSize: Dp = 22.dp
