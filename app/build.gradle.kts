@@ -19,17 +19,21 @@ android {
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
+            buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"ca-app-pub-3940256099942544/5224354917\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Include native debug symbols in AAB so Play Console
-            // can symbolicate native crashes from dependencies (AdMob, Media3).
             ndk {
                 debugSymbolLevel = "SYMBOL_TABLE"
             }
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-2957776125077356~9738001248"
+            buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"ca-app-pub-2957776125077356/2029759972\"")
         }
     }
 
@@ -44,6 +48,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

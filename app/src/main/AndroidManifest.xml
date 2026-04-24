@@ -15,10 +15,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DualFrame">
 
-        <!-- AdMob App ID — REPLACE with your real App ID before release -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="${admobAppId}" />
 
         <activity
             android:name="com.dualframe.ui.MainActivity"
