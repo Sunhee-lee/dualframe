@@ -18,7 +18,7 @@ import com.android.billingclient.api.QueryPurchasesParams
 /**
  * Google Play Billing — one-time purchase for permanent watermark removal.
  *
- * Product ID: pro_upgrade (configured in Google Play Console)
+ * Product ID: dualframe_pro (configured in Google Play Console)
  * Type: INAPP (non-consumable, one-time purchase)
  *
  * Flow:
@@ -33,7 +33,7 @@ class BillingManager private constructor(private val context: Context) {
         private const val TAG = "BillingManager"
 
         // Product ID — must match Google Play Console in-app product
-        const val PRODUCT_ID = "pro_upgrade"
+        const val PRODUCT_ID = "dualframe_pro"
 
         @Volatile
         private var instance: BillingManager? = null
