@@ -22,7 +22,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -126,7 +126,6 @@ fun MainScreen(
 
     // Back button confirmation dialog
     var showExitDialog by remember { mutableStateOf(false) }
-    var layoutSwapped by remember { mutableStateOf(false) }
     BackHandler { showExitDialog = true }
     if (showExitDialog) {
         androidx.compose.material3.AlertDialog(
@@ -178,21 +177,25 @@ fun MainScreen(
             }
         }
 
-        // ── Main content ──
+        // ── Main content: previews centered, settings floating top-right ──
         val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
 
-        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            if (!layoutSwapped) {
-                PreviewPanels(
-                    renderer, viewModel.cameraManager, state.settings.showGuides,
-                    Modifier.weight(1f),
-                    deviceRotation = deviceRotation, appStatus = state.appStatus,
-                )
-            }
+        BoxWithConstraints(
+            modifier = Modifier.weight(1f).fillMaxWidth()
+                .padding(horizontal = 8.dp, bottom = 12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val fitWidth = ((maxHeight.value - 8f) / (16f / 9f + 9f / 16f))
+                .coerceAtLeast(0f).dp.coerceAtMost(maxWidth)
 
-            ControlRail(
-                appStatus = state.appStatus,
-                cameraReady = state.cameraReady,
+            PreviewPanels(
+                renderer, viewModel.cameraManager, state.settings.showGuides,
+                Modifier.width(fitWidth),
+                deviceRotation = deviceRotation, appStatus = state.appStatus,
+            )
+
+            SettingsButton(
+                isRecording = state.appStatus == AppStatus.RECORDING,
                 audioEnabled = state.settings.audioEnabled,
                 zoomRatio = zoomRatio,
                 guidesEnabled = state.settings.showGuides,
@@ -204,7 +207,6 @@ fun MainScreen(
                 isFrontCamera = isFrontCamera,
                 resolution = state.settings.videoQuality.label.substringBefore(" ("),
                 deviceRotation = deviceRotation,
-                layoutSwapped = layoutSwapped,
                 onAudioToggle = {
                     viewModel.updateSettings(state.settings.copy(audioEnabled = !state.settings.audioEnabled))
                 },
@@ -234,26 +236,23 @@ fun MainScreen(
                     val next = qualities[(idx + 1) % qualities.size]
                     viewModel.updateSettings(state.settings.copy(videoQuality = next))
                 },
-                onSwapToggle = { layoutSwapped = !layoutSwapped },
-                onSwitchCamera = { viewModel.switchCamera() },
-                onRecord = { viewModel.toggleRecording(hasAudioPermission) },
-                onGallery = {
-                    try { context.startActivity(buildGalleryIntent(context)) }
-                    catch (_: Exception) {}
-                },
-                modifier = Modifier.fillMaxHeight(),
+                modifier = Modifier.align(Alignment.TopEnd),
             )
-
-            if (layoutSwapped) {
-                PreviewPanels(
-                    renderer, viewModel.cameraManager, state.settings.showGuides,
-                    Modifier.weight(1f),
-                    deviceRotation = deviceRotation, appStatus = state.appStatus,
-                )
-            }
         }
 
         ExportStatusStub(state)
+
+        BottomActionBar(
+            appStatus = state.appStatus,
+            cameraReady = state.cameraReady,
+            onGallery = {
+                try { context.startActivity(buildGalleryIntent(context)) }
+                catch (_: Exception) {}
+            },
+            onRecord = { viewModel.toggleRecording(hasAudioPermission) },
+            onSwitchCamera = { viewModel.switchCamera() },
+        )
+
         ErrorArea(state) { viewModel.clearError() }
     }
 
@@ -299,8 +298,9 @@ private fun PreviewPanels(
     appStatus: AppStatus = AppStatus.IDLE,
 ) {
     Column(
-        modifier.padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val isDeviceLandscape = deviceRotation == 90 || deviceRotation == 270
         val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }

@@ -1,30 +1,26 @@
 package com.dualframe.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Cameraswitch
 import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicOff
-import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -49,25 +45,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dualframe.data.AppStatus
 
 object RailTheme {
-    val tileSize: Dp = 50.dp
-    val tileRadius: Dp = 11.dp
-    val tileGap: Dp = 5.dp
+    val tileSize: Dp = 44.dp
+    val tileRadius: Dp = 10.dp
+    val tileGap: Dp = 4.dp
     val tileBg = Color(0xFF151515)
     val tileBorder = Color(0xFF252525)
     val iconColor = Color(0xFFCCCCCC)
-    val iconSize: Dp = 18.dp
+    val iconSize: Dp = 17.dp
     val activeColor = Color(0xFF4CAF50)
     val inactiveColor = Color(0xFF666666)
     val font: FontFamily = FontFamily.SansSerif
 }
 
 @Composable
-fun ControlRail(
-    appStatus: AppStatus,
-    cameraReady: Boolean,
+fun SettingsButton(
+    isRecording: Boolean,
     audioEnabled: Boolean,
     zoomRatio: Float,
     guidesEnabled: Boolean,
@@ -79,7 +73,6 @@ fun ControlRail(
     isFrontCamera: Boolean,
     resolution: String,
     deviceRotation: Int,
-    layoutSwapped: Boolean,
     onAudioToggle: () -> Unit,
     onZoomToggle: () -> Unit,
     onGuideToggle: () -> Unit,
@@ -88,37 +81,34 @@ fun ControlRail(
     onKeepScreenToggle: () -> Unit,
     onSelfieEffectToggle: () -> Unit,
     onResolutionCycle: () -> Unit,
-    onSwapToggle: () -> Unit,
-    onSwitchCamera: () -> Unit,
-    onRecord: () -> Unit,
-    onGallery: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
     var expanded by remember { mutableStateOf(false) }
-    val isRecording = appStatus == AppStatus.RECORDING
-    val isCountdown = appStatus == AppStatus.COUNTDOWN
-    val isExporting = appStatus == AppStatus.EXPORTING_NATIVE || appStatus == AppStatus.EXPORTING_CROPPED
-    val actionEnabled = cameraReady && !isExporting
+
+    if (isRecording) return
 
     Column(
-        modifier = modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+        modifier = modifier.padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Settings gear — hidden during recording
-        if (!isRecording) {
-            IconTile(
-                icon = Icons.Outlined.Settings,
-                stateText = null, isActive = expanded,
-                rotation = rot, onClick = { expanded = !expanded },
-            )
+        Box(
+            Modifier.size(36.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(RailTheme.tileBg.copy(alpha = 0.85f))
+                .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(8.dp))
+                .clickable { expanded = !expanded },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.Settings, null,
+                tint = if (expanded) RailTheme.activeColor else RailTheme.iconColor,
+                modifier = Modifier.size(16.dp))
         }
 
-        // Expandable settings — hidden during recording
         AnimatedVisibility(
-            visible = expanded && !isRecording,
-            enter = slideInHorizontally(initialOffsetX = { it }),
-            exit = slideOutHorizontally(targetOffsetX = { it }),
+            visible = expanded,
+            enter = fadeIn() + slideInVertically(),
+            exit = fadeOut() + slideOutVertically(),
         ) {
             Column(
                 modifier = Modifier
@@ -151,77 +141,11 @@ fun ControlRail(
                     )
                 }
 
-                IconTile(Icons.Outlined.SwapHoriz,
-                    null, layoutSwapped, rot, onSwapToggle)
+                if (showFlash) {
+                    IconTile(if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
+                        if (flashOn) "ON" else "OFF", flashOn, rot, onFlashToggle)
+                }
             }
-        }
-
-        // Push action buttons to bottom — fixed position
-        Spacer(Modifier.weight(1f))
-
-        // Action buttons — always visible, position stable
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
-        ) {
-            Box(
-                Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
-                    .clickable(enabled = actionEnabled && !isRecording) { onSwitchCamera() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.Cameraswitch, "Switch",
-                    tint = if (actionEnabled && !isRecording) Color.White else Color(0xFF555555),
-                    modifier = Modifier.size(20.dp))
-            }
-
-            RecordDot(isRecording, isCountdown, isExporting, actionEnabled, onRecord)
-
-            Box(
-                Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
-                    .clickable { onGallery() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.PhotoLibrary, "Gallery",
-                    tint = Color.White, modifier = Modifier.size(20.dp))
-            }
-
-            // Flash at very bottom
-            if (showFlash && !isRecording) {
-                IconTile(if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
-                    if (flashOn) "ON" else "OFF", flashOn, rot, onFlashToggle)
-            }
-        }
-    }
-}
-
-@Composable
-private fun RecordDot(
-    isRecording: Boolean,
-    isCountdown: Boolean,
-    isExporting: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    val outerColor by animateColorAsState(
-        targetValue = when {
-            isRecording -> Color(0xFFFF1744)
-            isCountdown -> Color(0xFFFFA726)
-            isExporting -> Color(0xFF555555)
-            else -> Color.White
-        },
-        label = "rec",
-    )
-
-    Box(
-        modifier = Modifier.size(60.dp).clip(CircleShape).background(outerColor)
-            .clickable(enabled = enabled) { onClick() },
-        contentAlignment = Alignment.Center,
-    ) {
-        when {
-            isRecording -> Box(Modifier.size(20.dp).clip(RoundedCornerShape(4.dp)).background(Color.White))
-            isCountdown -> Text("X", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            isExporting -> Box(Modifier.size(20.dp).clip(CircleShape).background(Color(0xFF888888)))
-            else -> Box(Modifier.size(22.dp).clip(CircleShape).background(Color(0xFFFF1744)))
         }
     }
 }
@@ -237,7 +161,7 @@ private fun ZoomTile(zoomRatio: Float, rotation: Float, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(displayText, color = RailTheme.activeColor, fontSize = 12.sp,
+        Text(displayText, color = RailTheme.activeColor, fontSize = 11.sp,
             fontWeight = FontWeight.Bold, fontFamily = RailTheme.font,
             modifier = Modifier.rotate(rotation))
     }
@@ -289,7 +213,7 @@ private fun IconTile(
             if (stateText != null) {
                 Text(stateText,
                     color = if (isActive) RailTheme.activeColor else RailTheme.inactiveColor,
-                    fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = RailTheme.font)
+                    fontSize = 9.sp, fontWeight = FontWeight.Bold, fontFamily = RailTheme.font)
             }
         }
     }
