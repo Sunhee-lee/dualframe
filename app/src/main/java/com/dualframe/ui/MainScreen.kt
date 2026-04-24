@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -597,7 +598,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
     val isPro = com.dualframe.monetize.ProEntitlement.isProOwned(context)
     val isLandscapeRecording = !state.masterIsPortrait
-    val mirrorMod = if (state.wasFrontCamera) Modifier.graphicsLayer { scaleX = -1f } else Modifier
+    val mirrorMod = if (state.wasFrontCamera) Modifier.scale(-1f, 1f) else Modifier
 
     val portraitBmp = if (state.masterIsPortrait) state.thumbnailBitmap else state.landscapeThumbnailBitmap
     val landscapeBmp = if (state.masterIsPortrait) state.landscapeThumbnailBitmap else state.thumbnailBitmap
