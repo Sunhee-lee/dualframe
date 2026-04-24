@@ -21,7 +21,6 @@ import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicOff
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -75,7 +74,6 @@ fun SettingsButton(
     isFrontCamera: Boolean,
     resolution: String,
     deviceRotation: Int,
-    layoutSwapped: Boolean,
     onAudioToggle: () -> Unit,
     onZoomToggle: () -> Unit,
     onGuideToggle: () -> Unit,
@@ -84,7 +82,6 @@ fun SettingsButton(
     onKeepScreenToggle: () -> Unit,
     onSelfieEffectToggle: () -> Unit,
     onResolutionCycle: () -> Unit,
-    onSwapToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
@@ -121,10 +118,6 @@ fun SettingsButton(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
             ) {
-                // Swap at top
-                IconTile(Icons.Outlined.SwapHoriz,
-                    null, layoutSwapped, rot, onSwapToggle)
-
                 IconTile(if (audioEnabled) Icons.Outlined.Mic else Icons.Outlined.MicOff,
                     if (audioEnabled) "ON" else "OFF", audioEnabled, rot, onAudioToggle)
 

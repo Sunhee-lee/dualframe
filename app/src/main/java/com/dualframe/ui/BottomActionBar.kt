@@ -33,7 +33,6 @@ import com.dualframe.data.AppStatus
 fun BottomActionBar(
     appStatus: AppStatus,
     cameraReady: Boolean,
-    layoutSwapped: Boolean,
     onGallery: () -> Unit,
     onRecord: () -> Unit,
     onSwitchCamera: () -> Unit,
@@ -51,22 +50,9 @@ fun BottomActionBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Left button
-        if (!layoutSwapped) {
-            SwitchCameraButton(enabled && !isRecording, onSwitchCamera)
-        } else {
-            GalleryButton(onGallery)
-        }
-
-        // Center: Record (always)
+        SwitchCameraButton(enabled && !isRecording, onSwitchCamera)
         RecordDot(isRecording, isCountdown, isExporting, enabled, onRecord)
-
-        // Right button
-        if (!layoutSwapped) {
-            GalleryButton(onGallery)
-        } else {
-            SwitchCameraButton(enabled && !isRecording, onSwitchCamera)
-        }
+        GalleryButton(onGallery)
     }
 }
 

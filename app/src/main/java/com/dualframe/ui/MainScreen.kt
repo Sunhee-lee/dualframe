@@ -128,7 +128,6 @@ fun MainScreen(
 
     // Back button confirmation dialog
     var showExitDialog by remember { mutableStateOf(false) }
-    var layoutSwapped by remember { mutableStateOf(false) }
     BackHandler { showExitDialog = true }
     if (showExitDialog) {
         androidx.compose.material3.AlertDialog(
@@ -210,7 +209,6 @@ fun MainScreen(
                 isFrontCamera = isFrontCamera,
                 resolution = state.settings.videoQuality.label.substringBefore(" (").replace(" ", "\n"),
                 deviceRotation = deviceRotation,
-                layoutSwapped = layoutSwapped,
                 onAudioToggle = {
                     viewModel.updateSettings(state.settings.copy(audioEnabled = !state.settings.audioEnabled))
                 },
@@ -240,7 +238,6 @@ fun MainScreen(
                     val next = qualities[(idx + 1) % qualities.size]
                     viewModel.updateSettings(state.settings.copy(videoQuality = next))
                 },
-                onSwapToggle = { layoutSwapped = !layoutSwapped },
                 modifier = Modifier.align(Alignment.TopEnd),
             )
         }
@@ -250,7 +247,6 @@ fun MainScreen(
         BottomActionBar(
             appStatus = state.appStatus,
             cameraReady = state.cameraReady,
-            layoutSwapped = layoutSwapped,
             onGallery = {
                 try { context.startActivity(buildGalleryIntent(context)) }
                 catch (_: Exception) {}
@@ -618,21 +614,24 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (isLandscapeRecording) {
-                // ── Landscape recording: side-by-side thumbnails ──
+        if (isLandscapeRecording) {
+            // ── Landscape: Row layout, 180° rotated, previews left + buttons right ──
+            Row(
+                modifier = Modifier.fillMaxSize()
+                    .rotate(180f)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Left: previews side by side
                 Row(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    modifier = Modifier.weight(0.6f),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     landscapeBmp?.let { bmp ->
                         Box(
-                            Modifier.fillMaxHeight(0.88f).aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(12.dp)).background(Color.Black)
+                            Modifier.fillMaxHeight(0.75f).aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
                         ) {
                             Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
@@ -640,8 +639,8 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     }
                     portraitBmp?.let { bmp ->
                         Box(
-                            Modifier.fillMaxHeight(0.88f).aspectRatio(9f / 16f)
-                                .clip(RoundedCornerShape(12.dp)).background(Color.Black)
+                            Modifier.fillMaxHeight(0.75f).aspectRatio(9f / 16f)
+                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
                         ) {
                             Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
@@ -649,35 +648,36 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     }
                 }
 
-                SaveStatusArea(state)
-
-                // 2x2 button grid for landscape
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                // Right: buttons
+                Column(
+                    modifier = Modifier.weight(0.4f).padding(start = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        PrimaryResultButton("Save Videos", Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
-                            viewModel.saveBothWithWatermark()
-                        }
-                        ResultButton("View in Gallery", Modifier.fillMaxWidth(), true) {
-                            try { context.startActivity(buildGalleryIntent(context)) }
-                            catch (_: Exception) {}
+                    SaveStatusArea(state)
+                    PrimaryResultButton("Save Videos", Modifier.fillMaxWidth(0.85f), state.appStatus != AppStatus.SAVING) {
+                        viewModel.saveBothWithWatermark()
+                    }
+                    if (!isPro) {
+                        RemoveWatermarkResultButton(Modifier.fillMaxWidth(0.85f), state.appStatus != AppStatus.SAVING) {
+                            viewModel.showRemoveWatermarkDialog()
                         }
                     }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (!isPro) {
-                            RemoveWatermarkResultButton(Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
-                                viewModel.showRemoveWatermarkDialog()
-                            }
-                        }
-                        ResultButton("Retake", Modifier.fillMaxWidth(), true) {
-                            viewModel.resetToIdle()
-                        }
+                    ResultButton("View in Gallery", Modifier.fillMaxWidth(0.85f), true) {
+                        try { context.startActivity(buildGalleryIntent(context)) }
+                        catch (_: Exception) {}
+                    }
+                    ResultButton("Retake", Modifier.fillMaxWidth(0.85f), true) {
+                        viewModel.resetToIdle()
                     }
                 }
-            } else {
-                // ── Portrait recording: stacked thumbnails ──
+            }
+        } else {
+            // ── Portrait: centered vertical layout ──
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 portraitBmp?.let { bmp ->
                     Box(
                         Modifier.fillMaxWidth(0.50f).aspectRatio(9f / 16f)
@@ -765,7 +765,8 @@ private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Bool
     androidx.compose.material3.Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(48.dp),
+        modifier = modifier.height(48.dp)
+            .border(1.dp, if (enabled) Color.White.copy(alpha = 0.85f) else Color(0xFF444444), RoundedCornerShape(10.dp)),
         shape = RoundedCornerShape(10.dp),
         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
             containerColor = Color(0xFF2A2A2A),
@@ -774,7 +775,7 @@ private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Bool
             disabledContentColor = Color(0xFF666666),
         ),
     ) {
-        Text(label, fontSize = 20.sp, maxLines = 1,
+        Text(label, color = Color.White, fontSize = 20.sp, maxLines = 1,
             fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
     }
 }
@@ -864,7 +865,7 @@ private fun RemoveWatermarkDialog(
                     Text("♕", color = Color(0xFFFFD700), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
-                    "Unlock permanent watermark removal and an ad-free experience.",
+                    "Save videos without watermarks and enjoy an ad-free experience.",
                     color = Color(0xFFBBBBBB), fontSize = 14.sp,
                     fontFamily = FontFamily.SansSerif,
                 )
