@@ -659,10 +659,30 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
     if (isLandscapeRecording) {
         val activity = context as? Activity
         DisposableEffect(Unit) {
+            val window = activity?.window
+            window?.let {
+                val lp = it.attributes
+                lp.rotationAnimation = 2
+                it.attributes = lp
+            }
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
+            onDispose {
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                window?.let {
+                    val lp = it.attributes
+                    lp.rotationAnimation = 0
+                    it.attributes = lp
+                }
+            }
         }
     }
+
+    val saveLabel = when {
+        state.appStatus == AppStatus.SAVING -> "Saving..."
+        state.saveMessage != null -> "Saved ✓"
+        else -> "Save Videos"
+    }
+    val saveEnabled = state.appStatus == AppStatus.EXPORT_COMPLETE && state.saveMessage == null
 
     Box(
         modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
@@ -676,28 +696,38 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Left: previews side by side (portrait left, landscape right, same height)
-                Row(
+                // Left: portrait (left) + landscape (right), portrait width = landscape height
+                BoxWithConstraints(
                     modifier = Modifier.weight(0.55f),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
+                    contentAlignment = Alignment.Center,
                 ) {
-                    portraitBmp?.let { bmp ->
-                        Box(
-                            Modifier.fillMaxHeight(0.7f).aspectRatio(9f / 16f)
-                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                        ) {
-                            Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                            if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
+                    val gap = 6f
+                    val s = minOf(
+                        maxHeight.value * 9f / 16f,
+                        (maxWidth.value - gap) * 9f / 25f
+                    ).coerceAtLeast(0f).dp
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        portraitBmp?.let { bmp ->
+                            Box(
+                                Modifier.width(s).aspectRatio(9f / 16f)
+                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                            ) {
+                                Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                                if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
+                            }
                         }
-                    }
-                    landscapeBmp?.let { bmp ->
-                        Box(
-                            Modifier.fillMaxHeight(0.7f).aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                        ) {
-                            Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                            if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
+                        landscapeBmp?.let { bmp ->
+                            Box(
+                                Modifier.height(s).aspectRatio(16f / 9f)
+                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                            ) {
+                                Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                                if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
+                            }
                         }
                     }
                 }
@@ -708,8 +738,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    SaveStatusArea(state)
-                    PrimaryResultButton("Save Videos", Modifier.fillMaxWidth(0.9f), state.appStatus != AppStatus.SAVING) {
+                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(0.9f), saveEnabled) {
                         viewModel.saveBothWithWatermark()
                     }
                     if (!isPro) {
@@ -756,13 +785,11 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
                 Spacer(Modifier.height(14.dp))
 
-                SaveStatusArea(state)
-
                 Column(
                     modifier = Modifier.fillMaxWidth(0.75f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    PrimaryResultButton("Save Videos", Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
+                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(), saveEnabled) {
                         viewModel.saveBothWithWatermark()
                     }
                     if (!isPro) {
@@ -780,22 +807,6 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SaveStatusArea(state: UiState) {
-    if (state.appStatus == AppStatus.SAVING) {
-        androidx.compose.material3.LinearProgressIndicator(
-            modifier = Modifier.fillMaxWidth(0.5f).height(4.dp).clip(RoundedCornerShape(2.dp)),
-            color = Color(0xFF66BB6A), trackColor = Color(0xFF333333),
-        )
-        Spacer(Modifier.height(6.dp))
-    }
-    state.saveMessage?.let {
-        Text(it, color = Color.White, fontSize = 16.sp, fontFamily = FontFamily.SansSerif,
-            fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(8.dp))
     }
 }
 
@@ -923,11 +934,11 @@ private fun RemoveWatermarkDialog(
                     color = Color(0xFFBBBBBB), fontSize = 14.sp,
                     fontFamily = FontFamily.SansSerif,
                 )
-                androidx.compose.material3.TextButton(
-                    onClick = onDismiss,
-                ) {
-                    Text("Cancel", color = Color(0xFF999999), fontSize = 15.sp,
-                        fontFamily = FontFamily.SansSerif)
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                    androidx.compose.material3.TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = Color(0xFF999999), fontSize = 15.sp,
+                            fontFamily = FontFamily.SansSerif)
+                    }
                 }
             }
         },
