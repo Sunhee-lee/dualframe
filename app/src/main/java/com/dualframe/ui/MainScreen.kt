@@ -962,7 +962,7 @@ private fun RemoveWatermarkDialog(
                     Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
-                    "One-time purchase.\nRemove watermarks forever.\nAd-free experience.",
+                    "One-time purchase.\nRemove watermarks forever.\nAd-free experience!",
                     color = Color(0xFFBBBBBB), fontSize = 14.sp,
                     fontFamily = FontFamily.SansSerif,
                 )

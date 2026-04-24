@@ -386,13 +386,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(appStatus = AppStatus.EXPORTING_CROPPED, exportProgress = 0f) }
 
             val cropOffset = cameraManager.renderer.landscapeCropOffsetY
-            val masterRotation = masterMeta?.rotation ?: 0
-            val correctedOffset = if (masterRotation == 90) -cropOffset else cropOffset
-            Log.i("DualFrameCameraDiag", "Crop offset: raw=${"%.3f".format(cropOffset)} " +
-                "rotation=$masterRotation corrected=${"%.3f".format(correctedOffset)}")
+            Log.i("DualFrameCameraDiag", "Crop offset: ${"%.3f".format(cropOffset)} rotation=${masterMeta?.rotation}")
             val croppedFile = exportManager.exportCropped(
                 file, croppedAspect, croppedSuffix,
-                verticalOffset = correctedOffset,
+                verticalOffset = cropOffset,
             ) { progress ->
                 _uiState.update { it.copy(exportProgress = progress) }
             }
