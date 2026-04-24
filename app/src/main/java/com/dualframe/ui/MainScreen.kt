@@ -689,36 +689,45 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         contentAlignment = Alignment.Center,
     ) {
         if (isLandscapeRecording) {
-            // ── Landscape: rotation depends on which way device was held ──
-            val landscapeRot = if (deviceRotation == 90) 0f else 180f
+            // ── Landscape: 180° rotated for both rotation directions ──
             Row(
                 modifier = Modifier.fillMaxSize()
-                    .rotate(landscapeRot)
+                    .rotate(180f)
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Left: portrait + landscape side by side, same height
-                Row(
+                // Left: portrait width = landscape height (shared dimension S)
+                BoxWithConstraints(
                     modifier = Modifier.weight(0.55f),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
+                    contentAlignment = Alignment.Center,
                 ) {
-                    portraitBmp?.let { bmp ->
-                        Box(
-                            Modifier.fillMaxHeight(0.65f).aspectRatio(9f / 16f)
-                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                        ) {
-                            Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                            if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
+                    val gap = 6f
+                    val s = minOf(
+                        maxHeight.value * 9f / 16f,
+                        (maxWidth.value - gap) * 9f / 25f
+                    ).coerceAtLeast(0f).dp
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        portraitBmp?.let { bmp ->
+                            Box(
+                                Modifier.width(s).aspectRatio(9f / 16f)
+                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                            ) {
+                                Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                                if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
+                            }
                         }
-                    }
-                    landscapeBmp?.let { bmp ->
-                        Box(
-                            Modifier.fillMaxHeight(0.65f).aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                        ) {
-                            Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
-                            if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
+                        landscapeBmp?.let { bmp ->
+                            Box(
+                                Modifier.height(s).aspectRatio(16f / 9f)
+                                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                            ) {
+                                Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
+                                if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
+                            }
                         }
                     }
                 }
@@ -882,7 +891,7 @@ private fun RemoveWatermarkDialog(
                 fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold)
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
                         onDismiss()
@@ -931,7 +940,7 @@ private fun RemoveWatermarkDialog(
                 )
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                     androidx.compose.material3.TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = Color(0xFF999999), fontSize = 15.sp,
+                        Text("Cancel", color = Color(0xFFBBBBBB), fontSize = 15.sp,
                             fontFamily = FontFamily.SansSerif)
                     }
                 }

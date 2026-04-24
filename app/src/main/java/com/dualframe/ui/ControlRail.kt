@@ -100,7 +100,7 @@ fun SettingsPanel(
 
         if (isFrontCamera) {
             TextTile(
-                if (selfieEffect) "Beauty\non" else "Beauty\noff",
+                if (selfieEffect) "Beauty\nON" else "Beauty\nOFF",
                 rot, onSelfieEffectToggle, isActive = selfieEffect,
             )
         }
