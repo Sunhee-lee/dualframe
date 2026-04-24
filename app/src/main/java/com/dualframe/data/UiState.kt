@@ -12,6 +12,7 @@ data class UiState(
     val masterFilePath: String? = null,
     val cameraReady: Boolean = false,
     val flashOn: Boolean = false,
+    val masterIsPortrait: Boolean = true,
     // Thumbnails of latest export results
     val thumbnailBitmap: Bitmap? = null,           // portrait thumbnail
     val landscapeThumbnailBitmap: Bitmap? = null,  // landscape thumbnail

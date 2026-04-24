@@ -2,6 +2,7 @@ package com.dualframe.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.graphics.SurfaceTexture
 import android.view.OrientationEventListener
 import android.view.Surface
@@ -599,88 +600,147 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
     if (state.appStatus != AppStatus.EXPORT_COMPLETE && state.appStatus != AppStatus.SAVING) return
 
     val isPro = com.dualframe.monetize.ProEntitlement.isProOwned(context)
+    val isLandscapeRecording = !state.masterIsPortrait
+
+    val portraitBmp = if (state.masterIsPortrait) state.thumbnailBitmap else state.landscapeThumbnailBitmap
+    val landscapeBmp = if (state.masterIsPortrait) state.landscapeThumbnailBitmap else state.thumbnailBitmap
+
+    if (isLandscapeRecording) {
+        val activity = context as? Activity
+        DisposableEffect(Unit) {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
+        }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val thumbWidth = 0.45f
-
-            // Portrait thumbnail — watermark top-right (matches saved output)
-            state.thumbnailBitmap?.let { bmp ->
-                Box(
-                    Modifier.fillMaxWidth(thumbWidth).aspectRatio(9f / 16f)
-                        .clip(RoundedCornerShape(12.dp)).background(Color.Black),
+            if (isLandscapeRecording) {
+                // ── Landscape recording: side-by-side thumbnails ──
+                Row(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Landscape thumbnail — watermark bottom-right (matches saved output)
-            state.landscapeThumbnailBitmap?.let { bmp ->
-                Box(
-                    Modifier.fillMaxWidth(thumbWidth).aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(12.dp)).background(Color.Black),
-                ) {
-                    Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
-                }
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            // Save progress
-            if (state.appStatus == AppStatus.SAVING) {
-                androidx.compose.material3.LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(0.5f).height(4.dp).clip(RoundedCornerShape(2.dp)),
-                    color = Color(0xFF66BB6A), trackColor = Color(0xFF333333),
-                )
-                Spacer(Modifier.height(8.dp))
-            }
-            state.saveMessage?.let {
-                Text(it, color = Color.White, fontSize = 16.sp, fontFamily = FontFamily.SansSerif,
-                    fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(10.dp))
-            }
-
-            // Action buttons — vertical stack
-            Column(
-                modifier = Modifier.fillMaxWidth(0.7f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ResultButton("Save Image", Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
-                    viewModel.saveBothWithWatermark()
-                }
-                if (!isPro) {
-                    androidx.compose.material3.OutlinedButton(
-                        onClick = { viewModel.showRemoveWatermarkDialog() },
-                        enabled = state.appStatus != AppStatus.SAVING,
-                        modifier = Modifier.fillMaxWidth().height(44.dp),
-                        shape = RoundedCornerShape(10.dp),
-                    ) {
-                        Text("Remove Watermark", color = Color.White, fontSize = 15.sp,
-                            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
-                        Spacer(Modifier.width(6.dp))
-                        Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold)
+                    landscapeBmp?.let { bmp ->
+                        Box(
+                            Modifier.fillMaxHeight(0.88f).aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(12.dp)).background(Color.Black)
+                        ) {
+                            Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
+                        }
+                    }
+                    portraitBmp?.let { bmp ->
+                        Box(
+                            Modifier.fillMaxHeight(0.88f).aspectRatio(9f / 16f)
+                                .clip(RoundedCornerShape(12.dp)).background(Color.Black)
+                        ) {
+                            Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
+                        }
                     }
                 }
-                ResultButton("View in Gallery", Modifier.fillMaxWidth(), true) {
-                    try { context.startActivity(buildGalleryIntent(context)) }
-                    catch (_: Exception) {}
+
+                SaveStatusArea(state)
+
+                // 2x2 button grid for landscape
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        PrimaryResultButton("Save Videos", Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
+                            viewModel.saveBothWithWatermark()
+                        }
+                        ResultButton("View in Gallery", Modifier.fillMaxWidth(), true) {
+                            try { context.startActivity(buildGalleryIntent(context)) }
+                            catch (_: Exception) {}
+                        }
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (!isPro) {
+                            RemoveWatermarkResultButton(Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
+                                viewModel.showRemoveWatermarkDialog()
+                            }
+                        }
+                        ResultButton("Retake", Modifier.fillMaxWidth(), true) {
+                            viewModel.resetToIdle()
+                        }
+                    }
                 }
-                ResultButton("Retake", Modifier.fillMaxWidth(), true) {
-                    viewModel.resetToIdle()
+            } else {
+                // ── Portrait recording: stacked thumbnails ──
+                portraitBmp?.let { bmp ->
+                    Box(
+                        Modifier.fillMaxWidth(0.50f).aspectRatio(9f / 16f)
+                            .clip(RoundedCornerShape(12.dp)).background(Color.Black),
+                    ) {
+                        Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
+                    }
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                landscapeBmp?.let { bmp ->
+                    Box(
+                        Modifier.fillMaxWidth(0.50f).aspectRatio(16f / 9f)
+                            .clip(RoundedCornerShape(12.dp)).background(Color.Black),
+                    ) {
+                        Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                SaveStatusArea(state)
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(0.75f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    PrimaryResultButton("Save Videos", Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
+                        viewModel.saveBothWithWatermark()
+                    }
+                    if (!isPro) {
+                        RemoveWatermarkResultButton(Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
+                            viewModel.showRemoveWatermarkDialog()
+                        }
+                    }
+                    ResultButton("View in Gallery", Modifier.fillMaxWidth(), true) {
+                        try { context.startActivity(buildGalleryIntent(context)) }
+                        catch (_: Exception) {}
+                    }
+                    ResultButton("Retake", Modifier.fillMaxWidth(), true) {
+                        viewModel.resetToIdle()
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SaveStatusArea(state: UiState) {
+    if (state.appStatus == AppStatus.SAVING) {
+        androidx.compose.material3.LinearProgressIndicator(
+            modifier = Modifier.fillMaxWidth(0.5f).height(4.dp).clip(RoundedCornerShape(2.dp)),
+            color = Color(0xFF66BB6A), trackColor = Color(0xFF333333),
+        )
+        Spacer(Modifier.height(6.dp))
+    }
+    state.saveMessage?.let {
+        Text(it, color = Color.White, fontSize = 16.sp, fontFamily = FontFamily.SansSerif,
+            fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
     }
 }
 
@@ -689,7 +749,7 @@ private fun ThumbnailWatermark(anchor: Alignment) {
     Box(Modifier.fillMaxSize()) {
         Text(
             "DualFrame",
-            color = Color.White.copy(alpha = 0.35f),
+            color = Color.White.copy(alpha = 0.45f),
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.SansSerif,
@@ -700,14 +760,48 @@ private fun ThumbnailWatermark(anchor: Alignment) {
 }
 
 @Composable
+private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
+    androidx.compose.material3.Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(48.dp),
+        shape = RoundedCornerShape(10.dp),
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF2A2A2A),
+            contentColor = Color.White,
+            disabledContainerColor = Color(0xFF1A1A1A),
+            disabledContentColor = Color(0xFF666666),
+        ),
+    ) {
+        Text(label, fontSize = 20.sp, maxLines = 1,
+            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun RemoveWatermarkResultButton(modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
+    androidx.compose.material3.OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(46.dp),
+        shape = RoundedCornerShape(10.dp),
+    ) {
+        Text("Remove Watermark", color = Color.White, fontSize = 16.sp,
+            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.width(5.dp))
+        Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
 private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
     androidx.compose.material3.OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(44.dp),
+        modifier = modifier.height(46.dp),
         shape = RoundedCornerShape(10.dp),
     ) {
-        Text(label, color = Color.White, fontSize = 15.sp, maxLines = 1,
+        Text(label, color = Color.White, fontSize = 16.sp, maxLines = 1,
             fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
     }
 }
@@ -722,7 +816,7 @@ private fun RemoveWatermarkDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF121212),
         title = {
-            Text("Remove Watermark", color = Color.White, fontSize = 18.sp,
+            Text("Remove Watermark", color = Color.White, fontSize = 22.sp,
                 fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold)
         },
         text = {
@@ -739,13 +833,13 @@ private fun RemoveWatermarkDialog(
                             )
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(10.dp),
                 ) {
-                    Text("Watch Ad to Remove", color = Color.White, fontSize = 15.sp,
+                    Text("Watch Ad to Remove", color = Color.White, fontSize = 18.sp,
                         fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
                 }
-                androidx.compose.material3.OutlinedButton(
+                androidx.compose.material3.Button(
                     onClick = {
                         onDismiss()
                         val activity = context as? android.app.Activity
@@ -756,23 +850,33 @@ private fun RemoveWatermarkDialog(
                                 }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(10.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2A2A2A),
+                        contentColor = Color.White,
+                    ),
                 ) {
-                    Text("Upgrade to PRO", color = Color.White, fontSize = 15.sp,
-                        fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
+                    Text("Upgrade to PRO", fontSize = 18.sp,
+                        fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(6.dp))
+                    Text("♕", color = Color(0xFFFFD700), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
                     "Unlock permanent watermark removal and an ad-free experience.",
-                    color = Color(0xFF999999), fontSize = 13.sp,
+                    color = Color(0xFFBBBBBB), fontSize = 14.sp,
                     fontFamily = FontFamily.SansSerif,
                 )
             }
         },
         confirmButton = {},
         dismissButton = {
-            androidx.compose.material3.TextButton(onDismiss) {
-                Text("Cancel", color = Color(0xFF666666), fontFamily = FontFamily.SansSerif)
+            androidx.compose.material3.TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.padding(top = 4.dp),
+            ) {
+                Text("Cancel", color = Color(0xFF888888), fontSize = 15.sp,
+                    fontFamily = FontFamily.SansSerif)
             }
         },
     )

@@ -418,6 +418,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 it.copy(
                     appStatus = AppStatus.EXPORT_COMPLETE,
                     exportProgress = 1f,
+                    masterIsPortrait = isPortrait,
                     thumbnailBitmap = thumbnail,
                     landscapeThumbnailBitmap = landscapeThumbnail,
                     nativeExportInfo = buildOutputLine(nativeLabel, nativeRes, nativeFps),
