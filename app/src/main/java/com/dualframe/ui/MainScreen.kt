@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -405,11 +406,11 @@ private fun PreviewPanels(
             if (showGuides) RuleOfThirdsGrid()
             when (deviceRotation) {
                 90 -> {  // landscape right — 9:16 frame
-                    GhostWatermark(Alignment.TopEnd, 13, rot)
+                    GhostWatermark(Alignment.TopEnd, 13, rot, rotVPad = 30.dp)
                     AspectLabel("16:9", Alignment.BottomStart, rot)
                 }
                 270 -> {
-                    GhostWatermark(Alignment.BottomStart, 13, rot)
+                    GhostWatermark(Alignment.BottomStart, 13, rot, rotVPad = 30.dp)
                     AspectLabel("16:9", Alignment.TopEnd, rot)
                 }
                 else -> {
@@ -470,11 +471,11 @@ private fun PreviewPanels(
             if (showGuides) RuleOfThirdsGrid()
             when (deviceRotation) {
                 90 -> {
-                    GhostWatermark(Alignment.TopStart, 9, rot)
+                    GhostWatermark(Alignment.TopStart, 9, rot, rotVPad = 21.dp)
                     AspectLabel("9:16", Alignment.BottomStart, rot)
                 }
                 270 -> {
-                    GhostWatermark(Alignment.BottomEnd, 9, rot)
+                    GhostWatermark(Alignment.BottomEnd, 9, rot, rotVPad = 21.dp)
                     AspectLabel("9:16", Alignment.TopEnd, rot)
                 }
                 else -> {
@@ -570,12 +571,12 @@ private fun GuideBorder() {
 }
 
 @Composable
-private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
+private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float, rotVPad: Dp = 20.dp) {
     Box(Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier.align(anchor).padding(
-                horizontal = if (rotation == 0f) 6.dp else 5.dp,
-                vertical = if (rotation == 0f) 6.dp else 20.dp,
+                horizontal = if (rotation == 0f) 6.dp else 3.dp,
+                vertical = if (rotation == 0f) 6.dp else rotVPad,
             ),
         ) {
             Text(
@@ -594,9 +595,12 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
 private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
     val padH = if (rotation == 0f) 4.dp else 0.dp
     val padV = if (rotation == 0f) 4.dp else 12.dp
+    val offsetX = if (rotation == 0f) 0.dp else (-2).dp
     Box(Modifier.fillMaxSize()) {
         Box(
-            modifier = Modifier.align(anchor).padding(horizontal = padH, vertical = padV),
+            modifier = Modifier.align(anchor)
+                .padding(horizontal = padH, vertical = padV)
+                .offset(x = offsetX),
         ) {
             Text(text = text, color = Color.White, fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
