@@ -102,7 +102,7 @@ object WatermarkHelper {
                 val overlayAnchorY: Float
                 if (isPortrait) {
                     overlayAnchorX = 0.85f
-                    overlayAnchorY = 0.85f
+                    overlayAnchorY = 0.92f
                 } else {
                     overlayAnchorX = 0.85f
                     overlayAnchorY = -0.85f
