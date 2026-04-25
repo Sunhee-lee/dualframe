@@ -583,7 +583,7 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
             Text(
                 text = "DualFrame",
                 color = Color.White.copy(alpha = 0.35f),
-                fontSize = if (rotation != 0f) (fontSize - 2).coerceAtLeast(9) else fontSize,
+                fontSize = (if (rotation != 0f) (fontSize - 2).coerceAtLeast(9) else fontSize).sp,
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = PretendardFont,
                 modifier = Modifier.align(anchor)
