@@ -36,4 +36,10 @@
     <!-- Errors -->
     <string name="error_dismiss">Dismiss</string>
     <string name="error_ad_not_available">Ad not available. Please try again later.</string>
+
+    <!-- Settings tiles -->
+    <string name="label_on">ON</string>
+    <string name="label_off">OFF</string>
+    <string name="label_beauty_on">Beauty\nON</string>
+    <string name="label_beauty_off">Beauty\nOFF</string>
 </resources>

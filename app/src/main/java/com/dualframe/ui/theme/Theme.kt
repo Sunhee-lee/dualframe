@@ -24,6 +24,7 @@ private val DarkScheme = darkColorScheme(
 fun DualFrameTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = DarkScheme,
+        typography = DualFrameTypography,
         content = content,
     )
 }

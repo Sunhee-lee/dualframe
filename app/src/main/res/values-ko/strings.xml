@@ -15,17 +15,17 @@
     <string name="btn_save_videos">영상 저장</string>
     <string name="label_saving">저장 중…</string>
     <string name="label_saved">저장됨</string>
-    <string name="btn_view_in_gallery">갤러리에서 보기</string>
+    <string name="btn_view_in_gallery">갤러리에서 보기</string> <!-- was 갤러리에서 확인 -->
     <string name="btn_retake">다시 촬영</string>
     <string name="btn_remove_watermark">워터마크 제거</string>
 
     <!-- Remove Watermark dialog -->
     <string name="dialog_remove_watermark_title">워터마크 제거</string>
-    <string name="btn_watch_ad">광고 시청 후 제거</string>
-    <string name="btn_go_pro">PRO 구매</string>
-    <string name="desc_pro_onetime">1회 결제.</string>
-    <string name="desc_pro_no_watermark">워터마크를 영구 제거합니다.</string>
-    <string name="desc_pro_adfree">광고 없는 경험!</string>
+    <string name="btn_watch_ad">광고 보고 제거</string>
+    <string name="btn_go_pro">PRO 업그레이드</string>
+    <string name="desc_pro_onetime">한 번만 결제하면</string>
+    <string name="desc_pro_no_watermark">워터마크가 영구 제거되고</string>
+    <string name="desc_pro_adfree">광고 없이 사용할 수 있습니다.</string>
     <string name="btn_cancel">취소</string>
 
     <!-- Exit dialog -->
@@ -36,4 +36,10 @@
     <!-- Errors -->
     <string name="error_dismiss">닫기</string>
     <string name="error_ad_not_available">광고를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.</string>
+
+    <!-- Settings tiles -->
+    <string name="label_on">켜짐</string>
+    <string name="label_off">꺼짐</string>
+    <string name="label_beauty_on">뷰티\n켜짐</string>
+    <string name="label_beauty_off">뷰티\n꺼짐</string>
 </resources>

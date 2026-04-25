@@ -868,8 +868,8 @@ private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Bool
             disabledContentColor = if (isSaved) Color.White else Color(0xFF666666),
         ),
     ) {
-        Text(label, fontSize = 20.sp, maxLines = 1,
-            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
+        Text(label, fontSize = 18.sp, maxLines = 1,
+            fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
         if (isSaved) {
             Spacer(Modifier.width(6.dp))
             Text("✓", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -890,8 +890,8 @@ private fun RemoveWatermarkResultButton(modifier: Modifier, enabled: Boolean, on
             contentColor = Color.White,
         ),
     ) {
-        Text(stringResource(R.string.btn_remove_watermark), color = Color.White, fontSize = 19.sp,
-            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
+        Text(stringResource(R.string.btn_remove_watermark), color = Color.White, fontSize = 18.sp,
+            fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
         Spacer(Modifier.width(4.dp))
         Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
@@ -909,8 +909,8 @@ private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, on
             contentColor = Color.White,
         ),
     ) {
-        Text(label, color = Color.White, fontSize = 16.sp, maxLines = 1,
-            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
+        Text(label, color = Color.White, fontSize = 18.sp, maxLines = 1,
+            fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
     }
 }
 

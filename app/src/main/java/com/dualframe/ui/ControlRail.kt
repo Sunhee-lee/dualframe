@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sunnlab.dualframe.R
 
 object RailTheme {
     val tileSize: Dp = 56.dp
@@ -82,32 +84,36 @@ fun SettingsPanel(
         verticalArrangement = Arrangement.spacedBy(RailTheme.tileGap),
     ) {
         IconTile(if (audioEnabled) Icons.Outlined.Mic else Icons.Outlined.MicOff,
-            if (audioEnabled) "ON" else "OFF", audioEnabled, rot, onAudioToggle)
+            if (audioEnabled) stringResource(R.string.label_on) else stringResource(R.string.label_off),
+            audioEnabled, rot, onAudioToggle)
 
         IconTile(Icons.Outlined.GridOn,
-            if (guidesEnabled) "ON" else "OFF", guidesEnabled, rot, onGuideToggle)
+            if (guidesEnabled) stringResource(R.string.label_on) else stringResource(R.string.label_off),
+            guidesEnabled, rot, onGuideToggle)
 
         IconTile(if (keepScreenOn) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-            if (keepScreenOn) "ON" else "OFF", keepScreenOn, rot, onKeepScreenToggle)
+            if (keepScreenOn) stringResource(R.string.label_on) else stringResource(R.string.label_off),
+            keepScreenOn, rot, onKeepScreenToggle)
 
         ZoomTile(zoomRatio, rot, onZoomToggle)
 
         TextTile(resolution, rot, onResolutionCycle, fontSize = 14.sp)
 
         IconTile(Icons.Outlined.Timer,
-            if (timerSeconds > 0) "${timerSeconds}s" else "OFF",
+            if (timerSeconds > 0) "${timerSeconds}s" else stringResource(R.string.label_off),
             timerSeconds > 0, rot, onTimerCycle)
 
         if (isFrontCamera) {
             TextTile(
-                if (selfieEffect) "Beauty\nON" else "Beauty\nOFF",
+                if (selfieEffect) stringResource(R.string.label_beauty_on) else stringResource(R.string.label_beauty_off),
                 rot, onSelfieEffectToggle, isActive = selfieEffect,
             )
         }
 
         if (showFlash) {
             IconTile(if (flashOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
-                if (flashOn) "ON" else "OFF", flashOn, rot, onFlashToggle)
+                if (flashOn) stringResource(R.string.label_on) else stringResource(R.string.label_off),
+                flashOn, rot, onFlashToggle)
         }
     }
 }
