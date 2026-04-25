@@ -404,12 +404,12 @@ private fun PreviewPanels(
             )
             if (showGuides) RuleOfThirdsGrid()
             when (deviceRotation) {
-                90 -> {  // landscape right — 9:16 frame is the smaller one
-                    GhostWatermark(Alignment.TopEnd, 9, rot)
+                90 -> {  // landscape right — 9:16 frame
+                    GhostWatermark(Alignment.TopEnd, 13, rot)
                     AspectLabel("16:9", Alignment.BottomStart, rot)
                 }
                 270 -> {
-                    GhostWatermark(Alignment.BottomStart, 9, rot)
+                    GhostWatermark(Alignment.BottomStart, 13, rot)
                     AspectLabel("16:9", Alignment.TopEnd, rot)
                 }
                 else -> {
@@ -470,11 +470,11 @@ private fun PreviewPanels(
             if (showGuides) RuleOfThirdsGrid()
             when (deviceRotation) {
                 90 -> {
-                    GhostWatermark(Alignment.TopStart, 14, rot)
+                    GhostWatermark(Alignment.TopStart, 11, rot)
                     AspectLabel("9:16", Alignment.BottomStart, rot)
                 }
                 270 -> {
-                    GhostWatermark(Alignment.BottomEnd, 14, rot)
+                    GhostWatermark(Alignment.BottomEnd, 11, rot)
                     AspectLabel("9:16", Alignment.TopEnd, rot)
                 }
                 else -> {
