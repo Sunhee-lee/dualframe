@@ -859,13 +859,12 @@ private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Bool
     androidx.compose.material3.Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(48.dp)
-            .border(1.dp, if (enabled || isSaved) Color.White.copy(alpha = 0.85f) else Color(0xFF444444), RoundedCornerShape(10.dp)),
+        modifier = modifier.height(48.dp),
         shape = RoundedCornerShape(10.dp),
         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF2A2A2A),
+            containerColor = Color(0xFF4CAF50),
             contentColor = Color.White,
-            disabledContainerColor = if (isSaved) Color(0xFF2A2A2A) else Color(0xFF1A1A1A),
+            disabledContainerColor = if (isSaved) Color(0xFF388E3C) else Color(0xFF1A1A1A),
             disabledContentColor = if (isSaved) Color.White else Color(0xFF666666),
         ),
     ) {
@@ -873,7 +872,7 @@ private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Bool
             fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
         if (isSaved) {
             Spacer(Modifier.width(6.dp))
-            Text("✓", color = Color(0xFF66BB6A), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("✓", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -883,8 +882,13 @@ private fun RemoveWatermarkResultButton(modifier: Modifier, enabled: Boolean, on
     androidx.compose.material3.OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(48.dp),
+        modifier = modifier.height(48.dp)
+            .border(1.dp, Color(0xFFFFD54A).copy(alpha = 0.6f), RoundedCornerShape(10.dp)),
         shape = RoundedCornerShape(10.dp),
+        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+            containerColor = Color(0xFF0D0D0D),
+            contentColor = Color.White,
+        ),
     ) {
         Text(stringResource(R.string.btn_remove_watermark), color = Color.White, fontSize = 19.sp,
             fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
@@ -900,6 +904,10 @@ private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, on
         enabled = enabled,
         modifier = modifier.height(46.dp),
         shape = RoundedCornerShape(10.dp),
+        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+            containerColor = Color(0xFF0D0D0D),
+            contentColor = Color.White,
+        ),
     ) {
         Text(label, color = Color.White, fontSize = 16.sp, maxLines = 1,
             fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
@@ -936,6 +944,10 @@ private fun RemoveWatermarkDialog(
                     },
                     modifier = Modifier.fillMaxWidth().height(44.dp),
                     shape = RoundedCornerShape(10.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color(0xFF0D0D0D),
+                        contentColor = Color.White,
+                    ),
                 ) {
                     Text(stringResource(R.string.btn_watch_ad), color = Color.White, fontSize = 18.sp,
                         fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
@@ -956,14 +968,14 @@ private fun RemoveWatermarkDialog(
                     modifier = Modifier.fillMaxWidth().height(44.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2A2A2A),
-                        contentColor = Color.White,
+                        containerColor = Color(0xFFFFD54A),
+                        contentColor = Color(0xFF111111),
                     ),
                 ) {
-                    Text(stringResource(R.string.btn_go_pro), fontSize = 18.sp,
+                    Text(stringResource(R.string.btn_go_pro), color = Color(0xFF111111), fontSize = 18.sp,
                         fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(4.dp))
-                    Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("♕", color = Color(0xFF111111), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
                     "${stringResource(R.string.desc_pro_onetime)}\n${stringResource(R.string.desc_pro_no_watermark)}\n${stringResource(R.string.desc_pro_adfree)}",
