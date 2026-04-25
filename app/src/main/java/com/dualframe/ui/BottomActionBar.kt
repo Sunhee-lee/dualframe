@@ -65,7 +65,7 @@ private fun SwitchCameraButton(enabled: Boolean, onClick: () -> Unit) {
     ) {
         Icon(Icons.Outlined.Cameraswitch, "Switch",
             tint = if (enabled) Color.White else Color(0xFF555555),
-            modifier = Modifier.size(22.dp))
+            modifier = Modifier.size(20.dp))
     }
 }
 

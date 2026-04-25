@@ -113,7 +113,7 @@ object WatermarkHelper {
                 val textOverlay = TextOverlay.createStaticTextOverlay(
                     android.text.SpannableString("DualFrame").apply {
                         setSpan(
-                            android.text.style.ForegroundColorSpan(0xB3FFFFFF.toInt()),
+                            android.text.style.ForegroundColorSpan(0x66FFFFFF.toInt()),
                             0, length,
                             android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                         )

@@ -44,10 +44,10 @@ object RailTheme {
     val tileSize: Dp = 56.dp
     val tileRadius: Dp = 12.dp
     val tileGap: Dp = 5.dp
-    val tileBg = Color(0xFF151515).copy(alpha = 0.85f)
+    val tileBg = Color(0xFF151515).copy(alpha = 0.75f)
     val tileBorder = Color(0xFF252525)
     val iconColor = Color(0xFFCCCCCC)
-    val iconSize: Dp = 22.dp
+    val iconSize: Dp = 20.dp
     val activeColor = Color(0xFF4CAF50)
     val inactiveColor = Color(0xFF666666)
     val font: FontFamily = PretendardFont
@@ -131,7 +131,7 @@ private fun ZoomTile(zoomRatio: Float, rotation: Float, onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Text(displayText, color = RailTheme.activeColor, fontSize = 13.sp,
-            fontWeight = FontWeight.Bold, fontFamily = RailTheme.font,
+            fontWeight = FontWeight.SemiBold, fontFamily = RailTheme.font,
             modifier = Modifier.rotate(rotation))
     }
 }
@@ -155,7 +155,7 @@ private fun TextTile(
         Text(text,
             color = if (isActive) RailTheme.activeColor else RailTheme.iconColor,
             fontSize = fontSize,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             fontFamily = RailTheme.font,
             textAlign = TextAlign.Center,
             lineHeight = (fontSize.value + 2f).sp,
@@ -189,7 +189,7 @@ private fun IconTile(
                 Text(stateText,
                     color = if (isActive) RailTheme.activeColor else RailTheme.inactiveColor,
                     fontSize = 11.sp, lineHeight = 11.sp,
-                    fontWeight = FontWeight.Bold, fontFamily = RailTheme.font)
+                    fontWeight = FontWeight.Medium, fontFamily = RailTheme.font)
             }
         }
     }

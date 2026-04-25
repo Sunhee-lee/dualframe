@@ -226,7 +226,7 @@ fun MainScreen(
                     if (!isRecording) {
                         Icon(Icons.Outlined.Settings, null,
                             tint = if (settingsExpanded) RailTheme.activeColor else RailTheme.iconColor,
-                            modifier = Modifier.size(22.dp))
+                            modifier = Modifier.size(20.dp))
                     }
                 }
             }
@@ -267,7 +267,7 @@ fun MainScreen(
         AnimatedVisibility(
             visible = settingsExpanded && !isRecording,
             modifier = Modifier.align(Alignment.TopEnd)
-                .padding(top = 56.dp, end = 8.dp),
+                .padding(top = 56.dp, end = 2.dp),
             enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
             exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
         ) {
@@ -571,9 +571,9 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
     Box(Modifier.fillMaxSize()) {
         Text(
             text = "DualFrame",
-            color = Color.White.copy(alpha = 0.3f),
+            color = Color.White.copy(alpha = 0.35f),
             fontSize = fontSize.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.align(anchor)
                 .padding(horizontal = padH, vertical = padV)
                 .rotate(rotation),
@@ -820,9 +820,9 @@ private fun ThumbnailWatermark(anchor: Alignment) {
     Box(Modifier.fillMaxSize()) {
         Text(
             "DualFrame",
-            color = Color.White.copy(alpha = 0.45f),
+            color = Color.White.copy(alpha = 0.40f),
             fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             fontFamily = PretendardFont,
             modifier = Modifier.align(anchor)
                 .padding(horizontal = 6.dp, vertical = 4.dp),
@@ -885,10 +885,10 @@ private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Bool
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(label, color = Color.White, fontSize = 18.sp, maxLines = 1,
-                    fontFamily = PretendardFont, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
+                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.02).sp)
                 if (isSaved) {
                     Spacer(Modifier.width(6.dp))
-                    Text("✓", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("✓", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -909,7 +909,7 @@ private fun RemoveWatermarkResultButton(modifier: Modifier, enabled: Boolean, on
         ),
     ) {
         Text(stringResource(R.string.btn_remove_watermark), color = Color(0xFFFFD54A), fontSize = 18.sp,
-            fontFamily = PretendardFont, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
+            fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.02).sp)
         Spacer(Modifier.width(6.dp))
         Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
@@ -928,7 +928,7 @@ private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, on
         ),
     ) {
         Text(label, color = Color.White, fontSize = 18.sp, maxLines = 1,
-            fontFamily = PretendardFont, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
+            fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.02).sp)
     }
 }
 
