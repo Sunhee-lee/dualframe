@@ -2,23 +2,17 @@ package com.dualframe.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.sunnlab.dualframe.R
 
-// Pretendard font — uses system SansSerif as base.
-// When pretendard_regular.otf, pretendard_semibold.otf, pretendard_bold.otf
-// are placed in app/src/main/res/font/, uncomment the Font() lines below
-// and add: import androidx.compose.ui.text.font.Font
-//          import com.sunnlab.dualframe.R
-//
-// val PretendardFont = FontFamily(
-//     Font(R.font.pretendard_regular, FontWeight.Normal),
-//     Font(R.font.pretendard_semibold, FontWeight.SemiBold),
-//     Font(R.font.pretendard_bold, FontWeight.Bold),
-// )
-
-val PretendardFont = FontFamily.SansSerif
+val PretendardFont = FontFamily(
+    Font(R.font.pretendard_regular, FontWeight.Normal),
+    Font(R.font.pretendard_semibold, FontWeight.SemiBold),
+    Font(R.font.pretendard_bold, FontWeight.Bold),
+)
 
 val DualFrameTypography = Typography(
     displayLarge = TextStyle(

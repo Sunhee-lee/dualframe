@@ -857,7 +857,7 @@ private fun LandscapeThumbFixed(bmp: android.graphics.Bitmap?, thumbH: Dp, mirro
 }
 
 private val ShinyGreenBrush = Brush.horizontalGradient(
-    colors = listOf(Color(0xFF32CD32), Color(0xFFC6FF00), Color(0xFF32CD32))
+    colors = listOf(Color(0xFF228B22), Color(0xFF32CD32), Color(0xFF228B22))
 )
 private val SavedGreenBrush = Brush.horizontalGradient(
     colors = listOf(Color(0xFF2E7D32), Color(0xFF66BB6A), Color(0xFF2E7D32))
@@ -885,7 +885,7 @@ private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Bool
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(label, color = Color.White, fontSize = 18.sp, maxLines = 1,
-                    fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
+                    fontFamily = PretendardFont, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
                 if (isSaved) {
                     Spacer(Modifier.width(6.dp))
                     Text("✓", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -908,9 +908,9 @@ private fun RemoveWatermarkResultButton(modifier: Modifier, enabled: Boolean, on
             contentColor = Color.White,
         ),
     ) {
-        Text(stringResource(R.string.btn_remove_watermark), color = Color.White, fontSize = 18.sp,
-            fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
-        Spacer(Modifier.width(4.dp))
+        Text(stringResource(R.string.btn_remove_watermark), color = Color(0xFFFFD54A), fontSize = 18.sp,
+            fontFamily = PretendardFont, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
+        Spacer(Modifier.width(6.dp))
         Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }
@@ -928,7 +928,7 @@ private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, on
         ),
     ) {
         Text(label, color = Color.White, fontSize = 18.sp, maxLines = 1,
-            fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
+            fontFamily = PretendardFont, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
     }
 }
 
