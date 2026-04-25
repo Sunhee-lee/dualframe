@@ -122,6 +122,11 @@ object WatermarkHelper {
                             0, length,
                             android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                         )
+                        setSpan(
+                            android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                            0, length,
+                            android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                        )
                     },
                     OverlaySettings.Builder()
                         .setOverlayFrameAnchor(overlayAnchorX, overlayAnchorY)
