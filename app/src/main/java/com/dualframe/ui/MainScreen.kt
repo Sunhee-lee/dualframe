@@ -190,25 +190,25 @@ fun MainScreen(
         ) {
             // ── Top header: DualFrame + Ready/REC + Settings gear ──
             Row(
-                Modifier.fillMaxWidth().heightIn(min = 52.dp)
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                Modifier.fillMaxWidth().heightIn(min = 44.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("DualFrame", color = Color.White, fontSize = 22.sp,
+                Text("DualFrame", color = Color.White, fontSize = 18.sp,
                     fontWeight = FontWeight.Bold, fontFamily = PretendardFont)
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(7.dp))
                 if (isRecording) {
                     Row(
                         Modifier.background(Color(0x44FF1744), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF1744)))
-                        Spacer(Modifier.width(6.dp))
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(Color(0xFFFF1744)))
+                        Spacer(Modifier.width(5.dp))
                         Text(
                             text = formatDuration(state.recordingDurationSeconds),
-                            color = Color.White, fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace,
+                            color = Color.White, fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace,
                         )
                     }
                 } else {
@@ -340,10 +340,10 @@ private fun StatusChip(status: AppStatus) {
         AppStatus.SAVING -> stringResource(R.string.status_saving) to Color(0xFFFFA726)
         AppStatus.ERROR -> stringResource(R.string.status_error) to Color(0xFFCF6679)
     }
-    Text(text = text, color = color, fontSize = 15.sp, fontWeight = FontWeight.Normal,
+    Text(text = text, color = color, fontSize = 13.sp, fontWeight = FontWeight.Normal,
         fontFamily = PretendardFont,
-        modifier = Modifier.background(color.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp))
+        modifier = Modifier.background(color.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp))
 }
 
 // ── Preview Panels (GPU dual render via TextureViews) ─────────────────
