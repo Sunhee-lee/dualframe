@@ -15,24 +15,10 @@ import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
 
-/**
- * Google Play Billing — one-time purchase for permanent watermark removal.
- *
- * Product ID: dualframe_pro (configured in Google Play Console)
- * Type: INAPP (non-consumable, one-time purchase)
- *
- * Flow:
- * 1. connect() on app start → queries product + restores existing purchases
- * 2. launchPurchase() when user taps "Go Pro"
- * 3. On purchase success → acknowledge → grant entitlement
- * 4. On app restart → checkExistingPurchases() restores entitlement from Play
- */
 class BillingManager private constructor(private val context: Context) {
 
     companion object {
         private const val TAG = "BillingManager"
-
-        // Product ID — must match Google Play Console in-app product
         const val PRODUCT_ID = "dualframe_pro"
 
         @Volatile
@@ -49,31 +35,37 @@ class BillingManager private constructor(private val context: Context) {
     private var productDetails: ProductDetails? = null
     private var onPurchaseComplete: ((Boolean) -> Unit)? = null
     private var isConnected = false
+    private var connectionRetryCount = 0
 
     private val purchasesUpdatedListener = PurchasesUpdatedListener { result, purchases ->
+        Log.i(TAG, "purchasesUpdated: code=${result.responseCode} msg=${result.debugMessage}")
         when (result.responseCode) {
             BillingClient.BillingResponseCode.OK -> {
                 purchases?.forEach { handlePurchase(it) }
             }
             BillingClient.BillingResponseCode.USER_CANCELED -> {
-                Log.i(TAG, "Purchase canceled")
+                Log.i(TAG, "Purchase canceled by user")
                 onPurchaseComplete?.invoke(false)
             }
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
-                // User already owns this — restore entitlement
                 Log.i(TAG, "Item already owned — restoring")
                 ProEntitlement.grantPro(context)
                 onPurchaseComplete?.invoke(true)
             }
             else -> {
-                Log.e(TAG, "Purchase error ${result.responseCode}: ${result.debugMessage}")
+                Log.e(TAG, "Purchase error code=${result.responseCode}: ${result.debugMessage}")
                 onPurchaseComplete?.invoke(false)
             }
         }
     }
 
     fun connect() {
-        if (isConnected) return
+        if (isConnected) {
+            Log.d(TAG, "Already connected")
+            return
+        }
+        Log.i(TAG, "Connecting billing client... (packageName=${context.packageName})")
+
         val client = BillingClient.newBuilder(context)
             .setListener(purchasesUpdatedListener)
             .enablePendingPurchases(
@@ -86,24 +78,32 @@ class BillingManager private constructor(private val context: Context) {
 
         client.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
+                Log.i(TAG, "Billing setup: code=${result.responseCode} msg=${result.debugMessage}")
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                     isConnected = true
-                    Log.i(TAG, "Billing connected")
+                    connectionRetryCount = 0
                     queryProduct()
                     restorePurchases()
                 } else {
-                    Log.e(TAG, "Billing setup failed: ${result.debugMessage}")
+                    isConnected = false
+                    Log.e(TAG, "Billing setup FAILED: code=${result.responseCode} " +
+                        "msg=${result.debugMessage}")
                 }
             }
 
             override fun onBillingServiceDisconnected() {
                 isConnected = false
-                Log.w(TAG, "Billing disconnected")
+                Log.w(TAG, "Billing disconnected (retry=$connectionRetryCount)")
+                if (connectionRetryCount < 3) {
+                    connectionRetryCount++
+                    connect()
+                }
             }
         })
     }
 
     private fun queryProduct() {
+        Log.i(TAG, "Querying product: $PRODUCT_ID (type=INAPP)")
         val params = QueryProductDetailsParams.newBuilder()
             .setProductList(
                 listOf(
@@ -115,27 +115,30 @@ class BillingManager private constructor(private val context: Context) {
             )
             .build()
 
-        billingClient?.queryProductDetailsAsync(params) { _, detailsList ->
+        billingClient?.queryProductDetailsAsync(params) { result, detailsList ->
+            Log.i(TAG, "queryProductDetails: code=${result.responseCode} " +
+                "msg=${result.debugMessage} count=${detailsList.size}")
             productDetails = detailsList.firstOrNull()
-            Log.i(TAG, if (productDetails != null)
-                "Product loaded: ${productDetails?.title}"
-            else
-                "Product not found: $PRODUCT_ID"
-            )
+            if (productDetails != null) {
+                Log.i(TAG, "Product loaded: id=${productDetails?.productId} " +
+                    "title=${productDetails?.title} " +
+                    "price=${productDetails?.oneTimePurchaseOfferDetails?.formattedPrice}")
+            } else {
+                Log.e(TAG, "Product NOT FOUND: '$PRODUCT_ID'. " +
+                    "Check: 1) Play Console product ID matches exactly " +
+                    "2) App is published (at least internal test) " +
+                    "3) Package name matches (${context.packageName})")
+            }
         }
     }
 
-    /**
-     * Restore purchases from Google Play. Called on app start and on
-     * billing reconnect. This is the source of truth for entitlement —
-     * even after app reinstall, the Play Store remembers the purchase.
-     */
     fun restorePurchases() {
         billingClient?.queryPurchasesAsync(
             QueryPurchasesParams.newBuilder()
                 .setProductType(BillingClient.ProductType.INAPP)
                 .build()
-        ) { _, purchases ->
+        ) { result, purchases ->
+            Log.i(TAG, "restorePurchases: code=${result.responseCode} count=${purchases.size}")
             var found = false
             for (purchase in purchases) {
                 if (PRODUCT_ID in purchase.products &&
@@ -143,8 +146,6 @@ class BillingManager private constructor(private val context: Context) {
                 ) {
                     found = true
                     ProEntitlement.grantPro(context)
-                    // Acknowledge if not already (handles edge case where
-                    // purchase succeeded but acknowledge failed previously)
                     if (!purchase.isAcknowledged) {
                         acknowledgePurchase(purchase)
                     }
@@ -158,7 +159,6 @@ class BillingManager private constructor(private val context: Context) {
     }
 
     fun launchPurchase(activity: Activity, onComplete: (Boolean) -> Unit) {
-        // If already PRO, no need to purchase again
         if (ProEntitlement.isProOwned(context)) {
             Log.i(TAG, "Already PRO — skipping purchase")
             onComplete(true)
@@ -167,15 +167,19 @@ class BillingManager private constructor(private val context: Context) {
 
         val details = productDetails
         if (details == null) {
-            Log.e(TAG, "Product details not available — try reconnecting")
-            if (!isConnected) connect()
+            Log.e(TAG, "productDetails is NULL — cannot launch purchase. " +
+                "isConnected=$isConnected billingClient=${billingClient != null}")
+            if (!isConnected) {
+                Log.i(TAG, "Reconnecting billing...")
+                connect()
+            }
             onComplete(false)
             return
         }
 
         onPurchaseComplete = onComplete
+        Log.i(TAG, "Launching purchase flow for: ${details.productId}")
 
-        // One-time product — no offerToken needed (that's for subscriptions)
         val flowParams = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(
                 listOf(
@@ -187,27 +191,23 @@ class BillingManager private constructor(private val context: Context) {
             .build()
 
         val result = billingClient?.launchBillingFlow(activity, flowParams)
+        Log.i(TAG, "launchBillingFlow: code=${result?.responseCode} msg=${result?.debugMessage}")
         if (result?.responseCode != BillingClient.BillingResponseCode.OK) {
-            Log.e(TAG, "Failed to launch billing flow: ${result?.debugMessage}")
+            Log.e(TAG, "launchBillingFlow FAILED: code=${result?.responseCode} " +
+                "msg=${result?.debugMessage}")
             onComplete(false)
         }
     }
 
-    /**
-     * Handle a completed purchase: acknowledge it (required by Google within
-     * 3 days or the purchase is automatically refunded) and grant entitlement.
-     */
     private fun handlePurchase(purchase: Purchase) {
+        Log.i(TAG, "handlePurchase: products=${purchase.products} " +
+            "state=${purchase.purchaseState} acknowledged=${purchase.isAcknowledged}")
         if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
         if (PRODUCT_ID !in purchase.products) return
 
-        Log.i(TAG, "Purchase successful: ${purchase.products}")
-
-        // Grant entitlement immediately (local cache)
         ProEntitlement.grantPro(context)
         onPurchaseComplete?.invoke(true)
 
-        // Acknowledge the purchase — REQUIRED by Google Play policy
         if (!purchase.isAcknowledged) {
             acknowledgePurchase(purchase)
         }
@@ -219,11 +219,7 @@ class BillingManager private constructor(private val context: Context) {
             .build()
 
         billingClient?.acknowledgePurchase(params) { result ->
-            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                Log.i(TAG, "Purchase acknowledged")
-            } else {
-                Log.e(TAG, "Acknowledge failed: ${result.debugMessage}")
-            }
+            Log.i(TAG, "acknowledge: code=${result.responseCode} msg=${result.debugMessage}")
         }
     }
 
