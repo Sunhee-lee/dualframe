@@ -575,21 +575,23 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val w = maxWidth.value
             val h = maxHeight.value
-            val (padH, padV) = if (rotation == 0f) {
-                (w * 0.04f).dp to (h * 0.03f).dp
-            } else {
-                (w * 0.03f).dp to (h * 0.08f).dp
-            }
-            Text(
-                text = "DualFrame",
-                color = Color.White.copy(alpha = 0.35f),
-                fontSize = fontSize.sp,
-                fontWeight = FontWeight.SemiBold,
-                fontFamily = PretendardFont,
+            // Screen-space padding — applied BEFORE rotate, so it stays
+            // in screen coordinates regardless of text rotation.
+            val startEnd = if (rotation == 0f) (w * 0.04f).dp else (h * 0.08f).dp
+            val topBottom = if (rotation == 0f) (h * 0.03f).dp else (w * 0.03f).dp
+            Box(
                 modifier = Modifier.align(anchor)
-                    .padding(horizontal = padH, vertical = padV)
-                    .rotate(rotation),
-            )
+                    .padding(horizontal = startEnd, vertical = topBottom),
+            ) {
+                Text(
+                    text = "DualFrame",
+                    color = Color.White.copy(alpha = 0.35f),
+                    fontSize = fontSize.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = PretendardFont,
+                    modifier = Modifier.rotate(rotation),
+                )
+            }
         }
     }
 }
@@ -600,17 +602,18 @@ private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val w = maxWidth.value
             val h = maxHeight.value
-            val (padH, padV) = if (rotation == 0f) {
-                (w * 0.025f).dp to (h * 0.015f).dp
-            } else {
-                (w * 0.015f).dp to (h * 0.06f).dp
-            }
-            Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+            val startEnd = if (rotation == 0f) (w * 0.02f).dp else (h * 0.06f).dp
+            val topBottom = if (rotation == 0f) (h * 0.01f).dp else (w * 0.02f).dp
+            Box(
                 modifier = Modifier.align(anchor)
-                    .padding(horizontal = padH, vertical = padV)
-                    .rotate(rotation)
-                    .background(Color(0x77000000), RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 3.dp))
+                    .padding(horizontal = startEnd, vertical = topBottom),
+            ) {
+                Text(text = text, color = Color.White, fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.rotate(rotation)
+                        .background(Color(0x77000000), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp))
+            }
         }
     }
 }
