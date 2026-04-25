@@ -29,8 +29,8 @@
     <string name="btn_cancel">Cancel</string>
 
     <!-- Exit dialog -->
-    <string name="dialog_exit_title">Exit</string>
-    <string name="dialog_exit_message">Do you want to exit the app?</string>
+    <string name="dialog_exit_title">Exit app?</string>
+    <string name="dialog_exit_message">Do you want to close DualFrame?</string>
     <string name="btn_exit">Exit</string>
 
     <!-- Errors -->

@@ -29,8 +29,8 @@
     <string name="btn_cancel">취소</string>
 
     <!-- Exit dialog -->
-    <string name="dialog_exit_title">종료</string>
-    <string name="dialog_exit_message">앱을 종료하시겠습니까?</string>
+    <string name="dialog_exit_title">앱을 종료할까요?</string>
+    <string name="dialog_exit_message">DualFrame을 종료하시겠습니까?</string>
     <string name="btn_exit">종료</string>
 
     <!-- Errors -->
