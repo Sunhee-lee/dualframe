@@ -465,11 +465,11 @@ private fun PreviewPanels(
             if (showGuides) RuleOfThirdsGrid()
             when (deviceRotation) {
                 90 -> {
-                    GhostWatermark(Alignment.TopStart, 13, rot)
+                    GhostWatermark(Alignment.TopStart, 14, rot)
                     AspectLabel("9:16", Alignment.BottomStart, rot)
                 }
                 270 -> {
-                    GhostWatermark(Alignment.BottomEnd, 13, rot)
+                    GhostWatermark(Alignment.BottomEnd, 14, rot)
                     AspectLabel("9:16", Alignment.TopEnd, rot)
                 }
                 else -> {
@@ -566,19 +566,23 @@ private fun GuideBorder() {
 
 @Composable
 private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
-    val insetFraction = 0.075f
     Box(Modifier.fillMaxSize()) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val sideInset = (maxWidth.value * insetFraction).dp
-            val topBottomInset = (maxHeight.value * insetFraction).dp
+            val w = maxWidth.value
+            val h = maxHeight.value
+            val (padH, padV) = if (rotation == 0f) {
+                (w * 0.04f).dp to (h * 0.03f).dp
+            } else {
+                (w * 0.02f).dp to (h * 0.06f).dp
+            }
             Text(
                 text = "DualFrame",
                 color = Color.White.copy(alpha = 0.35f),
-                fontSize = fontSize.sp,
+                fontSize = if (rotation != 0f) (fontSize - 2).coerceAtLeast(9) else fontSize,
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = PretendardFont,
                 modifier = Modifier.align(anchor)
-                    .padding(horizontal = sideInset, vertical = topBottomInset)
+                    .padding(horizontal = padH, vertical = padV)
                     .rotate(rotation),
             )
         }
@@ -587,16 +591,20 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
 
 @Composable
 private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
-    val insetFraction = 0.04f
     Box(Modifier.fillMaxSize()) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val sideInset = (maxWidth.value * insetFraction).dp
-            val topBottomInset = (maxHeight.value * insetFraction).dp
+            val w = maxWidth.value
+            val h = maxHeight.value
+            val (padH, padV) = if (rotation == 0f) {
+                (w * 0.025f).dp to (h * 0.015f).dp
+            } else {
+                (w * 0.01f).dp to (h * 0.04f).dp
+            }
             Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.align(anchor)
-                    .padding(horizontal = sideInset, vertical = topBottomInset)
+                    .padding(horizontal = padH, vertical = padV)
                     .rotate(rotation)
-                    .background(Color(0xAA000000), RoundedCornerShape(6.dp))
+                    .background(Color(0x77000000), RoundedCornerShape(6.dp))
                     .padding(horizontal = 8.dp, vertical = 3.dp))
         }
     }
