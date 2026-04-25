@@ -82,6 +82,7 @@ import androidx.media3.common.util.UnstableApi
 import com.dualframe.data.AppStatus
 import com.sunnlab.dualframe.R
 import com.dualframe.data.UiState
+import com.dualframe.ui.theme.PretendardFont
 import com.dualframe.util.formatDuration
 import com.dualframe.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
@@ -159,20 +160,20 @@ fun MainScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(stringResource(R.string.dialog_exit_title), color = Color.White, fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif)
+                    fontWeight = FontWeight.Bold, fontFamily = PretendardFont)
                 Spacer(Modifier.height(12.dp))
                 Text(stringResource(R.string.dialog_exit_message), color = Color(0xFFCCCCCC),
-                    fontSize = 15.sp, fontFamily = FontFamily.SansSerif)
+                    fontSize = 15.sp, fontFamily = PretendardFont)
                 Spacer(Modifier.height(20.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     androidx.compose.material3.TextButton(onClick = { showExitDialog = false }) {
-                        Text(stringResource(R.string.btn_cancel), color = Color(0xFF999999), fontFamily = FontFamily.SansSerif)
+                        Text(stringResource(R.string.btn_cancel), color = Color(0xFF999999), fontFamily = PretendardFont)
                     }
                     androidx.compose.material3.TextButton(onClick = {
                         showExitDialog = false
                         (context as? Activity)?.finish()
                     }) {
-                        Text(stringResource(R.string.btn_exit), color = Color(0xFFFF5252), fontFamily = FontFamily.SansSerif)
+                        Text(stringResource(R.string.btn_exit), color = Color(0xFFFF5252), fontFamily = PretendardFont)
                     }
                 }
             }
@@ -193,7 +194,7 @@ fun MainScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("DualFrame", color = Color.White, fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif)
+                    fontWeight = FontWeight.Bold, fontFamily = PretendardFont)
                 Spacer(Modifier.width(10.dp))
                 if (isRecording) {
                     Row(
@@ -339,7 +340,7 @@ private fun StatusChip(status: AppStatus) {
         AppStatus.ERROR -> stringResource(R.string.status_error) to Color(0xFFCF6679)
     }
     Text(text = text, color = color, fontSize = 15.sp, fontWeight = FontWeight.Normal,
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PretendardFont,
         modifier = Modifier.background(color.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp))
 }
@@ -821,7 +822,7 @@ private fun ThumbnailWatermark(anchor: Alignment) {
             color = Color.White.copy(alpha = 0.45f),
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.SansSerif,
+            fontFamily = PretendardFont,
             modifier = Modifier.align(anchor)
                 .padding(horizontal = 6.dp, vertical = 4.dp),
         )
@@ -925,7 +926,7 @@ private fun RemoveWatermarkDialog(
         containerColor = Color(0xFF121212),
         title = {
             Text(stringResource(R.string.dialog_remove_watermark_title), color = Color.White, fontSize = 22.sp,
-                fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold)
+                fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -950,7 +951,7 @@ private fun RemoveWatermarkDialog(
                     ),
                 ) {
                     Text(stringResource(R.string.btn_watch_ad), color = Color.White, fontSize = 18.sp,
-                        fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
+                        fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
                 }
                 androidx.compose.material3.Button(
                     onClick = {
@@ -973,19 +974,19 @@ private fun RemoveWatermarkDialog(
                     ),
                 ) {
                     Text(stringResource(R.string.btn_go_pro), color = Color(0xFF111111), fontSize = 18.sp,
-                        fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
+                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(4.dp))
                     Text("♕", color = Color(0xFF111111), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
                     "${stringResource(R.string.desc_pro_onetime)}\n${stringResource(R.string.desc_pro_no_watermark)}\n${stringResource(R.string.desc_pro_adfree)}",
                     color = Color(0xFFBBBBBB), fontSize = 14.sp,
-                    fontFamily = FontFamily.SansSerif,
+                    fontFamily = PretendardFont,
                 )
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                     androidx.compose.material3.TextButton(onClick = onDismiss) {
                         Text(stringResource(R.string.btn_cancel), color = Color(0xFFBBBBBB), fontSize = 15.sp,
-                            fontFamily = FontFamily.SansSerif)
+                            fontFamily = PretendardFont)
                     }
                 }
             }

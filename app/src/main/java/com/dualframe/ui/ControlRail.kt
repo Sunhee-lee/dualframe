@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import com.dualframe.ui.theme.PretendardFont
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -49,7 +50,7 @@ object RailTheme {
     val iconSize: Dp = 22.dp
     val activeColor = Color(0xFF4CAF50)
     val inactiveColor = Color(0xFF666666)
-    val font: FontFamily = FontFamily.SansSerif
+    val font: FontFamily = PretendardFont
 }
 
 @Composable
