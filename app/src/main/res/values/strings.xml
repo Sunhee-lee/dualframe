@@ -1,4 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DualFrame</string>
+
+    <!-- Status -->
+    <string name="status_ready">Ready</string>
+    <string name="status_countdown">Countdown</string>
+    <string name="status_rec">REC</string>
+    <string name="status_exporting">Exporting</string>
+    <string name="status_done">Done</string>
+    <string name="status_saving">Saving</string>
+    <string name="status_error">Error</string>
+
+    <!-- Save screen -->
+    <string name="btn_save_videos">Save Videos</string>
+    <string name="label_saving">Saving…</string>
+    <string name="label_saved">Saved</string>
+    <string name="btn_view_in_gallery">View in Gallery</string>
+    <string name="btn_retake">Retake</string>
+    <string name="btn_remove_watermark">Remove Watermark</string>
+
+    <!-- Remove Watermark dialog -->
+    <string name="dialog_remove_watermark_title">Remove Watermark</string>
+    <string name="btn_watch_ad">Watch Ad to Remove</string>
+    <string name="btn_go_pro">Go PRO</string>
+    <string name="desc_pro_onetime">One-time purchase.</string>
+    <string name="desc_pro_no_watermark">Remove watermarks forever.</string>
+    <string name="desc_pro_adfree">Ad-free experience!</string>
+    <string name="btn_cancel">Cancel</string>
+
+    <!-- Exit dialog -->
+    <string name="dialog_exit_title">Exit</string>
+    <string name="dialog_exit_message">Do you want to exit the app?</string>
+    <string name="btn_exit">Exit</string>
+
+    <!-- Errors -->
+    <string name="error_dismiss">Dismiss</string>
+    <string name="error_ad_not_available">Ad not available. Please try again later.</string>
 </resources>

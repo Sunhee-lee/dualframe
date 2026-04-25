@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DualFrame</string>
+
+    <!-- Status -->
+    <string name="status_ready">준비</string>
+    <string name="status_countdown">카운트다운</string>
+    <string name="status_rec">녹화중</string>
+    <string name="status_exporting">내보내는 중</string>
+    <string name="status_done">완료</string>
+    <string name="status_saving">저장 중</string>
+    <string name="status_error">오류</string>
+
+    <!-- Save screen -->
+    <string name="btn_save_videos">영상 저장</string>
+    <string name="label_saving">저장 중…</string>
+    <string name="label_saved">저장됨</string>
+    <string name="btn_view_in_gallery">갤러리에서 보기</string>
+    <string name="btn_retake">다시 촬영</string>
+    <string name="btn_remove_watermark">워터마크 제거</string>
+
+    <!-- Remove Watermark dialog -->
+    <string name="dialog_remove_watermark_title">워터마크 제거</string>
+    <string name="btn_watch_ad">광고 시청 후 제거</string>
+    <string name="btn_go_pro">PRO 구매</string>
+    <string name="desc_pro_onetime">1회 결제.</string>
+    <string name="desc_pro_no_watermark">워터마크를 영구 제거합니다.</string>
+    <string name="desc_pro_adfree">광고 없는 경험!</string>
+    <string name="btn_cancel">취소</string>
+
+    <!-- Exit dialog -->
+    <string name="dialog_exit_title">종료</string>
+    <string name="dialog_exit_message">앱을 종료하시겠습니까?</string>
+    <string name="btn_exit">종료</string>
+
+    <!-- Errors -->
+    <string name="error_dismiss">닫기</string>
+    <string name="error_ad_not_available">광고를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.</string>
+</resources>

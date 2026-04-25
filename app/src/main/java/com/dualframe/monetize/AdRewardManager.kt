@@ -68,7 +68,7 @@ object AdRewardManager {
     ) {
         val ad = rewardedAd
         if (ad == null) {
-            onFailed("Ad not available. Please try again later.")
+            onFailed(activity.getString(com.sunnlab.dualframe.R.string.error_ad_not_available))
             loadAd(activity)
             return
         }
@@ -80,7 +80,7 @@ object AdRewardManager {
             }
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
                 rewardedAd = null
-                onFailed("Ad not available. Please try again later.")
+                onFailed(activity.getString(com.sunnlab.dualframe.R.string.error_ad_not_available))
                 loadAd(activity)
             }
         }

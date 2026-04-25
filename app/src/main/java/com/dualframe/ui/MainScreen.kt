@@ -70,6 +70,7 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -79,6 +80,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.util.UnstableApi
 import com.dualframe.data.AppStatus
+import com.sunnlab.dualframe.R
 import com.dualframe.data.UiState
 import com.dualframe.util.formatDuration
 import com.dualframe.viewmodel.MainViewModel
@@ -156,21 +158,21 @@ fun MainScreen(
                     .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {},
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("종료", color = Color.White, fontSize = 18.sp,
+                Text(stringResource(R.string.dialog_exit_title), color = Color.White, fontSize = 18.sp,
                     fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif)
                 Spacer(Modifier.height(12.dp))
-                Text("앱을 종료하시겠습니까?", color = Color(0xFFCCCCCC),
+                Text(stringResource(R.string.dialog_exit_message), color = Color(0xFFCCCCCC),
                     fontSize = 15.sp, fontFamily = FontFamily.SansSerif)
                 Spacer(Modifier.height(20.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     androidx.compose.material3.TextButton(onClick = { showExitDialog = false }) {
-                        Text("취소", color = Color(0xFF999999), fontFamily = FontFamily.SansSerif)
+                        Text(stringResource(R.string.btn_cancel), color = Color(0xFF999999), fontFamily = FontFamily.SansSerif)
                     }
                     androidx.compose.material3.TextButton(onClick = {
                         showExitDialog = false
                         (context as? Activity)?.finish()
                     }) {
-                        Text("종료", color = Color(0xFFFF5252), fontFamily = FontFamily.SansSerif)
+                        Text(stringResource(R.string.btn_exit), color = Color(0xFFFF5252), fontFamily = FontFamily.SansSerif)
                     }
                 }
             }
@@ -327,14 +329,14 @@ fun MainScreen(
 @Composable
 private fun StatusChip(status: AppStatus) {
     val (text, color) = when (status) {
-        AppStatus.IDLE -> "Ready" to Color(0xFF4CAF50)
-        AppStatus.COUNTDOWN -> "Countdown" to Color(0xFFFFA726)
-        AppStatus.RECORDING -> "REC" to Color(0xFFFF1744)
-        AppStatus.EXPORTING_NATIVE -> "Exporting" to Color(0xFFFFA726)
-        AppStatus.EXPORTING_CROPPED -> "Exporting" to Color(0xFFFFA726)
-        AppStatus.EXPORT_COMPLETE -> "Done" to Color(0xFF66BB6A)
-        AppStatus.SAVING -> "Saving" to Color(0xFFFFA726)
-        AppStatus.ERROR -> "Error" to Color(0xFFCF6679)
+        AppStatus.IDLE -> stringResource(R.string.status_ready) to Color(0xFF4CAF50)
+        AppStatus.COUNTDOWN -> stringResource(R.string.status_countdown) to Color(0xFFFFA726)
+        AppStatus.RECORDING -> stringResource(R.string.status_rec) to Color(0xFFFF1744)
+        AppStatus.EXPORTING_NATIVE -> stringResource(R.string.status_exporting) to Color(0xFFFFA726)
+        AppStatus.EXPORTING_CROPPED -> stringResource(R.string.status_exporting) to Color(0xFFFFA726)
+        AppStatus.EXPORT_COMPLETE -> stringResource(R.string.status_done) to Color(0xFF66BB6A)
+        AppStatus.SAVING -> stringResource(R.string.status_saving) to Color(0xFFFFA726)
+        AppStatus.ERROR -> stringResource(R.string.status_error) to Color(0xFFCF6679)
     }
     Text(text = text, color = color, fontSize = 15.sp, fontWeight = FontWeight.Normal,
         fontFamily = FontFamily.SansSerif,
@@ -679,9 +681,9 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
     }
 
     val saveLabel = when {
-        state.appStatus == AppStatus.SAVING -> "Saving..."
-        state.saveMessage != null -> "Saved"
-        else -> "Save Videos"
+        state.appStatus == AppStatus.SAVING -> stringResource(R.string.label_saving)
+        state.saveMessage != null -> stringResource(R.string.label_saved)
+        else -> stringResource(R.string.btn_save_videos)
     }
     val saveEnabled = state.appStatus == AppStatus.EXPORT_COMPLETE && state.saveMessage == null
 
@@ -746,11 +748,11 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                             viewModel.showRemoveWatermarkDialog()
                         }
                     }
-                    ResultButton("View in Gallery", Modifier.fillMaxWidth(0.9f), true) {
+                    ResultButton(stringResource(R.string.btn_view_in_gallery), Modifier.fillMaxWidth(0.9f), true) {
                         try { context.startActivity(buildGalleryIntent(context)) }
                         catch (_: Exception) {}
                     }
-                    ResultButton("Retake", Modifier.fillMaxWidth(0.9f), true) {
+                    ResultButton(stringResource(R.string.btn_retake), Modifier.fillMaxWidth(0.9f), true) {
                         viewModel.resetToIdle()
                     }
                 }
@@ -798,11 +800,11 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                             viewModel.showRemoveWatermarkDialog()
                         }
                     }
-                    ResultButton("View in Gallery", Modifier.fillMaxWidth(), true) {
+                    ResultButton(stringResource(R.string.btn_view_in_gallery), Modifier.fillMaxWidth(), true) {
                         try { context.startActivity(buildGalleryIntent(context)) }
                         catch (_: Exception) {}
                     }
-                    ResultButton("Retake", Modifier.fillMaxWidth(), true) {
+                    ResultButton(stringResource(R.string.btn_retake), Modifier.fillMaxWidth(), true) {
                         viewModel.resetToIdle()
                     }
                 }
@@ -884,7 +886,7 @@ private fun RemoveWatermarkResultButton(modifier: Modifier, enabled: Boolean, on
         modifier = modifier.height(48.dp),
         shape = RoundedCornerShape(10.dp),
     ) {
-        Text("Remove Watermark", color = Color.White, fontSize = 19.sp,
+        Text(stringResource(R.string.btn_remove_watermark), color = Color.White, fontSize = 19.sp,
             fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
         Spacer(Modifier.width(4.dp))
         Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -914,7 +916,7 @@ private fun RemoveWatermarkDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF121212),
         title = {
-            Text("Remove Watermark", color = Color.White, fontSize = 22.sp,
+            Text(stringResource(R.string.dialog_remove_watermark_title), color = Color.White, fontSize = 22.sp,
                 fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold)
         },
         text = {
@@ -935,7 +937,7 @@ private fun RemoveWatermarkDialog(
                     modifier = Modifier.fillMaxWidth().height(44.dp),
                     shape = RoundedCornerShape(10.dp),
                 ) {
-                    Text("Watch Ad to Remove", color = Color.White, fontSize = 18.sp,
+                    Text(stringResource(R.string.btn_watch_ad), color = Color.White, fontSize = 18.sp,
                         fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
                 }
                 androidx.compose.material3.Button(
@@ -958,19 +960,19 @@ private fun RemoveWatermarkDialog(
                         contentColor = Color.White,
                     ),
                 ) {
-                    Text("Go PRO", fontSize = 18.sp,
+                    Text(stringResource(R.string.btn_go_pro), fontSize = 18.sp,
                         fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(4.dp))
                     Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
-                    "One-time purchase.\nRemove watermarks forever.\nAd-free experience!",
+                    "${stringResource(R.string.desc_pro_onetime)}\n${stringResource(R.string.desc_pro_no_watermark)}\n${stringResource(R.string.desc_pro_adfree)}",
                     color = Color(0xFFBBBBBB), fontSize = 14.sp,
                     fontFamily = FontFamily.SansSerif,
                 )
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                     androidx.compose.material3.TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = Color(0xFFBBBBBB), fontSize = 15.sp,
+                        Text(stringResource(R.string.btn_cancel), color = Color(0xFFBBBBBB), fontSize = 15.sp,
                             fontFamily = FontFamily.SansSerif)
                     }
                 }
@@ -989,6 +991,6 @@ private fun ErrorArea(state: UiState, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth().background(Color(0xFF370000), RoundedCornerShape(8.dp)).padding(10.dp)) {
         Text(error, color = Color(0xFFCF6679), fontSize = 12.sp)
         Spacer(Modifier.height(4.dp))
-        androidx.compose.material3.TextButton(onDismiss) { Text("Dismiss", color = Color(0xFFCF6679), fontSize = 11.sp) }
+        androidx.compose.material3.TextButton(onDismiss) { Text(stringResource(R.string.error_dismiss), color = Color(0xFFCF6679), fontSize = 11.sp) }
     }
 }
