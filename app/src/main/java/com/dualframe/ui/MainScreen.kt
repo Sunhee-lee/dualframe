@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -855,25 +856,41 @@ private fun LandscapeThumbFixed(bmp: android.graphics.Bitmap?, thumbH: Dp, mirro
     }
 }
 
+private val ShinyGreenBrush = Brush.horizontalGradient(
+    colors = listOf(Color(0xFF32CD32), Color(0xFFC6FF00), Color(0xFF32CD32))
+)
+private val SavedGreenBrush = Brush.horizontalGradient(
+    colors = listOf(Color(0xFF2E7D32), Color(0xFF66BB6A), Color(0xFF2E7D32))
+)
+
 @Composable
 private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Boolean, isSaved: Boolean = false, onClick: () -> Unit) {
-    androidx.compose.material3.Button(
+    val brush = when {
+        isSaved -> SavedGreenBrush
+        enabled -> ShinyGreenBrush
+        else -> null
+    }
+    androidx.compose.material3.Surface(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(48.dp),
         shape = RoundedCornerShape(10.dp),
-        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF4CAF50),
-            contentColor = Color.White,
-            disabledContainerColor = if (isSaved) Color(0xFF388E3C) else Color(0xFF1A1A1A),
-            disabledContentColor = if (isSaved) Color.White else Color(0xFF666666),
-        ),
+        color = if (brush == null) Color(0xFF1A1A1A) else Color.Transparent,
+        modifier = modifier.height(48.dp),
     ) {
-        Text(label, fontSize = 18.sp, maxLines = 1,
-            fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
-        if (isSaved) {
-            Spacer(Modifier.width(6.dp))
-            Text("✓", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (brush != null) Modifier.background(brush) else Modifier),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, color = Color.White, fontSize = 18.sp, maxLines = 1,
+                    fontWeight = FontWeight.Bold, letterSpacing = (-0.02).sp)
+                if (isSaved) {
+                    Spacer(Modifier.width(6.dp))
+                    Text("✓", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
@@ -953,7 +970,10 @@ private fun RemoveWatermarkDialog(
                     Text(stringResource(R.string.btn_watch_ad), color = Color.White, fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
                 }
-                androidx.compose.material3.Button(
+                val shinyGoldBrush = Brush.horizontalGradient(
+                    colors = listOf(Color(0xFFFFD700), Color(0xFFFFF176), Color(0xFFFFD700))
+                )
+                androidx.compose.material3.Surface(
                     onClick = {
                         val activity = context as? android.app.Activity
                         if (activity != null) {
@@ -966,17 +986,21 @@ private fun RemoveWatermarkDialog(
                                 }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
                     shape = RoundedCornerShape(10.dp),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFD54A),
-                        contentColor = Color(0xFF111111),
-                    ),
+                    color = Color.Transparent,
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
                 ) {
-                    Text(stringResource(R.string.btn_go_pro), color = Color(0xFF111111), fontSize = 18.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.width(4.dp))
-                    Text("♕", color = Color(0xFF111111), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(shinyGoldBrush),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.btn_go_pro), color = Color(0xFF111111), fontSize = 18.sp,
+                                fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.width(4.dp))
+                            Text("♕", color = Color(0xFF111111), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
                 Text(
                     "${stringResource(R.string.desc_pro_onetime)}\n${stringResource(R.string.desc_pro_no_watermark)}\n${stringResource(R.string.desc_pro_adfree)}",
