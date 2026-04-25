@@ -566,30 +566,39 @@ private fun GuideBorder() {
 
 @Composable
 private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
-    val padH = if (rotation != 0f) 0.dp else 8.dp
-    val padV = if (rotation != 0f) 24.dp else 8.dp
+    val insetFraction = 0.075f
     Box(Modifier.fillMaxSize()) {
-        Text(
-            text = "DualFrame",
-            color = Color.White.copy(alpha = 0.35f),
-            fontSize = fontSize.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.align(anchor)
-                .padding(horizontal = padH, vertical = padV)
-                .rotate(rotation),
-        )
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val sideInset = (maxWidth.value * insetFraction).dp
+            val topBottomInset = (maxHeight.value * insetFraction).dp
+            Text(
+                text = "DualFrame",
+                color = Color.White.copy(alpha = 0.35f),
+                fontSize = fontSize.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = PretendardFont,
+                modifier = Modifier.align(anchor)
+                    .padding(horizontal = sideInset, vertical = topBottomInset)
+                    .rotate(rotation),
+            )
+        }
     }
 }
 
 @Composable
 private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
-    val padH = if (rotation != 0f) 3.dp else 6.dp
-    val padV = if (rotation != 0f) 9.dp else 6.dp
+    val insetFraction = 0.04f
     Box(Modifier.fillMaxSize()) {
-        Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(anchor).padding(horizontal = padH, vertical = padV).rotate(rotation)
-                .background(Color(0xAA000000), RoundedCornerShape(6.dp))
-                .padding(horizontal = 8.dp, vertical = 3.dp))
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val sideInset = (maxWidth.value * insetFraction).dp
+            val topBottomInset = (maxHeight.value * insetFraction).dp
+            Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.align(anchor)
+                    .padding(horizontal = sideInset, vertical = topBottomInset)
+                    .rotate(rotation)
+                    .background(Color(0xAA000000), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 8.dp, vertical = 3.dp))
+        }
     }
 }
 
