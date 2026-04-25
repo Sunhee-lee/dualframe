@@ -977,7 +977,12 @@ private fun RemoveWatermarkDialog(
                         if (activity != null) {
                             com.dualframe.monetize.AdRewardManager.showAd(
                                 activity = activity,
-                                onRewarded = { viewModel.saveBothClean() },
+                                onRewarded = {
+                                    viewModel.saveBothClean()
+                                    android.widget.Toast.makeText(context,
+                                        context.getString(R.string.toast_watermark_removed),
+                                        android.widget.Toast.LENGTH_SHORT).show()
+                                },
                                 onFailed = { viewModel.clearError() },
                             )
                         }
