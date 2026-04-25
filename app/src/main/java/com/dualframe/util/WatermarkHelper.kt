@@ -1,7 +1,14 @@
 package com.dualframe.util
 
 import android.content.Context
+import android.graphics.Typeface
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.TypefaceSpan
 import android.util.Log
+import androidx.core.content.res.ResourcesCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Brightness
@@ -20,6 +27,7 @@ import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import com.google.common.collect.ImmutableList
+import com.sunnlab.dualframe.R
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -110,22 +118,21 @@ object WatermarkHelper {
                 val baseSize = if (isPortrait) 1.0f else 0.9f
                 val textSize = baseSize * scale
 
+                val pretendard = ResourcesCompat.getFont(context, R.font.pretendard_semibold)
+                    ?: Typeface.DEFAULT_BOLD
                 val textOverlay = TextOverlay.createStaticTextOverlay(
-                    android.text.SpannableString("DualFrame").apply {
+                    SpannableString("DualFrame").apply {
                         setSpan(
-                            android.text.style.ForegroundColorSpan(0x66FFFFFF.toInt()),
-                            0, length,
-                            android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                            ForegroundColorSpan(0x66FFFFFF.toInt()),
+                            0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                         )
                         setSpan(
-                            android.text.style.RelativeSizeSpan(textSize),
-                            0, length,
-                            android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                            RelativeSizeSpan(textSize),
+                            0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                         )
                         setSpan(
-                            android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
-                            0, length,
-                            android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                            TypefaceSpan(pretendard),
+                            0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                         )
                     },
                     OverlaySettings.Builder()
