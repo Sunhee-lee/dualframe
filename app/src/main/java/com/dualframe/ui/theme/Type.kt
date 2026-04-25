@@ -6,73 +6,78 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.sunnlab.dualframe.R
 
-val DualFrameFont = FontFamily.SansSerif
+val PretendardFont = FontFamily(
+    Font(R.font.pretendard_regular, FontWeight.Normal),
+    Font(R.font.pretendard_semibold, FontWeight.SemiBold),
+    Font(R.font.pretendard_bold, FontWeight.Bold),
+)
 
 val DualFrameTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = DualFrameFont,
+        fontFamily = PretendardFont,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         letterSpacing = (-0.02).sp,
     ),
     headlineLarge = TextStyle(
-        fontFamily = DualFrameFont,
+        fontFamily = PretendardFont,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         letterSpacing = (-0.02).sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = DualFrameFont,
+        fontFamily = PretendardFont,
         fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
         letterSpacing = (-0.01).sp,
     ),
     titleLarge = TextStyle(
-        fontFamily = DualFrameFont,
+        fontFamily = PretendardFont,
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
         letterSpacing = (-0.01).sp,
     ),
     titleMedium = TextStyle(
-        fontFamily = DualFrameFont,
+        fontFamily = PretendardFont,
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
         letterSpacing = (-0.01).sp,
     ),
     bodyLarge = TextStyle(
-        fontFamily = DualFrameFont,
+        fontFamily = PretendardFont,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         letterSpacing = 0.sp,
     ),
     bodyMedium = TextStyle(
-        fontFamily = DualFrameFont,
+        fontFamily = PretendardFont,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         letterSpacing = 0.sp,
     ),
     bodySmall = TextStyle(
-        fontFamily = DualFrameFont,
+        fontFamily = PretendardFont,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         letterSpacing = 0.sp,
     ),
     labelLarge = TextStyle(
-        fontFamily = DualFrameFont,
-        fontWeight = FontWeight.Bold,
+        fontFamily = PretendardFont,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         letterSpacing = (-0.02).sp,
     ),
     labelMedium = TextStyle(
-        fontFamily = DualFrameFont,
+        fontFamily = PretendardFont,
         fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
         letterSpacing = (-0.01).sp,
     ),
     labelSmall = TextStyle(
-        fontFamily = DualFrameFont,
-        fontWeight = FontWeight.Medium,
+        fontFamily = PretendardFont,
+        fontWeight = FontWeight.Normal,
         fontSize = 11.sp,
         letterSpacing = 0.sp,
     ),
