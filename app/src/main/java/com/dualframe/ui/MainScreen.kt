@@ -145,40 +145,9 @@ fun MainScreen(
     // Back button confirmation dialog
     var showExitDialog by remember { mutableStateOf(false) }
     var settingsExpanded by remember { mutableStateOf(false) }
-    BackHandler { showExitDialog = true }
-    if (showExitDialog) {
-        val dialogRot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
-        Box(
-            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
-                .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { showExitDialog = false },
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                modifier = Modifier.rotate(dialogRot)
-                    .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
-                    .padding(24.dp)
-                    .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {},
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(stringResource(R.string.dialog_exit_title), color = Color.White, fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold, fontFamily = PretendardFont)
-                Spacer(Modifier.height(12.dp))
-                Text(stringResource(R.string.dialog_exit_message), color = Color(0xFFCCCCCC),
-                    fontSize = 15.sp, fontFamily = PretendardFont)
-                Spacer(Modifier.height(20.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    androidx.compose.material3.TextButton(onClick = { showExitDialog = false }) {
-                        Text(stringResource(R.string.btn_cancel), color = Color(0xFF999999), fontFamily = PretendardFont)
-                    }
-                    androidx.compose.material3.TextButton(onClick = {
-                        showExitDialog = false
-                        (context as? Activity)?.finish()
-                    }) {
-                        Text(stringResource(R.string.btn_exit), color = Color(0xFFFF5252), fontFamily = PretendardFont)
-                    }
-                }
-            }
-        }
+    BackHandler(enabled = true) {
+        android.util.Log.d("BackHandler", "Back pressed — showExitDialog=true")
+        showExitDialog = true
     }
 
     val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
@@ -323,6 +292,42 @@ fun MainScreen(
 
     if (state.showRemoveWatermarkDialog) {
         RemoveWatermarkDialog(viewModel, context) { viewModel.dismissRemoveWatermarkDialog() }
+    }
+
+    // Exit confirmation — rendered last to appear on top of everything
+    if (showExitDialog) {
+        val dialogRot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
+                .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { showExitDialog = false },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier.rotate(dialogRot)
+                    .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
+                    .padding(24.dp)
+                    .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {},
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(stringResource(R.string.dialog_exit_title), color = Color.White, fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold, fontFamily = PretendardFont)
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.dialog_exit_message), color = Color(0xFFCCCCCC),
+                    fontSize = 15.sp, fontFamily = PretendardFont)
+                Spacer(Modifier.height(20.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    androidx.compose.material3.TextButton(onClick = { showExitDialog = false }) {
+                        Text(stringResource(R.string.btn_cancel), color = Color(0xFF999999), fontFamily = PretendardFont)
+                    }
+                    androidx.compose.material3.TextButton(onClick = {
+                        showExitDialog = false
+                        (context as? Activity)?.finish()
+                    }) {
+                        Text(stringResource(R.string.btn_exit), color = Color(0xFFFF5252), fontFamily = PretendardFont)
+                    }
+                }
+            }
+        }
     }
 }
 
