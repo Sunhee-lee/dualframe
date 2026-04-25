@@ -404,12 +404,12 @@ private fun PreviewPanels(
             )
             if (showGuides) RuleOfThirdsGrid()
             when (deviceRotation) {
-                90 -> {  // landscape right
-                    GhostWatermark(Alignment.TopEnd, 11, rot)
+                90 -> {  // landscape right — 9:16 frame is the smaller one
+                    GhostWatermark(Alignment.TopEnd, 9, rot)
                     AspectLabel("16:9", Alignment.BottomStart, rot)
                 }
-                270 -> { // landscape left — mirror anchors
-                    GhostWatermark(Alignment.BottomStart, 11, rot)
+                270 -> {
+                    GhostWatermark(Alignment.BottomStart, 9, rot)
                     AspectLabel("16:9", Alignment.TopEnd, rot)
                 }
                 else -> {
@@ -578,12 +578,12 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
             val (padH, padV) = if (rotation == 0f) {
                 (w * 0.04f).dp to (h * 0.03f).dp
             } else {
-                (w * 0.02f).dp to (h * 0.06f).dp
+                (w * 0.03f).dp to (h * 0.08f).dp
             }
             Text(
                 text = "DualFrame",
                 color = Color.White.copy(alpha = 0.35f),
-                fontSize = (if (rotation != 0f) (fontSize - 2).coerceAtLeast(9) else fontSize).sp,
+                fontSize = fontSize.sp,
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = PretendardFont,
                 modifier = Modifier.align(anchor)
@@ -603,7 +603,7 @@ private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
             val (padH, padV) = if (rotation == 0f) {
                 (w * 0.025f).dp to (h * 0.015f).dp
             } else {
-                (w * 0.01f).dp to (h * 0.04f).dp
+                (w * 0.015f).dp to (h * 0.06f).dp
             }
             Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.align(anchor)
