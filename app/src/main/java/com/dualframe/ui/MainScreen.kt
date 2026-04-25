@@ -470,11 +470,11 @@ private fun PreviewPanels(
             if (showGuides) RuleOfThirdsGrid()
             when (deviceRotation) {
                 90 -> {
-                    GhostWatermark(Alignment.TopStart, 6, rot)
+                    GhostWatermark(Alignment.TopStart, 9, rot)
                     AspectLabel("9:16", Alignment.BottomStart, rot)
                 }
                 270 -> {
-                    GhostWatermark(Alignment.BottomEnd, 6, rot)
+                    GhostWatermark(Alignment.BottomEnd, 9, rot)
                     AspectLabel("9:16", Alignment.TopEnd, rot)
                 }
                 else -> {
@@ -589,9 +589,11 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float) {
 
 @Composable
 private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
+    val padH = if (rotation == 0f) 4.dp else 2.dp
+    val padV = if (rotation == 0f) 4.dp else 10.dp
     Box(Modifier.fillMaxSize()) {
         Box(
-            modifier = Modifier.align(anchor).padding(4.dp),
+            modifier = Modifier.align(anchor).padding(horizontal = padH, vertical = padV),
         ) {
             Text(text = text, color = Color.White, fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
