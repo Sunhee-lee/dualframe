@@ -575,8 +575,8 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float, ro
     Box(Modifier.fillMaxSize()) {
         val hOffset = when {
             rotation == 0f -> 0.dp
-            isCropFrame && rotation < 0f -> (-5).dp
-            isCropFrame -> 5.dp
+            isCropFrame && rotation < 0f -> (-10).dp
+            isCropFrame -> 10.dp
             rotation < 0f -> 10.dp
             else -> (-10).dp
         }
@@ -603,8 +603,8 @@ private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
     val padV = if (rotation == 0f) 4.dp else 12.dp
     val offsetX = when {
         rotation == 0f -> 0.dp
-        rotation < 0f -> (-5).dp
-        else -> 5.dp
+        rotation < 0f -> (-10).dp
+        else -> 10.dp
     }
     Box(Modifier.fillMaxSize()) {
         Box(
