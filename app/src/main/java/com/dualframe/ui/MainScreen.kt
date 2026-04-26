@@ -376,7 +376,7 @@ private fun PreviewPanels(
 
         Box(
             Modifier.fillMaxWidth().aspectRatio(9f / 16f)
-                .clip(RoundedCornerShape(12.dp)).background(Color.Black)
+                .clip(RoundedCornerShape(6.dp)).background(Color.Black)
                 .pointerInput(Unit) {
                     detectTapPanZoom(
                         onTap = { pos ->
@@ -427,7 +427,7 @@ private fun PreviewPanels(
 
         Box(
             Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(6.dp))
                 .background(Color.Black)
                 .pointerInput(Unit) {
                     detectTapPanZoom(
@@ -603,8 +603,8 @@ private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
     val padV = if (rotation == 0f) 4.dp else 12.dp
     val offsetX = when {
         rotation == 0f -> 0.dp
-        rotation < 0f -> (-8).dp
-        else -> 8.dp
+        rotation < 0f -> (-6).dp
+        else -> 6.dp
     }
     Box(Modifier.fillMaxSize()) {
         Box(
@@ -797,7 +797,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 portraitBmp?.let { bmp ->
                     Box(
                         Modifier.fillMaxWidth(0.50f).aspectRatio(9f / 16f)
-                            .clip(RoundedCornerShape(12.dp)).background(Color.Black),
+                            .clip(RoundedCornerShape(8.dp)).background(Color.Black),
                     ) {
                         Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
                         if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
@@ -809,7 +809,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 landscapeBmp?.let { bmp ->
                     Box(
                         Modifier.fillMaxWidth(0.50f).aspectRatio(16f / 9f)
-                            .clip(RoundedCornerShape(12.dp)).background(Color.Black),
+                            .clip(RoundedCornerShape(8.dp)).background(Color.Black),
                     ) {
                         Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
                         if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
@@ -863,7 +863,7 @@ private fun PortraitThumbFixed(bmp: android.graphics.Bitmap?, thumbH: Dp, mirror
     bmp?.let {
         Box(
             Modifier.height(thumbH).aspectRatio(9f / 16f)
-                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                .clip(RoundedCornerShape(8.dp)).background(Color.Black)
         ) {
             Image(it.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
             if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
@@ -876,7 +876,7 @@ private fun LandscapeThumbFixed(bmp: android.graphics.Bitmap?, thumbH: Dp, mirro
     bmp?.let {
         Box(
             Modifier.height(thumbH).aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(10.dp)).background(Color.Black)
+                .clip(RoundedCornerShape(8.dp)).background(Color.Black)
         ) {
             Image(it.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
             if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
