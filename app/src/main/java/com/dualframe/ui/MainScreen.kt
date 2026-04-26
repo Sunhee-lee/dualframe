@@ -575,9 +575,10 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float, ro
     Box(Modifier.fillMaxSize()) {
         val hOffset = when {
             rotation == 0f -> 0.dp
-            !isCropFrame -> 0.dp
-            rotation < 0f -> 30.dp
-            else -> (-30).dp
+            isCropFrame && rotation < 0f -> 30.dp
+            isCropFrame -> (-30).dp
+            rotation < 0f -> 10.dp
+            else -> (-10).dp
         }
         Box(
             modifier = Modifier.align(anchor)
