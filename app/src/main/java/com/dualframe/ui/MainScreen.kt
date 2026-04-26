@@ -471,11 +471,11 @@ private fun PreviewPanels(
             if (showGuides) RuleOfThirdsGrid()
             when (deviceRotation) {
                 90 -> {
-                    GhostWatermark(Alignment.TopStart, 9, rot, rotVPad = 6.dp)
+                    GhostWatermark(Alignment.TopStart, 9, rot, rotVPad = 21.dp)
                     AspectLabel("9:16", Alignment.BottomStart, rot)
                 }
                 270 -> {
-                    GhostWatermark(Alignment.BottomEnd, 9, rot, rotVPad = 6.dp)
+                    GhostWatermark(Alignment.BottomEnd, 9, rot, rotVPad = 21.dp)
                     AspectLabel("9:16", Alignment.TopEnd, rot)
                 }
                 else -> {
@@ -574,10 +574,9 @@ private fun GuideBorder() {
 private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float, rotVPad: Dp = 20.dp) {
     Box(Modifier.fillMaxSize()) {
         Box(
-            modifier = Modifier.align(anchor).padding(
-                horizontal = if (rotation == 0f) 6.dp else 3.dp,
-                vertical = if (rotation == 0f) 6.dp else rotVPad,
-            ),
+            modifier = Modifier.align(anchor)
+                .padding(horizontal = if (rotation == 0f) 6.dp else 0.dp, vertical = if (rotation == 0f) 6.dp else rotVPad)
+                .offset(x = if (rotation == 0f) 0.dp else (-20).dp),
         ) {
             Text(
                 text = "DualFrame",
@@ -595,7 +594,7 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float, ro
 private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
     val padH = if (rotation == 0f) 4.dp else 0.dp
     val padV = if (rotation == 0f) 4.dp else 12.dp
-    val offsetX = if (rotation == 0f) 0.dp else (-6).dp
+    val offsetX = if (rotation == 0f) 0.dp else (-20).dp
     Box(Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier.align(anchor)
