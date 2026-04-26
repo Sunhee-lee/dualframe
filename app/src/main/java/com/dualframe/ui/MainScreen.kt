@@ -573,10 +573,15 @@ private fun GuideBorder() {
 @Composable
 private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float, rotVPad: Dp = 20.dp) {
     Box(Modifier.fillMaxSize()) {
+        val hOffset = when {
+            rotation == 0f -> 0.dp
+            rotation < 0f -> 10.dp    // right turn: push right
+            else -> (-10).dp          // left turn: push left (opposite)
+        }
         Box(
             modifier = Modifier.align(anchor)
                 .padding(horizontal = if (rotation == 0f) 6.dp else 0.dp, vertical = if (rotation == 0f) 6.dp else rotVPad)
-                .offset(x = if (rotation == 0f) 0.dp else (-20).dp),
+                .offset(x = hOffset),
         ) {
             Text(
                 text = "DualFrame",
@@ -594,7 +599,11 @@ private fun GhostWatermark(anchor: Alignment, fontSize: Int, rotation: Float, ro
 private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
     val padH = if (rotation == 0f) 4.dp else 0.dp
     val padV = if (rotation == 0f) 4.dp else 12.dp
-    val offsetX = if (rotation == 0f) 0.dp else (-20).dp
+    val offsetX = when {
+        rotation == 0f -> 0.dp
+        rotation < 0f -> 10.dp    // right turn
+        else -> (-10).dp          // left turn (opposite)
+    }
     Box(Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier.align(anchor)
