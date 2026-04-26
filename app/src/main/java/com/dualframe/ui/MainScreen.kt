@@ -731,12 +731,12 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
             Row(
                 modifier = Modifier.fillMaxSize()
                     .rotate(landscapeRot)
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(start = 16.dp, end = 8.dp, top = 24.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Thumbnails: shared height computed from constraints
+                // Thumbnails
                 BoxWithConstraints(
-                    modifier = Modifier.weight(0.55f),
+                    modifier = Modifier.weight(0.5f),
                     contentAlignment = Alignment.Center,
                 ) {
                     val spacing = 6.dp
@@ -766,7 +766,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
                 // Right: buttons centered vertically
                 Column(
-                    modifier = Modifier.weight(0.45f).padding(start = 12.dp),
+                    modifier = Modifier.weight(0.5f).padding(start = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
@@ -797,7 +797,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 portraitBmp?.let { bmp ->
                     Box(
                         Modifier.fillMaxWidth(0.50f).aspectRatio(9f / 16f)
-                            .clip(RoundedCornerShape(8.dp)).background(Color.Black),
+                            .clip(RoundedCornerShape(6.dp)).background(Color.Black),
                     ) {
                         Image(bmp.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
                         if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
@@ -809,7 +809,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 landscapeBmp?.let { bmp ->
                     Box(
                         Modifier.fillMaxWidth(0.50f).aspectRatio(16f / 9f)
-                            .clip(RoundedCornerShape(8.dp)).background(Color.Black),
+                            .clip(RoundedCornerShape(6.dp)).background(Color.Black),
                     ) {
                         Image(bmp.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
                         if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
@@ -863,7 +863,7 @@ private fun PortraitThumbFixed(bmp: android.graphics.Bitmap?, thumbH: Dp, mirror
     bmp?.let {
         Box(
             Modifier.height(thumbH).aspectRatio(9f / 16f)
-                .clip(RoundedCornerShape(8.dp)).background(Color.Black)
+                .clip(RoundedCornerShape(6.dp)).background(Color.Black)
         ) {
             Image(it.asImageBitmap(), "Portrait", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
             if (!isPro) ThumbnailWatermark(Alignment.TopEnd)
@@ -876,7 +876,7 @@ private fun LandscapeThumbFixed(bmp: android.graphics.Bitmap?, thumbH: Dp, mirro
     bmp?.let {
         Box(
             Modifier.height(thumbH).aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp)).background(Color.Black)
+                .clip(RoundedCornerShape(6.dp)).background(Color.Black)
         ) {
             Image(it.asImageBitmap(), "Landscape", Modifier.fillMaxSize().then(mirrorMod), contentScale = ContentScale.Crop)
             if (!isPro) ThumbnailWatermark(Alignment.BottomEnd)
