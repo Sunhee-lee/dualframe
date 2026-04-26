@@ -615,7 +615,7 @@ private fun AspectLabel(text: String, anchor: Alignment, rotation: Float) {
             Text(text = text, color = Color.White, fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.rotate(rotation)
-                    .background(Color(0x77000000), RoundedCornerShape(6.dp))
+                    .background(Color(0x80000000), RoundedCornerShape(6.dp))
                     .padding(horizontal = 8.dp, vertical = 3.dp))
         }
     }
