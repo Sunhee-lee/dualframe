@@ -731,12 +731,12 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
             Row(
                 modifier = Modifier.fillMaxSize()
                     .rotate(landscapeRot)
-                    .padding(start = 16.dp, end = 8.dp, top = 24.dp, bottom = 10.dp),
+                    .padding(start = 30.dp, end = 30.dp, top = 24.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Thumbnails
                 BoxWithConstraints(
-                    modifier = Modifier.weight(0.5f),
+                    modifier = Modifier.weight(0.55f),
                     contentAlignment = Alignment.Center,
                 ) {
                     val spacing = 6.dp
@@ -766,23 +766,23 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
                 // Right: buttons centered vertically
                 Column(
-                    modifier = Modifier.weight(0.5f).padding(start = 6.dp),
+                    modifier = Modifier.weight(0.45f).padding(start = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(0.63f), saveEnabled, isSaved = state.saveMessage != null) {
+                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(), saveEnabled, isSaved = state.saveMessage != null) {
                         viewModel.saveBothWithWatermark()
                     }
                     if (!isPro) {
-                        RemoveWatermarkResultButton(Modifier.fillMaxWidth(0.63f), state.appStatus != AppStatus.SAVING) {
+                        RemoveWatermarkResultButton(Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
                             viewModel.showRemoveWatermarkDialog()
                         }
                     }
-                    ResultButton(stringResource(R.string.btn_view_in_gallery), Modifier.fillMaxWidth(0.63f), true) {
+                    ResultButton(stringResource(R.string.btn_view_in_gallery), Modifier.fillMaxWidth(), true) {
                         try { context.startActivity(buildGalleryIntent(context)) }
                         catch (_: Exception) {}
                     }
-                    ResultButton(stringResource(R.string.btn_retake), Modifier.fillMaxWidth(0.63f), true) {
+                    ResultButton(stringResource(R.string.btn_retake), Modifier.fillMaxWidth(), true) {
                         viewModel.resetToIdle()
                     }
                 }
