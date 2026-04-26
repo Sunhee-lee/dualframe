@@ -770,19 +770,19 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(0.9f), saveEnabled, isSaved = state.saveMessage != null) {
+                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(0.63f), saveEnabled, isSaved = state.saveMessage != null) {
                         viewModel.saveBothWithWatermark()
                     }
                     if (!isPro) {
-                        RemoveWatermarkResultButton(Modifier.fillMaxWidth(0.9f), state.appStatus != AppStatus.SAVING) {
+                        RemoveWatermarkResultButton(Modifier.fillMaxWidth(0.63f), state.appStatus != AppStatus.SAVING) {
                             viewModel.showRemoveWatermarkDialog()
                         }
                     }
-                    ResultButton(stringResource(R.string.btn_view_in_gallery), Modifier.fillMaxWidth(0.9f), true) {
+                    ResultButton(stringResource(R.string.btn_view_in_gallery), Modifier.fillMaxWidth(0.63f), true) {
                         try { context.startActivity(buildGalleryIntent(context)) }
                         catch (_: Exception) {}
                     }
-                    ResultButton(stringResource(R.string.btn_retake), Modifier.fillMaxWidth(0.9f), true) {
+                    ResultButton(stringResource(R.string.btn_retake), Modifier.fillMaxWidth(0.63f), true) {
                         viewModel.resetToIdle()
                     }
                 }
