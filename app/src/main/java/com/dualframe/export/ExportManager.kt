@@ -1,6 +1,9 @@
 package com.dualframe.export
 
 import android.content.Context
+import android.media.MediaCodecList
+import android.media.MediaFormat
+import android.os.Build
 import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
@@ -23,30 +26,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 
-/**
- * Exports the master recording into two aspect ratios: 16:9 and 9:16.
- *
- * Quality-preserving strategy:
- * - Native output (matches master framing): file copy, no re-encode, no quality loss.
- * - Derived output (different aspect): Transformer center-crop with explicit resolution
- *   preservation via Presentation.createForHeight() to prevent default downscaling.
- *
- * Media3 Transformer, when effects are applied, may default to a lower output resolution
- * (often 720p). We counter this by explicitly requesting the output height to match
- * the cropped region's actual pixel dimensions.
- */
 @UnstableApi
 class ExportManager(private val context: Context) {
 
     companion object {
         private const val TAG = "ExportManager"
-        const val ASPECT_16x9 = 16f / 9f  // 1.778
-        const val ASPECT_9x16 = 9f / 16f  // 0.5625
+        const val ASPECT_16x9 = 16f / 9f
+        const val ASPECT_9x16 = 9f / 16f
+        private const val FHD_MAX_DIMENSION = 1920
     }
 
-    /**
-     * Determine whether the master file is natively portrait or landscape.
-     */
+    var didFallbackToFhd: Boolean = false
+        private set
+
     fun isMasterPortrait(masterFile: File): Boolean {
         val metadata = VideoMetadata.fromFile(masterFile)
         val aspect = metadata?.displayAspectRatio ?: ASPECT_16x9
@@ -56,14 +48,6 @@ class ExportManager(private val context: Context) {
         return isPortrait
     }
 
-    /**
-     * "Export" the native framing by copying the master file directly.
-     * No re-encode, no crop, no quality loss. This preserves the exact recorded resolution.
-     *
-     * If the master aspect doesn't exactly match the target (e.g., camera records at
-     * a slightly non-standard ratio), the copy still preserves full quality — the tiny
-     * aspect difference is negligible for playback.
-     */
     suspend fun exportNativeCopy(
         masterFile: File,
         fileSuffix: String,
@@ -74,12 +58,18 @@ class ExportManager(private val context: Context) {
             onProgress(0.1f)
             masterFile.inputStream().use { input ->
                 outputFile.outputStream().use { output ->
-                    input.copyTo(output)
+                    val buffer = ByteArray(8192)
+                    val totalBytes = masterFile.length()
+                    var copiedBytes = 0L
+                    var bytesRead: Int
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        copiedBytes += bytesRead
+                        onProgress(0.1f + 0.9f * (copiedBytes.toFloat() / totalBytes))
+                    }
                 }
             }
-            onProgress(1f)
-            Log.i(TAG, "Native copy complete: ${outputFile.absolutePath} " +
-                "(${outputFile.length() / 1024}KB, no re-encode)")
+            Log.i(TAG, "$fileSuffix native copy complete: ${outputFile.absolutePath}")
             outputFile
         } catch (e: Exception) {
             Log.e(TAG, "Native copy failed", e)
@@ -88,19 +78,6 @@ class ExportManager(private val context: Context) {
         }
     }
 
-    /**
-     * Export the master file to a different aspect ratio via center-crop.
-     * Uses Transformer with explicit resolution preservation.
-     *
-     * The key to avoiding quality loss: after computing the crop region's pixel
-     * dimensions, we set Presentation.createForHeight() to match. This prevents
-     * Transformer from applying its default downscale.
-     *
-     * Example for portrait 1080x1920 master → 16:9 crop:
-     *   Crop keeps full width (1080px) and 31.6% of height (607px).
-     *   We set Presentation height to 607 → output is 1080x607 at full quality.
-     *   Without this, Transformer would default to ~720p → ~1280x720.
-     */
     suspend fun exportCropped(
         masterFile: File,
         targetAspect: Float,
@@ -108,42 +85,65 @@ class ExportManager(private val context: Context) {
         verticalOffset: Float = 0f,
         onProgress: (Float) -> Unit,
     ): File? = withContext(Dispatchers.Main) {
+        didFallbackToFhd = false
         val outputFile = FileStorage.createExportFile(context, fileSuffix)
+        val metadata = VideoMetadata.fromFile(masterFile)
+        if (metadata == null) {
+            Log.e(TAG, "Cannot read metadata for crop")
+        }
+
+        logDeviceInfo(metadata)
+
         try {
-            val metadata = VideoMetadata.fromFile(masterFile)
-            if (metadata == null) {
-                Log.e(TAG, "Cannot read metadata for crop")
-            }
             runCropTransform(
                 inputFile = masterFile,
                 outputFile = outputFile,
                 targetAspectRatio = targetAspect,
                 verticalOffset = verticalOffset,
                 sourceMetadata = metadata,
+                maxDimension = null,
                 onProgress = onProgress,
             )
             Log.i(TAG, "$fileSuffix crop export complete: ${outputFile.absolutePath}")
             outputFile
         } catch (e: Exception) {
-            Log.e(TAG, "$fileSuffix crop export failed", e)
+            Log.e(TAG, "$fileSuffix crop export FAILED at native resolution", e)
+            logExportError(e, metadata)
             outputFile.delete()
-            null
+
+            // Retry with FHD cap
+            val fhdFile = FileStorage.createExportFile(context, fileSuffix)
+            try {
+                Log.i(TAG, "Retrying $fileSuffix export with FHD cap ($FHD_MAX_DIMENSION)")
+                didFallbackToFhd = true
+                runCropTransform(
+                    inputFile = masterFile,
+                    outputFile = fhdFile,
+                    targetAspectRatio = targetAspect,
+                    verticalOffset = verticalOffset,
+                    sourceMetadata = metadata,
+                    maxDimension = FHD_MAX_DIMENSION,
+                    onProgress = onProgress,
+                )
+                Log.i(TAG, "$fileSuffix FHD fallback export complete: ${fhdFile.absolutePath}")
+                fhdFile
+            } catch (retryError: Exception) {
+                Log.e(TAG, "$fileSuffix FHD fallback also failed", retryError)
+                logExportError(retryError, metadata)
+                fhdFile.delete()
+                didFallbackToFhd = false
+                null
+            }
         }
     }
 
-    /**
-     * Center-crop + re-encode with explicit resolution preservation.
-     *
-     * Transformer applies rotation metadata first, then the Crop effect.
-     * We compute the exact pixel dimensions of the cropped output and use
-     * Presentation to lock that resolution, preventing default downscaling.
-     */
     private suspend fun runCropTransform(
         inputFile: File,
         outputFile: File,
         targetAspectRatio: Float,
         verticalOffset: Float = 0f,
         sourceMetadata: VideoMetadata?,
+        maxDimension: Int? = null,
         onProgress: (Float) -> Unit,
     ) = suspendCancellableCoroutine { cont ->
 
@@ -154,8 +154,19 @@ class ExportManager(private val context: Context) {
         val crop = CropMath.centerCropWithVerticalOffset(
             sourceAspect, targetAspectRatio, verticalOffset,
         )
-        val outputW = (displayW * crop.keepFractionX).toInt().coerceAtLeast(2)
-        val outputH = (displayH * crop.keepFractionY).toInt().coerceAtLeast(2)
+        var outputW = (displayW * crop.keepFractionX).toInt().coerceAtLeast(2)
+        var outputH = (displayH * crop.keepFractionY).toInt().coerceAtLeast(2)
+
+        // Apply FHD cap if specified
+        if (maxDimension != null) {
+            val maxDim = maxOf(outputW, outputH)
+            if (maxDim > maxDimension) {
+                val scale = maxDimension.toFloat() / maxDim
+                outputW = (outputW * scale).toInt().coerceAtLeast(2)
+                outputH = (outputH * scale).toInt().coerceAtLeast(2)
+                Log.i(TAG, "Resolution capped to ${outputW}x${outputH} (max=$maxDimension)")
+            }
+        }
 
         Log.i(TAG, "Export crop: source=${displayW}x${displayH} " +
             "(aspect=${"%.3f".format(sourceAspect)}) → target=${"%.3f".format(targetAspectRatio)} " +
@@ -164,10 +175,6 @@ class ExportManager(private val context: Context) {
             "B=${"%.3f".format(crop.bottom)} T=${"%.3f".format(crop.top)}]")
 
         val cropEffect = Crop(crop.left, crop.right, crop.bottom, crop.top)
-
-        // Presentation locks the output to the exact cropped pixel dimensions.
-        // Without this, Transformer defaults to ~720p when effects are present.
-        // We use the output height and let Presentation compute width from aspect.
         val presentation = Presentation.createForHeight(outputH.coerceAtLeast(2))
 
         val mediaItem = MediaItem.fromUri(inputFile.toURI().toString())
@@ -202,7 +209,7 @@ class ExportManager(private val context: Context) {
                     exportException: ExportException,
                 ) {
                     handler.removeCallbacks(pollRunnable)
-                    Log.e(TAG, "Transformer error", exportException)
+                    Log.e(TAG, "Transformer error: code=${exportException.errorCode}", exportException)
                     if (cont.isActive) cont.resumeWithException(exportException)
                 }
             })
@@ -216,5 +223,26 @@ class ExportManager(private val context: Context) {
             handler.removeCallbacks(pollRunnable)
             outputFile.delete()
         }
+    }
+
+    private fun logDeviceInfo(metadata: VideoMetadata?) {
+        Log.i(TAG, "=== EXPORT DEVICE INFO ===")
+        Log.i(TAG, "  Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+        Log.i(TAG, "  Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+        Log.i(TAG, "  Input: ${metadata?.rawWidth}x${metadata?.rawHeight} rot=${metadata?.rotation}")
+        Log.i(TAG, "  Display: ${metadata?.displayWidth}x${metadata?.displayHeight}")
+        Log.i(TAG, "==========================")
+    }
+
+    private fun logExportError(e: Exception, metadata: VideoMetadata?) {
+        val errorCode = if (e is ExportException) e.errorCode else -1
+        Log.e(TAG, "=== EXPORT ERROR ===")
+        Log.e(TAG, "  Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+        Log.e(TAG, "  Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+        Log.e(TAG, "  Input: ${metadata?.displayWidth}x${metadata?.displayHeight}")
+        Log.e(TAG, "  ErrorCode: $errorCode")
+        Log.e(TAG, "  Message: ${e.message}")
+        Log.e(TAG, "  Cause: ${e.cause?.message}")
+        Log.e(TAG, "====================")
     }
 }

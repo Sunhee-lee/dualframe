@@ -418,6 +418,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
+            if (exportManager.didFallbackToFhd) {
+                _uiState.update { it.copy(showFhdFallbackToast = true) }
+            }
+
             val croppedMeta = withContext(Dispatchers.IO) { VideoMetadata.fromFile(croppedFile) }
             val croppedRes = croppedMeta?.let { "${it.displayWidth}x${it.displayHeight}" } ?: ""
             val croppedFps = withContext(Dispatchers.IO) { VideoMetadata.readActualFps(croppedFile) }

@@ -286,6 +286,15 @@ fun MainScreen(
         }
     }
 
+    // FHD fallback toast
+    if (state.showFhdFallbackToast) {
+        LaunchedEffect(Unit) {
+            android.widget.Toast.makeText(context,
+                context.getString(R.string.toast_export_fallback_fhd),
+                android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
     // Fullscreen result overlay
     if (state.appStatus == AppStatus.EXPORT_COMPLETE || state.appStatus == AppStatus.SAVING) {
         ResultActions(state, viewModel, context, deviceRotation)

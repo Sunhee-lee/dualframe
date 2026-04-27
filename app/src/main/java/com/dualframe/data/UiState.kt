@@ -31,6 +31,7 @@ data class UiState(
     val saveMessage: String? = null,
     // Whether the Remove Watermark dialog is showing
     val showRemoveWatermarkDialog: Boolean = false,
+    val showFhdFallbackToast: Boolean = false,
     // Settings
     val settings: AppSettings = AppSettings(),
     val supportedQualities: List<VideoQuality> = VideoQuality.entries,

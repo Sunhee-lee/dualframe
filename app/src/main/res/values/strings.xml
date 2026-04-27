@@ -37,6 +37,7 @@
     <string name="error_dismiss">Dismiss</string>
     <string name="error_ad_not_available">Ad not available. Please try again later.</string>
     <string name="toast_watermark_removed">Watermarks removed from both saved videos.</string>
+    <string name="toast_export_fallback_fhd">4K export not supported on this device. Saved in FHD.</string>
 
     <!-- Settings tiles -->
     <string name="label_on">ON</string>
