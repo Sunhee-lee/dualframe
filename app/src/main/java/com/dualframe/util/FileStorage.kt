@@ -5,47 +5,37 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Handles file creation for video recordings and exports.
- *
- * Strategy:
- * - Master recordings go to app-private storage first (fast, no permissions needed).
- * - Exported files get copied to MediaStore (Movies/) so they're visible in gallery.
- * - We use timestamps for deterministic, collision-free naming.
- */
 object FileStorage {
 
-    private const val DIRECTORY = "DualFrame"
+    private const val TAG = "FileStorage"
+    private const val TEMP_DIR = "dualframe_export_temp"
+    private const val GALLERY_DIR = "DualFrame"
+    private const val STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000L
     private val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
 
-    /** Create a temp file in app-private cache for the master recording. */
     fun createMasterFile(context: Context): File {
-        val dir = File(context.cacheDir, DIRECTORY).apply { mkdirs() }
+        val dir = File(context.cacheDir, TEMP_DIR).apply { mkdirs() }
         val stamp = dateFormat.format(Date())
         return File(dir, "DF_${stamp}_master.mp4")
     }
 
-    /** Build output file path for an export (stays in cache until saved to MediaStore). */
     fun createExportFile(context: Context, suffix: String): File {
-        val dir = File(context.cacheDir, DIRECTORY).apply { mkdirs() }
+        val dir = File(context.cacheDir, TEMP_DIR).apply { mkdirs() }
         val stamp = dateFormat.format(Date())
         return File(dir, "DF_${stamp}_$suffix.mp4")
     }
 
-    /**
-     * Copy a finished video file into MediaStore Movies/ so it appears in the gallery.
-     * Returns the content URI on success, null on failure.
-     */
     fun saveToMediaStore(context: Context, sourceFile: File, displayName: String): Uri? {
         val contentValues = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, displayName)
             put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-            put(MediaStore.Video.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/$DIRECTORY")
+            put(MediaStore.Video.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/$GALLERY_DIR")
             put(MediaStore.Video.Media.IS_PENDING, 1)
         }
 
@@ -64,16 +54,56 @@ object FileStorage {
             resolver.update(uri, contentValues, null, null)
             uri
         } catch (e: Exception) {
-            resolver.delete(uri, null, null)
+            Log.e(TAG, "MediaStore save failed, cleaning pending Uri", e)
+            runCatching { resolver.delete(uri, null, null) }
             null
         }
     }
 
-    /** Clean up old temp files from app cache. */
-    fun cleanupCache(context: Context) {
-        val dir = File(context.cacheDir, DIRECTORY)
-        if (dir.exists()) {
-            dir.listFiles()?.forEach { it.delete() }
+    fun deleteTempFile(file: File?) {
+        if (file == null) return
+        runCatching {
+            if (file.exists()) {
+                file.delete()
+                Log.d(TAG, "Deleted temp: ${file.name}")
+            }
+        }
+    }
+
+    fun deletePendingUri(context: Context, uri: Uri?) {
+        if (uri == null) return
+        runCatching {
+            context.contentResolver.delete(uri, null, null)
+            Log.d(TAG, "Deleted pending Uri: $uri")
+        }
+    }
+
+    fun cleanupStaleTemp(context: Context) {
+        runCatching {
+            val dir = File(context.cacheDir, TEMP_DIR)
+            if (!dir.exists()) return
+            val now = System.currentTimeMillis()
+            var count = 0
+            dir.listFiles()?.forEach { file ->
+                if (now - file.lastModified() > STALE_THRESHOLD_MS) {
+                    file.delete()
+                    count++
+                }
+            }
+            if (count > 0) Log.i(TAG, "Cleaned $count stale temp files (>24h)")
+        }
+    }
+
+    fun cleanupAllTemp(context: Context) {
+        runCatching {
+            val dir = File(context.cacheDir, TEMP_DIR)
+            if (!dir.exists()) return
+            var count = 0
+            dir.listFiles()?.forEach { file ->
+                file.delete()
+                count++
+            }
+            if (count > 0) Log.i(TAG, "Cleaned all $count temp files")
         }
     }
 }

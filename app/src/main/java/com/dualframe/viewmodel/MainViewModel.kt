@@ -514,6 +514,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 FileStorage.saveToMediaStore(app, sourceCropped, croppedFile.name)
             }
 
+            // Clean temp files after successful save
+            if (uriN != null && uriC != null) {
+                withContext(Dispatchers.IO) {
+                    FileStorage.deleteTempFile(sourceNative)
+                    FileStorage.deleteTempFile(sourceCropped)
+                    FileStorage.deleteTempFile(nativeFile)
+                    FileStorage.deleteTempFile(croppedFile)
+                }
+            }
+
             _uiState.update {
                 it.copy(
                     appStatus = AppStatus.EXPORT_COMPLETE,
@@ -567,6 +577,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             val uriC = withContext(Dispatchers.IO) {
                 FileStorage.saveToMediaStore(app, sourceCropped, croppedFile.name)
+            }
+
+            if (uriN != null && uriC != null) {
+                withContext(Dispatchers.IO) {
+                    FileStorage.deleteTempFile(sourceNative)
+                    FileStorage.deleteTempFile(sourceCropped)
+                    FileStorage.deleteTempFile(nativeFile)
+                    FileStorage.deleteTempFile(croppedFile)
+                }
             }
 
             _uiState.update {
