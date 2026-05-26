@@ -15,22 +15,8 @@ import android.view.Surface
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * GPU-based dual preview renderer.
- *
- * Takes a single camera SurfaceTexture and renders it into two output surfaces
- * (TextureViews) with different crop transforms — one for 9:16, one for 16:9.
- * All rendering happens on a dedicated GL thread. Zero CPU bitmap processing.
- *
- * Architecture:
- * 1. Creates an EGL context + OES texture + SurfaceTexture for CameraX to write into
- * 2. On each frame (onFrameAvailable), renders the camera texture twice:
- *    a) To surface1 with 9:16 center-crop vertex transform
- *    b) To surface2 with 16:9 center-crop vertex transform
- * 3. The crop is achieved by scaling the quad beyond [-1,1] clip space — the GPU clips
- *    the overflow, showing only the center portion matching the target aspect ratio.
- */
 class DualPreviewRenderer {
 
     companion object {
@@ -48,8 +34,6 @@ class DualPreviewRenderer {
             }
         """
 
-        // Beauty shader — values must match BeautyParams.kt constants.
-        // GLSL can't read Kotlin values, so keep numbers in sync manually.
         private const val FRAGMENT_SHADER = """
             #extension GL_OES_EGL_image_external : require
             precision mediump float;
@@ -59,7 +43,6 @@ class DualPreviewRenderer {
             void main() {
                 vec4 color = texture2D(sTexture, vTexCoord);
                 if (uBeauty > 0.0) {
-                    // [Blur] preview-only — BeautyParams.BLUR_OFFSET / BLUR_MIX
                     float off = 0.0018;
                     vec4 s1 = texture2D(sTexture, vTexCoord + vec2(off, 0.0));
                     vec4 s2 = texture2D(sTexture, vTexCoord + vec2(-off, 0.0));
@@ -67,15 +50,11 @@ class DualPreviewRenderer {
                     vec4 s4 = texture2D(sTexture, vTexCoord + vec2(0.0, -off));
                     vec4 blurred = (color + s1 + s2 + s3 + s4) / 5.0;
                     color.rgb = mix(color.rgb, blurred.rgb, 0.20);
-                    // [Brightness] BeautyParams.BRIGHTNESS
                     color.rgb = color.rgb + 0.08;
-                    // [Contrast] BeautyParams.CONTRAST
                     color.rgb = (color.rgb - 0.5) * (1.0 + 0.08) + 0.5;
-                    // [RGB] BeautyParams — 노란기 제거, 약간 쿨톤
                     color.r = color.r * 1.0;
                     color.g = color.g * 0.995;
                     color.b = color.b * 1.005;
-                    // [Saturation] BeautyParams.SATURATION_BOOST (3% ≈ 1.03 multiplier)
                     float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
                     color.rgb = mix(vec3(gray), color.rgb, 1.03);
                     color.rgb = clamp(color.rgb, 0.0, 1.0);
@@ -84,12 +63,11 @@ class DualPreviewRenderer {
             }
         """
 
-        // Fullscreen quad vertices (x, y) and texture coordinates (s, t)
         private val QUAD_VERTICES = floatArrayOf(
-            -1f, -1f,  0f, 0f,  // bottom-left
-             1f, -1f,  1f, 0f,  // bottom-right
-            -1f,  1f,  0f, 1f,  // top-left
-             1f,  1f,  1f, 1f,  // top-right
+            -1f, -1f,  0f, 0f,
+             1f, -1f,  1f, 0f,
+            -1f,  1f,  0f, 1f,
+             1f,  1f,  1f, 1f,
         )
     }
 
@@ -109,24 +87,12 @@ class DualPreviewRenderer {
     private var eglSurface9x16: EGLSurface = EGL14.EGL_NO_SURFACE
     private var eglSurface16x9: EGLSurface = EGL14.EGL_NO_SURFACE
 
-    // Camera preview dimensions (set when CameraX provides the SurfaceRequest)
     private var previewWidth = 0
     private var previewHeight = 0
 
-    // Mirror for front camera
     var mirrorHorizontally = false
-    // Beauty effect for front camera (soft blur + brightness + warm tone)
     var beautyEnabled = false
-
-    // Aspect ratio of the recorder master buffer (shorter/longer, so always ≤ 1).
-    // Preview is first cropped to this aspect before cropping to each panel's aspect,
-    // so the visible preview FOV matches what's actually saved (WYSIWYG).
-    // Set by CameraManager after bind from VideoCapture.attachedSurfaceResolution.
     var masterVisualAspect: Float = 9f / 16f
-
-    // User-adjustable vertical crop offset for the landscape (16:9) panel.
-    // Normalized [-1, 1]: -1 = bottom, 0 = center, +1 = top.
-    // Set by drag gesture on the landscape preview. Read by export pipeline.
     @Volatile var landscapeCropOffsetY: Float = 0f
 
     private val stMatrix = FloatArray(16)
@@ -138,34 +104,34 @@ class DualPreviewRenderer {
     private var aPositionHandle = 0
     private var aTexCoordHandle = 0
 
-    /**
-     * Initialize the GL context and camera texture on a dedicated thread.
-     * Returns the SurfaceTexture that CameraX should write into.
-     */
+    private val released = AtomicBoolean(false)
+
     fun init(onReady: (SurfaceTexture) -> Unit) {
+        released.set(false)
         glThread = HandlerThread("DualPreviewGL").apply { start() }
         glHandler = Handler(glThread!!.looper)
 
         glHandler?.post {
-            initEGL()
-            initShaders()
-            cameraTextureId = createOESTexture()
+            try {
+                initEGL()
+                initShaders()
+                cameraTextureId = createOESTexture()
 
-            val st = SurfaceTexture(cameraTextureId)
-            cameraSurfaceTexture = st
+                val st = SurfaceTexture(cameraTextureId)
+                cameraSurfaceTexture = st
 
-            st.setOnFrameAvailableListener({ renderFrame() }, glHandler)
+                st.setOnFrameAvailableListener({ renderFrame() }, glHandler)
 
-            // Callback on the GL thread — caller can use this to provide to CameraX
-            onReady(st)
-            Log.i(TAG, "GL renderer initialized, camera texture ID=$cameraTextureId")
+                onReady(st)
+                Log.i(TAG, "GL renderer initialized, camera texture ID=$cameraTextureId")
+            } catch (e: Exception) {
+                Log.e(TAG, "GL init failed", e)
+            }
         }
     }
 
-    /** Get the camera SurfaceTexture if already initialized, or null. */
     fun getCameraSurfaceTexture(): SurfaceTexture? = cameraSurfaceTexture
 
-    /** Set the camera preview resolution (from CameraX SurfaceRequest). */
     fun setPreviewSize(width: Int, height: Int) {
         previewWidth = width
         previewHeight = height
@@ -173,39 +139,53 @@ class DualPreviewRenderer {
         Log.i(TAG, "Preview size set: ${width}x${height}")
     }
 
-    /** Set the output surface for the 9:16 preview panel. */
     fun setOutput9x16(surface: Surface) {
         glHandler?.post {
-            if (eglSurface9x16 != EGL14.EGL_NO_SURFACE) {
-                EGL14.eglDestroySurface(eglDisplay, eglSurface9x16)
+            if (released.get()) return@post
+            try {
+                if (eglSurface9x16 != EGL14.EGL_NO_SURFACE) {
+                    EGL14.eglDestroySurface(eglDisplay, eglSurface9x16)
+                }
+                surface9x16 = surface
+                eglSurface9x16 = createEGLWindowSurface(surface)
+                Log.i(TAG, "9:16 output surface set")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set 9:16 surface", e)
+                eglSurface9x16 = EGL14.EGL_NO_SURFACE
             }
-            surface9x16 = surface
-            eglSurface9x16 = createEGLWindowSurface(surface)
-            Log.i(TAG, "9:16 output surface set")
         }
     }
 
-    /** Set the output surface for the 16:9 preview panel. */
     fun setOutput16x9(surface: Surface) {
         glHandler?.post {
-            if (eglSurface16x9 != EGL14.EGL_NO_SURFACE) {
-                EGL14.eglDestroySurface(eglDisplay, eglSurface16x9)
+            if (released.get()) return@post
+            try {
+                if (eglSurface16x9 != EGL14.EGL_NO_SURFACE) {
+                    EGL14.eglDestroySurface(eglDisplay, eglSurface16x9)
+                }
+                surface16x9 = surface
+                eglSurface16x9 = createEGLWindowSurface(surface)
+                Log.i(TAG, "16:9 output surface set")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set 16:9 surface", e)
+                eglSurface16x9 = EGL14.EGL_NO_SURFACE
             }
-            surface16x9 = surface
-            eglSurface16x9 = createEGLWindowSurface(surface)
-            Log.i(TAG, "16:9 output surface set")
         }
     }
 
-    /** Render the camera texture to both output surfaces. */
     private fun renderFrame() {
-        val st = cameraSurfaceTexture ?: return
-        st.updateTexImage()
-        st.getTransformMatrix(stMatrix)
+        if (released.get()) return
 
-        // Compute the post-rotation visual aspect. The SurfaceTexture's ST matrix
-        // handles sensor rotation, so the visual content is in display orientation.
-        // For a 1920x1080 landscape buffer with 90° rotation → visual is 1080x1920.
+        val st = cameraSurfaceTexture ?: return
+
+        try {
+            st.updateTexImage()
+            st.getTransformMatrix(stMatrix)
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "SurfaceTexture invalid, skipping frame", e)
+            return
+        }
+
         val visualAspect = if (previewWidth > 0 && previewHeight > 0) {
             val shorter = minOf(previewWidth, previewHeight).toFloat()
             val longer = maxOf(previewWidth, previewHeight).toFloat()
@@ -222,93 +202,80 @@ class DualPreviewRenderer {
         }
     }
 
-    /**
-     * Render the camera texture to one output surface using SHARED crop math.
-     *
-     * Uses CropMath.centerCrop() — the SAME function used by ExportManager —
-     * so preview and saved output show the exact same visible region (WYSIWYG).
-     *
-     * Instead of scaling the quad to overflow clip space (old approach),
-     * we keep the quad at [-1,1] and adjust texture coordinates to select
-     * the center-crop region. This matches the export's NDC crop bounds.
-     */
     private fun renderToSurface(eglSurface: EGLSurface, visualAspect: Float, cropOffsetY: Float) {
-        if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) return
+        if (released.get()) return
 
-        val surfaceWidth = intArrayOf(0)
-        val surfaceHeight = intArrayOf(0)
-        EGL14.eglQuerySurface(eglDisplay, eglSurface, EGL14.EGL_WIDTH, surfaceWidth, 0)
-        EGL14.eglQuerySurface(eglDisplay, eglSurface, EGL14.EGL_HEIGHT, surfaceHeight, 0)
-        val sw = surfaceWidth[0]
-        val sh = surfaceHeight[0]
-        if (sw <= 0 || sh <= 0) return
-        GLES20.glViewport(0, 0, sw, sh)
+        try {
+            if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) return
 
-        GLES20.glClearColor(0f, 0f, 0f, 1f)
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+            val surfaceWidth = intArrayOf(0)
+            val surfaceHeight = intArrayOf(0)
+            EGL14.eglQuerySurface(eglDisplay, eglSurface, EGL14.EGL_WIDTH, surfaceWidth, 0)
+            EGL14.eglQuerySurface(eglDisplay, eglSurface, EGL14.EGL_HEIGHT, surfaceHeight, 0)
+            val sw = surfaceWidth[0]
+            val sh = surfaceHeight[0]
+            if (sw <= 0 || sh <= 0) return
+            GLES20.glViewport(0, 0, sw, sh)
 
-        GLES20.glUseProgram(program)
+            GLES20.glClearColor(0f, 0f, 0f, 1f)
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
 
-        // Two-stage crop for WYSIWYG with the saved master.
-        // Stage A: preview buffer → master aspect (mimic ViewPort crop on Preview)
-        // Stage B: master → panel aspect (with optional vertical offset for landscape)
-        val surfaceAspect = sw.toFloat() / sh.toFloat()
-        val cropA = com.dualframe.util.CropMath.centerCrop(visualAspect, masterVisualAspect)
-        val cropB = com.dualframe.util.CropMath.centerCropWithVerticalOffset(
-            masterVisualAspect, surfaceAspect, cropOffsetY,
-        )
-        val texA = com.dualframe.util.CropMath.ndcToTexCoords(cropA)
-        val texB = com.dualframe.util.CropMath.ndcToTexCoords(cropB)
-        val oX = texA.offsetX + texA.rangeX * texB.offsetX
-        val oY = texA.offsetY + texA.rangeY * texB.offsetY
-        val rX = texA.rangeX * texB.rangeX
-        val rY = texA.rangeY * texB.rangeY
+            GLES20.glUseProgram(program)
 
-        val cropVertices = floatArrayOf(
-            -1f, -1f,  oX,       oY,        // bottom-left
-             1f, -1f,  oX + rX,  oY,        // bottom-right
-            -1f,  1f,  oX,       oY + rY,   // top-left
-             1f,  1f,  oX + rX,  oY + rY,   // top-right
-        )
+            val surfaceAspect = sw.toFloat() / sh.toFloat()
+            val cropA = com.dualframe.util.CropMath.centerCrop(visualAspect, masterVisualAspect)
+            val cropB = com.dualframe.util.CropMath.centerCropWithVerticalOffset(
+                masterVisualAspect, surfaceAspect, cropOffsetY,
+            )
+            val texA = com.dualframe.util.CropMath.ndcToTexCoords(cropA)
+            val texB = com.dualframe.util.CropMath.ndcToTexCoords(cropB)
+            val oX = texA.offsetX + texA.rangeX * texB.offsetX
+            val oY = texA.offsetY + texA.rangeY * texB.offsetY
+            val rX = texA.rangeX * texB.rangeX
+            val rY = texA.rangeY * texB.rangeY
 
-        val cropBuf = java.nio.ByteBuffer.allocateDirect(cropVertices.size * 4)
-            .order(java.nio.ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .apply { put(cropVertices); position(0) }
+            val cropVertices = floatArrayOf(
+                -1f, -1f,  oX,       oY,
+                 1f, -1f,  oX + rX,  oY,
+                -1f,  1f,  oX,       oY + rY,
+                 1f,  1f,  oX + rX,  oY + rY,
+            )
 
-        // MVP is identity — no scaling, no overflow, no stretch.
-        // The crop is handled entirely by texture coordinates.
-        val mvp = FloatArray(16).apply { android.opengl.Matrix.setIdentityM(this, 0) }
+            val cropBuf = ByteBuffer.allocateDirect(cropVertices.size * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+                .apply { put(cropVertices); position(0) }
 
-        // Front camera mirror
-        if (mirrorHorizontally) {
-            android.opengl.Matrix.scaleM(mvp, 0, -1f, 1f, 1f)
+            val mvp = FloatArray(16).apply { android.opengl.Matrix.setIdentityM(this, 0) }
+
+            if (mirrorHorizontally) {
+                android.opengl.Matrix.scaleM(mvp, 0, -1f, 1f, 1f)
+            }
+
+            GLES20.glUniformMatrix4fv(uSTMatrixHandle, 1, false, stMatrix, 0)
+            GLES20.glUniformMatrix4fv(uMVPMatrixHandle, 1, false, mvp, 0)
+            GLES20.glUniform1f(uBeautyHandle, if (beautyEnabled) 1.0f else 0.0f)
+
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+            GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId)
+
+            cropBuf.position(0)
+            GLES20.glEnableVertexAttribArray(aPositionHandle)
+            GLES20.glVertexAttribPointer(aPositionHandle, 2, GLES20.GL_FLOAT, false, 16, cropBuf)
+
+            cropBuf.position(2)
+            GLES20.glEnableVertexAttribArray(aTexCoordHandle)
+            GLES20.glVertexAttribPointer(aTexCoordHandle, 2, GLES20.GL_FLOAT, false, 16, cropBuf)
+
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+            GLES20.glDisableVertexAttribArray(aPositionHandle)
+            GLES20.glDisableVertexAttribArray(aTexCoordHandle)
+
+            EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+        } catch (e: Exception) {
+            Log.w(TAG, "renderToSurface error, skipping frame", e)
         }
-
-        // Set uniforms
-        GLES20.glUniformMatrix4fv(uSTMatrixHandle, 1, false, stMatrix, 0)
-        GLES20.glUniformMatrix4fv(uMVPMatrixHandle, 1, false, mvp, 0)
-        GLES20.glUniform1f(uBeautyHandle, if (beautyEnabled) 1.0f else 0.0f)
-
-        // Bind texture
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId)
-
-        // Draw quad with cropped texture coordinates
-        cropBuf.position(0)
-        GLES20.glEnableVertexAttribArray(aPositionHandle)
-        GLES20.glVertexAttribPointer(aPositionHandle, 2, GLES20.GL_FLOAT, false, 16, cropBuf)
-
-        cropBuf.position(2)
-        GLES20.glEnableVertexAttribArray(aTexCoordHandle)
-        GLES20.glVertexAttribPointer(aTexCoordHandle, 2, GLES20.GL_FLOAT, false, 16, cropBuf)
-
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
-
-        GLES20.glDisableVertexAttribArray(aPositionHandle)
-        GLES20.glDisableVertexAttribArray(aTexCoordHandle)
-
-        EGL14.eglSwapBuffers(eglDisplay, eglSurface)
     }
 
     // ── EGL setup ─────────────────────────────────────────────────────
@@ -335,7 +302,6 @@ class DualPreviewRenderer {
         val contextAttribs = intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL14.EGL_NONE)
         eglContext = EGL14.eglCreateContext(eglDisplay, eglConfig, EGL14.EGL_NO_CONTEXT, contextAttribs, 0)
 
-        // Create a small pbuffer as the initial current surface (required to compile shaders)
         val pbufferAttribs = intArrayOf(EGL14.EGL_WIDTH, 1, EGL14.EGL_HEIGHT, 1, EGL14.EGL_NONE)
         val pbuffer = EGL14.eglCreatePbufferSurface(eglDisplay, eglConfig, pbufferAttribs, 0)
         EGL14.eglMakeCurrent(eglDisplay, pbuffer, pbuffer, eglContext)
@@ -365,7 +331,6 @@ class DualPreviewRenderer {
         aPositionHandle = GLES20.glGetAttribLocation(program, "aPosition")
         aTexCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
 
-        // Vertex buffer
         val bb = ByteBuffer.allocateDirect(QUAD_VERTICES.size * 4).order(ByteOrder.nativeOrder())
         vertexBuffer = bb.asFloatBuffer().apply {
             put(QUAD_VERTICES)
@@ -404,18 +369,31 @@ class DualPreviewRenderer {
     // ── Cleanup ───────────────────────────────────────────────────────
 
     fun release() {
-        glHandler?.post {
-            cameraSurfaceTexture?.release()
-            cameraSurfaceTexture = null
-            if (eglSurface9x16 != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(eglDisplay, eglSurface9x16)
-            if (eglSurface16x9 != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(eglDisplay, eglSurface16x9)
-            if (eglContext != EGL14.EGL_NO_CONTEXT) EGL14.eglDestroyContext(eglDisplay, eglContext)
-            if (eglDisplay != EGL14.EGL_NO_DISPLAY) EGL14.eglTerminate(eglDisplay)
-            GLES20.glDeleteProgram(program)
-            Log.i(TAG, "GL renderer released")
-        }
-        glThread?.quitSafely()
-        glThread = null
+        if (released.getAndSet(true)) return
+        Log.i(TAG, "Release requested")
+
+        val handler = glHandler
+        val thread = glThread
         glHandler = null
+        glThread = null
+
+        handler?.post {
+            try {
+                cameraSurfaceTexture?.setOnFrameAvailableListener(null)
+                cameraSurfaceTexture?.release()
+                cameraSurfaceTexture = null
+                if (eglSurface9x16 != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(eglDisplay, eglSurface9x16)
+                if (eglSurface16x9 != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(eglDisplay, eglSurface16x9)
+                eglSurface9x16 = EGL14.EGL_NO_SURFACE
+                eglSurface16x9 = EGL14.EGL_NO_SURFACE
+                if (eglContext != EGL14.EGL_NO_CONTEXT) EGL14.eglDestroyContext(eglDisplay, eglContext)
+                if (eglDisplay != EGL14.EGL_NO_DISPLAY) EGL14.eglTerminate(eglDisplay)
+                GLES20.glDeleteProgram(program)
+                Log.i(TAG, "GL renderer released")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during GL release", e)
+            }
+        }
+        thread?.quitSafely()
     }
 }

@@ -53,6 +53,9 @@ class CameraManager(private val context: Context) {
     private var activeRecording: Recording? = null
     private var preview: Preview? = null
     private var camera: androidx.camera.core.Camera? = null
+    @Volatile private var isCameraBound = false
+    @Volatile private var isStartingRecording = false
+    @Volatile private var isStoppingRecording = false
 
     private val _useFrontCamera = MutableStateFlow(false)
     val useFrontCamera: StateFlow<Boolean> = _useFrontCamera.asStateFlow()
@@ -82,6 +85,7 @@ class CameraManager(private val context: Context) {
         try {
             val provider = getCameraProvider()
             cameraProvider = provider
+            isCameraBound = false
             provider.unbindAll()
 
             logDiagnostics("bindInternal", quality)
@@ -143,6 +147,7 @@ class CameraManager(private val context: Context) {
                 .build()
 
             camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
+            isCameraBound = true
             _zoomRatio.value = 1f
             Log.i(TAG, "Camera bound: UseCaseGroup(Preview+VideoCapture) with ViewPort 9:16")
 
@@ -304,46 +309,100 @@ class CameraManager(private val context: Context) {
         hasAudioPermission: Boolean,
         onEvent: (VideoRecordEvent) -> Unit,
     ): File? {
+        if (activeRecording != null) {
+            Log.w(TAG, "startRecording blocked: already recording")
+            return null
+        }
+        if (isStartingRecording) {
+            Log.w(TAG, "startRecording blocked: start in progress")
+            return null
+        }
+        if (isStoppingRecording) {
+            Log.w(TAG, "startRecording blocked: stop in progress")
+            return null
+        }
+        if (!isCameraBound) {
+            Log.e(TAG, "startRecording blocked: camera not bound")
+            return null
+        }
         val capture = videoCapture ?: run {
-            Log.e(TAG, "VideoCapture not initialized")
+            Log.e(TAG, "startRecording blocked: VideoCapture not initialized")
             return null
         }
 
-        val outputFile = FileStorage.createMasterFile(context)
-        val outputOptions = FileOutputOptions.Builder(outputFile).build()
+        isStartingRecording = true
+        return try {
+            val outputFile = FileStorage.createMasterFile(context)
+            val outputOptions = FileOutputOptions.Builder(outputFile).build()
 
-        val pendingRecording = capture.output
-            .prepareRecording(context, outputOptions)
-            .let { pending ->
-                if (audioEnabled && hasAudioPermission) {
-                    @Suppress("MissingPermission")
-                    pending.withAudioEnabled()
-                } else {
-                    if (!audioEnabled) Log.i(TAG, "Audio disabled by user setting")
-                    else Log.w(TAG, "Audio enabled but permission not granted")
-                    pending
+            val pendingRecording = capture.output
+                .prepareRecording(context, outputOptions)
+                .let { pending ->
+                    if (audioEnabled && hasAudioPermission) {
+                        @Suppress("MissingPermission")
+                        pending.withAudioEnabled()
+                    } else {
+                        if (!audioEnabled) Log.i(TAG, "Audio disabled by user setting")
+                        else Log.w(TAG, "Audio enabled but permission not granted")
+                        pending
+                    }
                 }
-            }
 
-        activeRecording = pendingRecording.start(
-            ContextCompat.getMainExecutor(context),
-            onEvent,
-        )
+            activeRecording = pendingRecording.start(
+                ContextCompat.getMainExecutor(context),
+                onEvent,
+            )
 
-        Log.i(TAG, "Recording started: ${outputFile.absolutePath}")
-        return outputFile
+            Log.i(TAG, "Recording started: ${outputFile.absolutePath}")
+            outputFile
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "startRecording failed: IllegalStateException", e)
+            activeRecording = null
+            null
+        } catch (e: Exception) {
+            Log.e(TAG, "startRecording failed", e)
+            activeRecording = null
+            null
+        } finally {
+            isStartingRecording = false
+        }
     }
 
     fun stopRecording() {
-        activeRecording?.stop()
-        activeRecording = null
-        Log.i(TAG, "Recording stop requested")
+        if (activeRecording == null) {
+            Log.w(TAG, "stopRecording: no active recording")
+            return
+        }
+        if (isStoppingRecording) {
+            Log.w(TAG, "stopRecording: already stopping")
+            return
+        }
+        isStoppingRecording = true
+        try {
+            activeRecording?.stop()
+            activeRecording = null
+            Log.i(TAG, "Recording stop requested")
+        } catch (e: Exception) {
+            Log.e(TAG, "stopRecording error", e)
+            activeRecording = null
+        } finally {
+            isStoppingRecording = false
+        }
     }
 
     fun release() {
-        activeRecording?.stop()
+        isCameraBound = false
+        try {
+            activeRecording?.stop()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping recording during release", e)
+        }
         activeRecording = null
-        cameraProvider?.unbindAll()
+        try {
+            cameraProvider?.unbindAll()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error unbinding camera during release", e)
+        }
         cameraProvider = null
         renderer.release()
         boundLifecycleOwner = null
