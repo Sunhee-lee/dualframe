@@ -794,8 +794,6 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                         viewModel.resetToIdle()
                     }
                 }
-                    }
-                }
             }
         } else {
             // ── Portrait: centered vertical layout ──
@@ -890,13 +888,6 @@ private fun LandscapeThumbFixed(bmp: android.graphics.Bitmap?, thumbH: Dp, mirro
     }
 }
 
-private val ShinyGreenBrush = Brush.horizontalGradient(
-    colors = listOf(Color(0xFF228B22), Color(0xFF32CD32), Color(0xFF228B22))
-)
-private val SavedGreenBrush = Brush.horizontalGradient(
-    colors = listOf(Color(0xFF2E7D32), Color(0xFF66BB6A), Color(0xFF2E7D32))
-)
-
 @Composable
 private fun IconResultButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -924,55 +915,6 @@ private fun IconResultButton(
             Text(label, color = if (enabled) tint else Color(0xFF555555), fontSize = 15.sp,
                 fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
         }
-    }
-}
-
-@Composable
-private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Boolean, isSaved: Boolean = false, onClick: () -> Unit) {
-    val brush = when {
-        isSaved -> SavedGreenBrush
-        enabled -> ShinyGreenBrush
-        else -> null
-    }
-    androidx.compose.material3.Surface(
-        onClick = onClick,
-        enabled = enabled,
-        shape = RoundedCornerShape(10.dp),
-        color = if (brush == null) Color(0xFF1A1A1A) else Color.Transparent,
-        modifier = modifier.height(48.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(if (brush != null) Modifier.background(brush) else Modifier),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = Color.White, fontSize = 18.sp, maxLines = 1,
-                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.02).sp)
-                if (isSaved) {
-                    Spacer(Modifier.width(6.dp))
-                    Text("✓", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
-    androidx.compose.material3.OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.height(46.dp),
-        shape = RoundedCornerShape(10.dp),
-        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-            containerColor = Color(0xFF0D0D0D),
-            contentColor = Color.White,
-        ),
-    ) {
-        Text(label, color = Color.White, fontSize = 18.sp, maxLines = 1,
-            fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.02).sp)
     }
 }
 
@@ -1105,101 +1047,6 @@ private fun RemoveWatermarkDialog(
         }
     }
 }
-
-// Legacy dialog kept for backward compatibility
-@Composable
-private fun LegacyRemoveWatermarkDialog(
-    viewModel: MainViewModel,
-    context: android.content.Context,
-    onDismiss: () -> Unit,
-) {
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Color(0xFF121212),
-        title = {
-            Text(stringResource(R.string.dialog_remove_watermark_title), color = Color.White, fontSize = 22.sp,
-                fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Spacer(Modifier.height(8.dp))
-                androidx.compose.material3.OutlinedButton(
-                    onClick = {
-                        onDismiss()
-                        val activity = context as? android.app.Activity
-                        if (activity != null) {
-                            com.dualframe.monetize.AdRewardManager.showAd(
-                                activity = activity,
-                                onRewarded = {
-                                    viewModel.saveBothClean()
-                                    android.widget.Toast.makeText(context,
-                                        context.getString(R.string.toast_watermark_removed),
-                                        android.widget.Toast.LENGTH_SHORT).show()
-                                },
-                                onFailed = { viewModel.clearError() },
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color(0xFF0D0D0D),
-                        contentColor = Color.White,
-                    ),
-                ) {
-                    Text(stringResource(R.string.btn_watch_ad), color = Color.White, fontSize = 18.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
-                }
-                val shinyGoldBrush = Brush.horizontalGradient(
-                    colors = listOf(Color(0xFFFFD700), Color(0xFFFFF176), Color(0xFFFFD700))
-                )
-                androidx.compose.material3.Surface(
-                    onClick = {
-                        val activity = context as? android.app.Activity
-                        if (activity != null) {
-                            com.dualframe.monetize.BillingManager.getInstance(context)
-                                .launchPurchase(activity) { success ->
-                                    if (success) {
-                                        onDismiss()
-                                        viewModel.saveBothClean()
-                                    }
-                                }
-                        }
-                    },
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color.Transparent,
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(shinyGoldBrush),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.btn_go_pro), color = Color(0xFF111111), fontSize = 18.sp,
-                                fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.width(4.dp))
-                            Text("♕", color = Color(0xFF111111), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                Text(
-                    "${stringResource(R.string.desc_pro_onetime)}\n${stringResource(R.string.desc_pro_no_watermark)}\n${stringResource(R.string.desc_pro_adfree)}",
-                    color = Color(0xFFBBBBBB), fontSize = 14.sp,
-                    fontFamily = PretendardFont,
-                )
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                    androidx.compose.material3.TextButton(onClick = onDismiss) {
-                        Text(stringResource(R.string.btn_cancel), color = Color(0xFFBBBBBB), fontSize = 15.sp,
-                            fontFamily = PretendardFont)
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {},
-    )
-}
-
 
 @Composable
 private fun ErrorArea(state: UiState, onDismiss: () -> Unit) {
