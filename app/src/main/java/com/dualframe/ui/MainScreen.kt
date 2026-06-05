@@ -976,9 +976,9 @@ private fun RemoveWatermarkDialog(
 
             Spacer(Modifier.height(14.dp))
 
-            // 1. PRO Upgrade — gold gradient background
+            // 1. PRO Upgrade — premium gold gradient
             val goldBrush = Brush.horizontalGradient(
-                colors = listOf(Color(0xFFE8C252), Color(0xFFF0D474), Color(0xFFE8C252))
+                colors = listOf(Color(0xFFD4A828), Color(0xFFE8C85A), Color(0xFFD4A828))
             )
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -998,15 +998,14 @@ private fun RemoveWatermarkDialog(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
                         Icon(Icons.Outlined.WorkspacePremium, null, tint = Color.White,
                             modifier = Modifier.size(28.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 18.sp,
-                            fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
+                    Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 18.sp,
+                        fontFamily = PretendardFont, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f))
                     if (price != null) {
                         Text(price, color = Color(0xFFF0F0F0), fontSize = 15.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
@@ -1015,7 +1014,7 @@ private fun RemoveWatermarkDialog(
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF555555), fontSize = 14.sp,
-                    fontFamily = PretendardFont, modifier = Modifier.padding(start = 30.dp))
+                    fontFamily = PretendardFont, modifier = Modifier.padding(start = 40.dp))
             }
 
             Spacer(Modifier.height(8.dp))
@@ -1044,8 +1043,10 @@ private fun RemoveWatermarkDialog(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Filled.PlayArrow, null, tint = Color(0xFF4CAF50),
-                    modifier = Modifier.size(26.dp).padding(end = 8.dp))
+                Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.PlayArrow, null, tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(26.dp))
+                }
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
@@ -1057,7 +1058,7 @@ private fun RemoveWatermarkDialog(
 
             Spacer(Modifier.height(8.dp))
 
-            // 3. Save with Watermark
+            // 3. Basic Save
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
@@ -1066,8 +1067,10 @@ private fun RemoveWatermarkDialog(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.SaveAlt, null, tint = Color(0xFFAAAAAA),
-                    modifier = Modifier.size(26.dp).padding(end = 10.dp))
+                Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.SaveAlt, null, tint = Color(0xFFAAAAAA),
+                        modifier = Modifier.size(26.dp))
+                }
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
