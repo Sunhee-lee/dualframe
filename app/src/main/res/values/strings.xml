@@ -20,9 +20,9 @@
     <!-- Save options popup -->
     <string name="save_popup_title">Save Videos</string>
     <string name="save_popup_pro_title">Watermark-Free PRO</string>
-    <string name="save_popup_pro_subtitle">Lifetime access included</string>
+    <string name="save_popup_pro_subtitle">Lifetime Access Included</string>
     <string name="save_popup_ad_title">Watch Ad &amp; Save (Free)</string>
-    <string name="save_popup_ad_desc">Remove watermark for this video only.</string>
+    <string name="save_popup_ad_desc">Remove watermark for this save only.</string>
     <string name="save_popup_watermark_title">Basic Save</string>
     <string name="save_popup_watermark_desc">Includes watermark</string>
     <string name="btn_cancel">Cancel</string>
