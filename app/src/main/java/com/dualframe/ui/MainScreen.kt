@@ -1018,9 +1018,10 @@ private fun RemoveWatermarkDialog(
                             modifier = Modifier.padding(end = 6.dp))
                     }
                 }
-                Spacer(Modifier.height(2.dp))
-                Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF555555), fontSize = 14.sp,
-                    fontFamily = PretendardFont, modifier = Modifier.padding(start = 40.dp))
+                Spacer(Modifier.height(5.dp))
+                Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF6B5E3A), fontSize = 13.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.Normal,
+                    modifier = Modifier.padding(start = 40.dp))
             }
 
             Spacer(Modifier.height(8.dp))
