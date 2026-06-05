@@ -957,7 +957,7 @@ private fun RemoveWatermarkDialog(
     val price = com.dualframe.monetize.BillingManager.getInstance(context).formattedPrice
 
     Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f))
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.82f))
             .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismiss() },
         contentAlignment = Alignment.Center,
     ) {
@@ -988,7 +988,7 @@ private fun RemoveWatermarkDialog(
             )
             // 1. PRO Upgrade — premium gold gradient
             Row(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(goldBrush)
                     .clickable {
@@ -1025,7 +1025,7 @@ private fun RemoveWatermarkDialog(
 
             // 2. Watch Ad
             Row(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF1A1A1A))
                     .clickable {
@@ -1065,7 +1065,7 @@ private fun RemoveWatermarkDialog(
 
             // 3. Basic Save
             Row(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF1A1A1A))
                     .clickable { onDismiss(); viewModel.saveBothWithWatermark() }
