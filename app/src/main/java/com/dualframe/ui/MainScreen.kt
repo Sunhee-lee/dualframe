@@ -1009,7 +1009,7 @@ private fun RemoveWatermarkDialog(
             ) {
                 Text("♕", fontSize = 24.sp, color = Color(0xFF111111), modifier = Modifier.padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 15.sp,
+                    Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 16.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     if (price != null) {
                         Text(price, color = Color(0xFF111111), fontSize = 18.sp,
@@ -1049,7 +1049,7 @@ private fun RemoveWatermarkDialog(
             ) {
                 Text("▶", color = Color(0xFF4CAF50), fontSize = 16.sp, modifier = Modifier.padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 15.sp,
+                    Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 16.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
                     Text(stringResource(R.string.save_popup_ad_desc), color = Color(0xFF888888), fontSize = 12.sp,
                         fontFamily = PretendardFont)
@@ -1070,7 +1070,7 @@ private fun RemoveWatermarkDialog(
             ) {
                 Text("↓", color = Color(0xFF888888), fontSize = 18.sp, modifier = Modifier.padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 15.sp,
+                    Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 16.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
                     Text(stringResource(R.string.save_popup_watermark_desc), color = Color(0xFF888888), fontSize = 12.sp,
                         fontFamily = PretendardFont)
