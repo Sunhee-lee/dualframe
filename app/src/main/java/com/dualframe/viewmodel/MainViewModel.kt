@@ -165,19 +165,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Called when the user taps the record button.
      * If recording, stops. If idle, starts (with optional countdown).
      */
+    private var isToggling = false
+
     fun toggleRecording(hasAudioPermission: Boolean) {
-        val status = _uiState.value.appStatus
-        when {
-            status == AppStatus.RECORDING -> stopRecording()
-            status == AppStatus.COUNTDOWN -> cancelCountdown()
-            status == AppStatus.IDLE || status == AppStatus.EXPORT_COMPLETE || status == AppStatus.ERROR -> {
-                val countdown = _uiState.value.settings.countdownSeconds
-                if (countdown > 0) {
-                    startCountdown(countdown, hasAudioPermission)
-                } else {
-                    startRecording(hasAudioPermission)
+        if (isToggling) return
+        isToggling = true
+        try {
+            val status = _uiState.value.appStatus
+            when {
+                status == AppStatus.RECORDING -> stopRecording()
+                status == AppStatus.COUNTDOWN -> cancelCountdown()
+                status == AppStatus.IDLE || status == AppStatus.EXPORT_COMPLETE || status == AppStatus.ERROR -> {
+                    val countdown = _uiState.value.settings.countdownSeconds
+                    if (countdown > 0) {
+                        startCountdown(countdown, hasAudioPermission)
+                    } else {
+                        startRecording(hasAudioPermission)
+                    }
                 }
             }
+        } finally {
+            isToggling = false
         }
     }
 
@@ -211,10 +219,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startRecording(hasAudioPermission: Boolean) {
+        if (_uiState.value.appStatus == AppStatus.RECORDING) return
         clearError()
         val settings = _uiState.value.settings
         _uiState.update {
             it.copy(
+                appStatus = AppStatus.RECORDING,
+                recordingDurationSeconds = 0,
                 thumbnailBitmap = null,
                 landscapeThumbnailBitmap = null,
                 nativeExportInfo = null,
@@ -222,8 +233,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
 
-        // No rebind needed — always 2 use cases (Preview + VideoCapture).
-        // Both previews stay live via GPU renderer during recording.
         val file = cameraManager.startRecording(
             audioEnabled = settings.audioEnabled,
             hasAudioPermission = hasAudioPermission,
@@ -231,12 +240,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         if (file == null) {
+            _uiState.update { it.copy(appStatus = AppStatus.IDLE) }
             setError("Failed to start recording")
             return
         }
 
         masterFile = file
-        _uiState.update { it.copy(appStatus = AppStatus.RECORDING, recordingDurationSeconds = 0) }
         startTimer()
     }
 
