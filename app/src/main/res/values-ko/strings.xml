@@ -22,7 +22,7 @@
     <!-- Save options popup -->
     <string name="save_popup_title">영상 저장</string>
     <string name="save_popup_desc">저장 방식을 선택하세요.</string>
-    <string name="save_popup_pro_title">PRO 업그레이드</string>
+    <string name="save_popup_pro_title">워터마크 제거 PRO</string>
     <string name="save_popup_pro_price">₩7,900</string>
     <string name="save_popup_pro_subtitle">한 번 결제로 평생 사용</string>
     <string name="save_popup_pro_benefit1">워터마크 영구 제거</string>
@@ -31,8 +31,8 @@
     <string name="save_popup_pro_best">BEST</string>
     <string name="save_popup_ad_title">광고 보고 저장 (무료)</string>
     <string name="save_popup_ad_desc">이번 영상만 워터마크 제거</string>
-    <string name="save_popup_watermark_title">워터마크 포함 저장</string>
-    <string name="save_popup_watermark_desc">별도 비용 없이 저장됩니다.</string>
+    <string name="save_popup_watermark_title">기본 저장</string>
+    <string name="save_popup_watermark_desc">워터마크 포함</string>
     <string name="save_popup_watermark_notice">ⓘ 저장 시 워터마크가 포함됩니다.</string>
 
     <!-- Remove Watermark dialog (legacy) -->

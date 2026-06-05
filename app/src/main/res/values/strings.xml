@@ -22,7 +22,7 @@
     <!-- Save options popup -->
     <string name="save_popup_title">Save Videos</string>
     <string name="save_popup_desc">Choose how to save.</string>
-    <string name="save_popup_pro_title">PRO Upgrade</string>
+    <string name="save_popup_pro_title">Watermark-Free PRO</string>
     <string name="save_popup_pro_price">₩7,900</string>
     <string name="save_popup_pro_subtitle">One-time purchase, lifetime access</string>
     <string name="save_popup_pro_benefit1">Remove watermarks forever</string>
@@ -31,8 +31,8 @@
     <string name="save_popup_pro_best">BEST</string>
     <string name="save_popup_ad_title">Watch Ad &amp; Save (Free)</string>
     <string name="save_popup_ad_desc">Remove watermark for this video only.</string>
-    <string name="save_popup_watermark_title">Save with Watermark</string>
-    <string name="save_popup_watermark_desc">Save at no cost.</string>
+    <string name="save_popup_watermark_title">Basic Save</string>
+    <string name="save_popup_watermark_desc">Includes watermark</string>
     <string name="save_popup_watermark_notice">ⓘ Watermark will be included.</string>
 
     <!-- Remove Watermark dialog (legacy) -->
