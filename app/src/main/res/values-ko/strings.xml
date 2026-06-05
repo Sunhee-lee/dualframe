@@ -30,7 +30,7 @@
     <string name="save_popup_pro_benefit3">추가 결제 없음</string>
     <string name="save_popup_pro_best">BEST</string>
     <string name="save_popup_ad_title">광고 보고 저장 (무료)</string>
-    <string name="save_popup_ad_desc">보상형 광고 시청 후\n이번 영상만 워터마크 제거</string>
+    <string name="save_popup_ad_desc">이번 영상만 워터마크 제거</string>
     <string name="save_popup_watermark_title">워터마크 포함 저장</string>
     <string name="save_popup_watermark_desc">별도 비용 없이 저장됩니다.</string>
     <string name="save_popup_watermark_notice">ⓘ 저장 시 워터마크가 포함됩니다.</string>

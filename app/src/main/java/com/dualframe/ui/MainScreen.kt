@@ -727,7 +727,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         state.saveMessage != null -> stringResource(R.string.label_saved)
         else -> stringResource(R.string.btn_save_videos)
     }
-    val saveEnabled = state.appStatus == AppStatus.EXPORT_COMPLETE && state.saveMessage == null
+    val saveEnabled = state.appStatus != AppStatus.SAVING
 
     Box(
         modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
@@ -782,15 +782,15 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    IconResultButton(Icons.Outlined.FileDownload, saveLabel, Color(0xFFFFD54A), saveEnabled) {
+                    SaveResultButton(Icons.Outlined.FileDownload, saveLabel, saveEnabled) {
                         if (isPro) viewModel.saveBothWithWatermark()
                         else viewModel.showRemoveWatermarkDialog()
                     }
-                    IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery), Color.White, true) {
+                    IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery)) {
                         try { context.startActivity(buildGalleryIntent(context)) }
                         catch (_: Exception) {}
                     }
-                    IconResultButton(Icons.Outlined.CameraAlt, stringResource(R.string.btn_retake), Color.White, true) {
+                    IconResultButton(Icons.Outlined.CameraAlt, stringResource(R.string.btn_retake)) {
                         viewModel.resetToIdle()
                     }
                 }
@@ -830,15 +830,15 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     modifier = Modifier.fillMaxWidth(0.75f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    IconResultButton(Icons.Outlined.FileDownload, saveLabel, Color(0xFFFFD54A), saveEnabled) {
+                    SaveResultButton(Icons.Outlined.FileDownload, saveLabel, saveEnabled) {
                         if (isPro) viewModel.saveBothWithWatermark()
                         else viewModel.showRemoveWatermarkDialog()
                     }
-                    IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery), Color.White, true) {
+                    IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery)) {
                         try { context.startActivity(buildGalleryIntent(context)) }
                         catch (_: Exception) {}
                     }
-                    IconResultButton(Icons.Outlined.CameraAlt, stringResource(R.string.btn_retake), Color.White, true) {
+                    IconResultButton(Icons.Outlined.CameraAlt, stringResource(R.string.btn_retake)) {
                         viewModel.resetToIdle()
                     }
                 }
@@ -888,31 +888,63 @@ private fun LandscapeThumbFixed(bmp: android.graphics.Bitmap?, thumbH: Dp, mirro
     }
 }
 
+private val SaveGreenBrush = Brush.horizontalGradient(
+    colors = listOf(Color(0xFF228B22), Color(0xFF32CD32), Color(0xFF228B22))
+)
+
 @Composable
-private fun IconResultButton(
+private fun SaveResultButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    tint: Color,
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val borderColor = if (tint == Color(0xFFFFD54A)) tint.copy(alpha = 0.8f) else Color(0xFF555555)
     androidx.compose.material3.Surface(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(10.dp),
         color = Color.Transparent,
-        modifier = Modifier.fillMaxWidth().height(46.dp)
-            .border(1.dp, if (enabled) borderColor else Color(0xFF333333), RoundedCornerShape(10.dp)),
+        modifier = Modifier.fillMaxWidth().height(50.dp),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+                .background(if (enabled) SaveGreenBrush else Brush.horizontalGradient(listOf(Color(0xFF1A1A1A), Color(0xFF1A1A1A))),
+                    RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(label, color = Color.White, fontSize = 16.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun IconResultButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(10.dp),
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth().height(50.dp)
+            .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp)),
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(icon, null, tint = if (enabled) tint else Color(0xFF555555), modifier = Modifier.size(18.dp))
+            Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(6.dp))
-            Text(label, color = if (enabled) tint else Color(0xFF555555), fontSize = 15.sp,
+            Text(label, color = Color.White, fontSize = 16.sp,
                 fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
         }
     }
@@ -955,12 +987,14 @@ private fun RemoveWatermarkDialog(
 
             Spacer(Modifier.height(16.dp))
 
-            // 1. PRO Upgrade
+            // 1. PRO Upgrade — gold gradient background
+            val goldBrush = Brush.horizontalGradient(
+                colors = listOf(Color(0xFFFFD700), Color(0xFFFFF176), Color(0xFFFFD700))
+            )
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, Color(0xFFFFD54A).copy(alpha = 0.7f), RoundedCornerShape(12.dp))
-                    .background(Color(0xFF1A1A0A))
+                    .background(goldBrush)
                     .clickable {
                         val activity = context as? android.app.Activity
                         if (activity != null) {
@@ -973,18 +1007,18 @@ private fun RemoveWatermarkDialog(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("♕", fontSize = 24.sp, modifier = Modifier.padding(end = 10.dp))
+                Text("♕", fontSize = 24.sp, color = Color(0xFF111111), modifier = Modifier.padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFFFFD54A), fontSize = 15.sp,
+                    Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 15.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     if (price != null) {
-                        Text(price, color = Color.White, fontSize = 18.sp,
+                        Text(price, color = Color(0xFF111111), fontSize = 18.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
-                    Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF888888), fontSize = 11.sp,
+                    Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF444444), fontSize = 11.sp,
                         fontFamily = PretendardFont)
                 }
-                Text("›", color = Color(0xFF666666), fontSize = 20.sp)
+                Text("›", color = Color(0xFF444444), fontSize = 20.sp)
             }
 
             Spacer(Modifier.height(8.dp))

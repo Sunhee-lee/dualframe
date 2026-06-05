@@ -30,7 +30,7 @@
     <string name="save_popup_pro_benefit3">No additional charges</string>
     <string name="save_popup_pro_best">BEST</string>
     <string name="save_popup_ad_title">Watch Ad &amp; Save (Free)</string>
-    <string name="save_popup_ad_desc">Watch a rewarded ad.\nRemove watermark for this video only.</string>
+    <string name="save_popup_ad_desc">Remove watermark for this video only.</string>
     <string name="save_popup_watermark_title">Save with Watermark</string>
     <string name="save_popup_watermark_desc">Save at no cost.</string>
     <string name="save_popup_watermark_notice">ⓘ Watermark will be included.</string>
