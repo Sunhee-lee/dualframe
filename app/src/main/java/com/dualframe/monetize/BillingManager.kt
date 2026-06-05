@@ -37,6 +37,9 @@ class BillingManager private constructor(private val context: Context) {
     private var isConnected = false
     private var connectionRetryCount = 0
 
+    val formattedPrice: String?
+        get() = productDetails?.oneTimePurchaseOfferDetails?.formattedPrice
+
     private val purchasesUpdatedListener = PurchasesUpdatedListener { result, purchases ->
         Log.i(TAG, "purchasesUpdated: code=${result.responseCode} msg=${result.debugMessage}")
         when (result.responseCode) {

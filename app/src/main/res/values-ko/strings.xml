@@ -21,7 +21,7 @@
 
     <!-- Save options popup -->
     <string name="save_popup_title">영상 저장</string>
-    <string name="save_popup_desc">워터마크 없이 저장하려면\n아래 옵션을 선택하세요.</string>
+    <string name="save_popup_desc">저장 방식을 선택하세요.</string>
     <string name="save_popup_pro_title">PRO 업그레이드 👑</string>
     <string name="save_popup_pro_price">₩7,900</string>
     <string name="save_popup_pro_subtitle">구독 아님 · 평생 사용 가능</string>

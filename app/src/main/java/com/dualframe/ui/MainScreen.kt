@@ -782,72 +782,18 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    // Save — yellow accent
-                    androidx.compose.material3.Surface(
-                        onClick = {
-                            if (isPro) viewModel.saveBothWithWatermark()
-                            else viewModel.showRemoveWatermarkDialog()
-                        },
-                        enabled = saveEnabled,
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.Transparent,
-                        modifier = Modifier.fillMaxWidth().height(44.dp)
-                            .border(1.dp, Color(0xFFFFD54A).copy(alpha = 0.8f), RoundedCornerShape(10.dp)),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Outlined.FileDownload, null,
-                                tint = Color(0xFFFFD54A), modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(saveLabel, color = Color(0xFFFFD54A), fontSize = 13.sp,
-                                fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-                        }
+                    IconResultButton(Icons.Outlined.FileDownload, saveLabel, Color(0xFFFFD54A), saveEnabled) {
+                        if (isPro) viewModel.saveBothWithWatermark()
+                        else viewModel.showRemoveWatermarkDialog()
                     }
-                    // Gallery
-                    androidx.compose.material3.Surface(
-                        onClick = {
-                            try { context.startActivity(buildGalleryIntent(context)) }
-                            catch (_: Exception) {}
-                        },
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.Transparent,
-                        modifier = Modifier.fillMaxWidth().height(44.dp)
-                            .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp)),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Outlined.PhotoLibrary, null,
-                                tint = Color.White, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(stringResource(R.string.btn_view_in_gallery), color = Color.White, fontSize = 12.sp,
-                                fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
-                        }
+                    IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery), Color.White, true) {
+                        try { context.startActivity(buildGalleryIntent(context)) }
+                        catch (_: Exception) {}
                     }
-                    // Retake
-                    androidx.compose.material3.Surface(
-                        onClick = { viewModel.resetToIdle() },
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.Transparent,
-                        modifier = Modifier.fillMaxWidth().height(44.dp)
-                            .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp)),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Outlined.CameraAlt, null,
-                                tint = Color.White, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(stringResource(R.string.btn_retake), color = Color.White, fontSize = 12.sp,
-                                fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
-                        }
+                    IconResultButton(Icons.Outlined.CameraAlt, stringResource(R.string.btn_retake), Color.White, true) {
+                        viewModel.resetToIdle()
+                    }
+                }
                     }
                 }
             }
@@ -882,86 +828,21 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
                 Spacer(Modifier.height(14.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                Column(
+                    modifier = Modifier.fillMaxWidth(0.75f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    // Save Videos — primary, yellow accent
-                    androidx.compose.material3.Surface(
-                        onClick = {
-                            if (isPro) viewModel.saveBothWithWatermark()
-                            else viewModel.showRemoveWatermarkDialog()
-                        },
-                        enabled = saveEnabled,
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.Transparent,
-                        modifier = Modifier.weight(1f).height(46.dp)
-                            .border(1.dp, Color(0xFFFFD54A).copy(alpha = 0.8f), RoundedCornerShape(10.dp)),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Outlined.FileDownload, null,
-                                tint = Color(0xFFFFD54A), modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(5.dp))
-                            Text(saveLabel, color = Color(0xFFFFD54A), fontSize = 14.sp,
-                                fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-                        }
+                    IconResultButton(Icons.Outlined.FileDownload, saveLabel, Color(0xFFFFD54A), saveEnabled) {
+                        if (isPro) viewModel.saveBothWithWatermark()
+                        else viewModel.showRemoveWatermarkDialog()
                     }
-
-                    // View in Gallery
-                    androidx.compose.material3.Surface(
-                        onClick = {
-                            try { context.startActivity(buildGalleryIntent(context)) }
-                            catch (_: Exception) {}
-                        },
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.Transparent,
-                        modifier = Modifier.weight(1f).height(46.dp)
-                            .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp)),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Outlined.PhotoLibrary, null,
-                                tint = Color.White, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(5.dp))
-                            Text(stringResource(R.string.btn_view_in_gallery), color = Color.White, fontSize = 13.sp,
-                                fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
-                        }
+                    IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery), Color.White, true) {
+                        try { context.startActivity(buildGalleryIntent(context)) }
+                        catch (_: Exception) {}
                     }
-
-                    // Retake
-                    androidx.compose.material3.Surface(
-                        onClick = { viewModel.resetToIdle() },
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.Transparent,
-                        modifier = Modifier.weight(1f).height(46.dp)
-                            .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp)),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Outlined.CameraAlt, null,
-                                tint = Color.White, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(5.dp))
-                            Text(stringResource(R.string.btn_retake), color = Color.White, fontSize = 13.sp,
-                                fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
-                        }
+                    IconResultButton(Icons.Outlined.CameraAlt, stringResource(R.string.btn_retake), Color.White, true) {
+                        viewModel.resetToIdle()
                     }
-                }
-
-                if (!isPro) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(stringResource(R.string.save_popup_watermark_notice),
-                        color = Color(0xFF888888), fontSize = 12.sp,
-                        fontFamily = PretendardFont)
                 }
             }
         }
@@ -1015,6 +896,36 @@ private val ShinyGreenBrush = Brush.horizontalGradient(
 private val SavedGreenBrush = Brush.horizontalGradient(
     colors = listOf(Color(0xFF2E7D32), Color(0xFF66BB6A), Color(0xFF2E7D32))
 )
+
+@Composable
+private fun IconResultButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val borderColor = if (tint == Color(0xFFFFD54A)) tint.copy(alpha = 0.8f) else Color(0xFF555555)
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(10.dp),
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth().height(46.dp)
+            .border(1.dp, if (enabled) borderColor else Color(0xFF333333), RoundedCornerShape(10.dp)),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, null, tint = if (enabled) tint else Color(0xFF555555), modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(label, color = if (enabled) tint else Color(0xFF555555), fontSize = 15.sp,
+                fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
 
 @Composable
 private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Boolean, isSaved: Boolean = false, onClick: () -> Unit) {
@@ -1071,6 +982,8 @@ private fun RemoveWatermarkDialog(
     context: android.content.Context,
     onDismiss: () -> Unit,
 ) {
+    val price = com.dualframe.monetize.BillingManager.getInstance(context).formattedPrice
+
     Box(
         modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f))
             .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismiss() },
@@ -1084,75 +997,57 @@ private fun RemoveWatermarkDialog(
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Close X
+            // Close
             Box(Modifier.fillMaxWidth()) {
                 Text("✕", color = Color(0xFF888888), fontSize = 18.sp,
                     modifier = Modifier.align(Alignment.TopEnd)
-                        .clickable { onDismiss() }
-                        .padding(4.dp))
+                        .clickable { onDismiss() }.padding(4.dp))
             }
 
             // Title
             Text(stringResource(R.string.save_popup_title), color = Color.White, fontSize = 22.sp,
                 fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Text(stringResource(R.string.save_popup_desc), color = Color(0xFFAAAAAA), fontSize = 13.sp,
-                fontFamily = PretendardFont, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                fontFamily = PretendardFont)
 
             Spacer(Modifier.height(16.dp))
 
-            // ── 1. PRO Upgrade Card ──
-            Box(
+            // 1. PRO Upgrade
+            Row(
                 modifier = Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .border(1.5.dp, Color(0xFFFFD54A), RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, Color(0xFFFFD54A).copy(alpha = 0.7f), RoundedCornerShape(12.dp))
                     .background(Color(0xFF1A1A0A))
                     .clickable {
                         val activity = context as? android.app.Activity
                         if (activity != null) {
                             com.dualframe.monetize.BillingManager.getInstance(context)
                                 .launchPurchase(activity) { success ->
-                                    if (success) {
-                                        onDismiss()
-                                        viewModel.saveBothClean()
-                                    }
+                                    if (success) { onDismiss(); viewModel.saveBothClean() }
                                 }
                         }
                     }
-                    .padding(16.dp),
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                // BEST badge
-                Text(stringResource(R.string.save_popup_pro_best),
-                    color = Color(0xFF111111), fontSize = 11.sp,
-                    fontFamily = PretendardFont, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.TopEnd)
-                        .background(Color(0xFFFFD54A), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 2.dp))
-
-                Row {
-                    // Crown icon
-                    Text("👑", fontSize = 28.sp, modifier = Modifier.padding(end = 12.dp))
-
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFFFFD54A), fontSize = 17.sp,
+                Text("♕", fontSize = 24.sp, modifier = Modifier.padding(end = 10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFFFFD54A), fontSize = 15.sp,
+                        fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+                    if (price != null) {
+                        Text(price, color = Color.White, fontSize = 18.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
-                        Text(stringResource(R.string.save_popup_pro_price), color = Color.White, fontSize = 22.sp,
-                            fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
-                        Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF999999), fontSize = 11.sp,
-                            fontFamily = PretendardFont)
                     }
-
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        BenefitRow(stringResource(R.string.save_popup_pro_benefit1))
-                        BenefitRow(stringResource(R.string.save_popup_pro_benefit2))
-                        BenefitRow(stringResource(R.string.save_popup_pro_benefit3))
-                    }
+                    Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF888888), fontSize = 11.sp,
+                        fontFamily = PretendardFont)
                 }
+                Text("›", color = Color(0xFF666666), fontSize = 20.sp)
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // ── 2. Watch Ad Card ──
+            // 2. Watch Ad
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
@@ -1176,18 +1071,11 @@ private fun RemoveWatermarkDialog(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape)
-                        .background(Color(0xFF2A4A2A)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("▶", color = Color(0xFF4CAF50), fontSize = 16.sp)
-                }
-                Spacer(Modifier.width(12.dp))
+                Text("▶", color = Color(0xFF4CAF50), fontSize = 16.sp, modifier = Modifier.padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 15.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-                    Text(stringResource(R.string.save_popup_ad_desc), color = Color(0xFF999999), fontSize = 12.sp,
+                    Text(stringResource(R.string.save_popup_ad_desc), color = Color(0xFF888888), fontSize = 12.sp,
                         fontFamily = PretendardFont)
                 }
                 Text("›", color = Color(0xFF666666), fontSize = 20.sp)
@@ -1195,30 +1083,20 @@ private fun RemoveWatermarkDialog(
 
             Spacer(Modifier.height(8.dp))
 
-            // ── 3. Save with Watermark ──
+            // 3. Save with Watermark
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF1A1A1A))
-                    .clickable {
-                        onDismiss()
-                        viewModel.saveBothWithWatermark()
-                    }
+                    .clickable { onDismiss(); viewModel.saveBothWithWatermark() }
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape)
-                        .background(Color(0xFF2A2A2A)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("↓", color = Color(0xFF999999), fontSize = 18.sp)
-                }
-                Spacer(Modifier.width(12.dp))
+                Text("↓", color = Color(0xFF888888), fontSize = 18.sp, modifier = Modifier.padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 15.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-                    Text(stringResource(R.string.save_popup_watermark_desc), color = Color(0xFF999999), fontSize = 12.sp,
+                    Text(stringResource(R.string.save_popup_watermark_desc), color = Color(0xFF888888), fontSize = 12.sp,
                         fontFamily = PretendardFont)
                 }
                 Text("›", color = Color(0xFF666666), fontSize = 20.sp)
@@ -1226,20 +1104,10 @@ private fun RemoveWatermarkDialog(
 
             Spacer(Modifier.height(12.dp))
 
-            // Cancel
             Text(stringResource(R.string.btn_cancel), color = Color(0xFF666666), fontSize = 14.sp,
                 fontFamily = PretendardFont,
                 modifier = Modifier.clickable { onDismiss() }.padding(8.dp))
         }
-    }
-}
-
-@Composable
-private fun BenefitRow(text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("✓", color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.width(4.dp))
-        Text(text, color = Color(0xFFCCCCCC), fontSize = 11.sp, fontFamily = PretendardFont)
     }
 }
 
