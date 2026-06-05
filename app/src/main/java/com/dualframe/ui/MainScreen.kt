@@ -780,12 +780,8 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
                     PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(), saveEnabled, isSaved = state.saveMessage != null) {
-                        viewModel.saveBothWithWatermark()
-                    }
-                    if (!isPro) {
-                        RemoveWatermarkResultButton(Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
-                            viewModel.showRemoveWatermarkDialog()
-                        }
+                        if (isPro) viewModel.saveBothWithWatermark()
+                        else viewModel.showRemoveWatermarkDialog()
                     }
                     ResultButton(stringResource(R.string.btn_view_in_gallery), Modifier.fillMaxWidth(), true) {
                         try { context.startActivity(buildGalleryIntent(context)) }
@@ -832,12 +828,8 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(), saveEnabled, isSaved = state.saveMessage != null) {
-                        viewModel.saveBothWithWatermark()
-                    }
-                    if (!isPro) {
-                        RemoveWatermarkResultButton(Modifier.fillMaxWidth(), state.appStatus != AppStatus.SAVING) {
-                            viewModel.showRemoveWatermarkDialog()
-                        }
+                        if (isPro) viewModel.saveBothWithWatermark()
+                        else viewModel.showRemoveWatermarkDialog()
                     }
                     ResultButton(stringResource(R.string.btn_view_in_gallery), Modifier.fillMaxWidth(), true) {
                         try { context.startActivity(buildGalleryIntent(context)) }
@@ -846,6 +838,13 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     ResultButton(stringResource(R.string.btn_retake), Modifier.fillMaxWidth(), true) {
                         viewModel.resetToIdle()
                     }
+                }
+
+                if (!isPro) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(stringResource(R.string.save_popup_watermark_notice),
+                        color = Color(0xFF888888), fontSize = 12.sp,
+                        fontFamily = PretendardFont)
                 }
             }
         }
@@ -933,26 +932,6 @@ private fun PrimaryResultButton(label: String, modifier: Modifier, enabled: Bool
 }
 
 @Composable
-private fun RemoveWatermarkResultButton(modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
-    androidx.compose.material3.OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.height(48.dp)
-            .border(1.dp, Color(0xFFFFD54A).copy(alpha = 0.6f), RoundedCornerShape(10.dp)),
-        shape = RoundedCornerShape(10.dp),
-        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-            containerColor = Color(0xFF0D0D0D),
-            contentColor = Color.White,
-        ),
-    ) {
-        Text(stringResource(R.string.btn_remove_watermark), color = Color(0xFFFFD54A), fontSize = 18.sp,
-            fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.02).sp)
-        Spacer(Modifier.width(6.dp))
-        Text("♕", color = Color(0xFFFFD700), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
 private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
     androidx.compose.material3.OutlinedButton(
         onClick = onClick,
@@ -971,6 +950,185 @@ private fun ResultButton(label: String, modifier: Modifier, enabled: Boolean, on
 
 @Composable
 private fun RemoveWatermarkDialog(
+    viewModel: MainViewModel,
+    context: android.content.Context,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f))
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismiss() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(0.88f)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF141414))
+                .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {}
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // Close X
+            Box(Modifier.fillMaxWidth()) {
+                Text("✕", color = Color(0xFF888888), fontSize = 18.sp,
+                    modifier = Modifier.align(Alignment.TopEnd)
+                        .clickable { onDismiss() }
+                        .padding(4.dp))
+            }
+
+            // Title
+            Text(stringResource(R.string.save_popup_title), color = Color.White, fontSize = 22.sp,
+                fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            Text(stringResource(R.string.save_popup_desc), color = Color(0xFFAAAAAA), fontSize = 13.sp,
+                fontFamily = PretendardFont, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+
+            Spacer(Modifier.height(16.dp))
+
+            // ── 1. PRO Upgrade Card ──
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .border(1.5.dp, Color(0xFFFFD54A), RoundedCornerShape(14.dp))
+                    .background(Color(0xFF1A1A0A))
+                    .clickable {
+                        val activity = context as? android.app.Activity
+                        if (activity != null) {
+                            com.dualframe.monetize.BillingManager.getInstance(context)
+                                .launchPurchase(activity) { success ->
+                                    if (success) {
+                                        onDismiss()
+                                        viewModel.saveBothClean()
+                                    }
+                                }
+                        }
+                    }
+                    .padding(16.dp),
+            ) {
+                // BEST badge
+                Text(stringResource(R.string.save_popup_pro_best),
+                    color = Color(0xFF111111), fontSize = 11.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.TopEnd)
+                        .background(Color(0xFFFFD54A), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp))
+
+                Row {
+                    // Crown icon
+                    Text("👑", fontSize = 28.sp, modifier = Modifier.padding(end = 12.dp))
+
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFFFFD54A), fontSize = 17.sp,
+                            fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.save_popup_pro_price), color = Color.White, fontSize = 22.sp,
+                            fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF999999), fontSize = 11.sp,
+                            fontFamily = PretendardFont)
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        BenefitRow(stringResource(R.string.save_popup_pro_benefit1))
+                        BenefitRow(stringResource(R.string.save_popup_pro_benefit2))
+                        BenefitRow(stringResource(R.string.save_popup_pro_benefit3))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // ── 2. Watch Ad Card ──
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF1A1A1A))
+                    .clickable {
+                        onDismiss()
+                        val activity = context as? android.app.Activity
+                        if (activity != null) {
+                            com.dualframe.monetize.AdRewardManager.showAd(
+                                activity = activity,
+                                onRewarded = {
+                                    viewModel.saveBothClean()
+                                    android.widget.Toast.makeText(context,
+                                        context.getString(R.string.toast_watermark_removed),
+                                        android.widget.Toast.LENGTH_SHORT).show()
+                                },
+                                onFailed = { viewModel.clearError() },
+                            )
+                        }
+                    }
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape)
+                        .background(Color(0xFF2A4A2A)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("▶", color = Color(0xFF4CAF50), fontSize = 16.sp)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 15.sp,
+                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.save_popup_ad_desc), color = Color(0xFF999999), fontSize = 12.sp,
+                        fontFamily = PretendardFont)
+                }
+                Text("›", color = Color(0xFF666666), fontSize = 20.sp)
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── 3. Save with Watermark ──
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF1A1A1A))
+                    .clickable {
+                        onDismiss()
+                        viewModel.saveBothWithWatermark()
+                    }
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape)
+                        .background(Color(0xFF2A2A2A)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("↓", color = Color(0xFF999999), fontSize = 18.sp)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 15.sp,
+                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.save_popup_watermark_desc), color = Color(0xFF999999), fontSize = 12.sp,
+                        fontFamily = PretendardFont)
+                }
+                Text("›", color = Color(0xFF666666), fontSize = 20.sp)
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Cancel
+            Text(stringResource(R.string.btn_cancel), color = Color(0xFF666666), fontSize = 14.sp,
+                fontFamily = PretendardFont,
+                modifier = Modifier.clickable { onDismiss() }.padding(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun BenefitRow(text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("✓", color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(4.dp))
+        Text(text, color = Color(0xFFCCCCCC), fontSize = 11.sp, fontFamily = PretendardFont)
+    }
+}
+
+// Legacy dialog kept for backward compatibility
+@Composable
+private fun LegacyRemoveWatermarkDialog(
     viewModel: MainViewModel,
     context: android.content.Context,
     onDismiss: () -> Unit,

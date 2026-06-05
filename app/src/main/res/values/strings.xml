@@ -19,7 +19,23 @@
     <string name="btn_retake">Retake</string>
     <string name="btn_remove_watermark">Remove Watermark</string>
 
-    <!-- Remove Watermark dialog -->
+    <!-- Save options popup -->
+    <string name="save_popup_title">Save Videos</string>
+    <string name="save_popup_desc">To save without watermarks,\nchoose an option below.</string>
+    <string name="save_popup_pro_title">PRO Upgrade 👑</string>
+    <string name="save_popup_pro_price">₩7,900</string>
+    <string name="save_popup_pro_subtitle">Not a subscription · Lifetime access</string>
+    <string name="save_popup_pro_benefit1">Remove watermarks forever</string>
+    <string name="save_popup_pro_benefit2">Remove all ads</string>
+    <string name="save_popup_pro_benefit3">No additional charges</string>
+    <string name="save_popup_pro_best">BEST</string>
+    <string name="save_popup_ad_title">Watch Ad &amp; Save (Free)</string>
+    <string name="save_popup_ad_desc">Watch a rewarded ad.\nRemove watermark for this video only.</string>
+    <string name="save_popup_watermark_title">Save with Watermark</string>
+    <string name="save_popup_watermark_desc">Save at no cost.</string>
+    <string name="save_popup_watermark_notice">ⓘ Watermark will be included.</string>
+
+    <!-- Remove Watermark dialog (legacy) -->
     <string name="dialog_remove_watermark_title">Remove Watermark</string>
     <string name="btn_watch_ad">Watch Ad to Remove</string>
     <string name="btn_go_pro">Go PRO</string>
