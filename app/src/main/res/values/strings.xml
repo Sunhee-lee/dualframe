@@ -22,7 +22,7 @@
     <!-- Save options popup -->
     <string name="save_popup_title">Save Videos</string>
     <string name="save_popup_desc">Choose how to save.</string>
-    <string name="save_popup_pro_title">PRO Upgrade 👑</string>
+    <string name="save_popup_pro_title">PRO Upgrade</string>
     <string name="save_popup_pro_price">₩7,900</string>
     <string name="save_popup_pro_subtitle">Not a subscription · Lifetime access</string>
     <string name="save_popup_pro_benefit1">Remove watermarks forever</string>
