@@ -909,7 +909,7 @@ private fun SaveResultButton(
         enabled = enabled,
         shape = RoundedCornerShape(10.dp),
         color = Color.Transparent,
-        modifier = Modifier.fillMaxWidth().height(50.dp),
+        modifier = Modifier.fillMaxWidth().height(52.dp),
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -918,9 +918,9 @@ private fun SaveResultButton(
             contentAlignment = Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(label, color = Color.White, fontSize = 16.sp,
+                Text(label, color = Color.White, fontSize = 18.sp,
                     fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
             }
         }
@@ -939,7 +939,7 @@ private fun IconResultButton(
         enabled = enabled,
         shape = RoundedCornerShape(10.dp),
         color = Color.Transparent,
-        modifier = Modifier.fillMaxWidth().height(50.dp)
+        modifier = Modifier.fillMaxWidth().height(52.dp)
             .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp)),
     ) {
         Row(
@@ -947,9 +947,9 @@ private fun IconResultButton(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(6.dp))
-            Text(label, color = Color.White, fontSize = 16.sp,
+            Text(label, color = Color.White, fontSize = 18.sp,
                 fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
         }
     }
@@ -1014,19 +1014,19 @@ private fun RemoveWatermarkDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.WorkspacePremium, null, tint = Color(0xFF111111),
-                            modifier = Modifier.size(22.dp))
+                        Icon(Icons.Outlined.WorkspacePremium, null, tint = Color.White,
+                            modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 16.sp,
+                        Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 18.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
                     if (price != null) {
-                        Text(price, color = Color.White, fontSize = 17.sp,
+                        Text(price, color = Color.White, fontSize = 19.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
                 }
                 Spacer(Modifier.height(2.dp))
-                Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF555555), fontSize = 12.sp,
+                Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF555555), fontSize = 14.sp,
                     fontFamily = PretendardFont, modifier = Modifier.padding(start = 28.dp))
             }
 
@@ -1056,11 +1056,11 @@ private fun RemoveWatermarkDialog(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("▶", color = Color(0xFF4CAF50), fontSize = 16.sp, modifier = Modifier.padding(end = 10.dp))
+                Text("▶", color = Color(0xFF4CAF50), fontSize = 18.sp, modifier = Modifier.padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 16.sp,
+                    Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-                    Text(stringResource(R.string.save_popup_ad_desc), color = Color(0xFF888888), fontSize = 12.sp,
+                    Text(stringResource(R.string.save_popup_ad_desc), color = Color(0xFF888888), fontSize = 14.sp,
                         fontFamily = PretendardFont)
                 }
                 Text("›", color = Color(0xFF666666), fontSize = 20.sp)
@@ -1078,11 +1078,11 @@ private fun RemoveWatermarkDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Outlined.Save, null, tint = Color(0xFF888888),
-                    modifier = Modifier.size(22.dp).padding(end = 10.dp))
+                    modifier = Modifier.size(24.dp).padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 16.sp,
+                    Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-                    Text(stringResource(R.string.save_popup_watermark_desc), color = Color(0xFF888888), fontSize = 12.sp,
+                    Text(stringResource(R.string.save_popup_watermark_desc), color = Color(0xFF888888), fontSize = 14.sp,
                         fontFamily = PretendardFont)
                 }
                 Text("›", color = Color(0xFF666666), fontSize = 20.sp)
