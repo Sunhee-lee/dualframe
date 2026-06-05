@@ -1076,9 +1076,16 @@ private fun RemoveWatermarkDialog(
                     Icon(Icons.Outlined.SaveAlt, null, tint = Color(0xFFAAAAAA),
                         modifier = Modifier.size(26.dp))
                 }
-                Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 18.sp,
-                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f))
+                val watermarkDesc = stringResource(R.string.save_popup_watermark_desc)
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 18.sp,
+                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                    if (watermarkDesc.isNotEmpty()) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(watermarkDesc, color = Color(0xFFAAAAAA), fontSize = 13.sp,
+                            fontFamily = PretendardFont, fontWeight = FontWeight.Normal)
+                    }
+                }
                 Text("›", color = Color(0xFF666666), fontSize = 20.sp)
             }
 
