@@ -42,6 +42,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -779,16 +782,72 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(), saveEnabled, isSaved = state.saveMessage != null) {
-                        if (isPro) viewModel.saveBothWithWatermark()
-                        else viewModel.showRemoveWatermarkDialog()
+                    // Save — yellow accent
+                    androidx.compose.material3.Surface(
+                        onClick = {
+                            if (isPro) viewModel.saveBothWithWatermark()
+                            else viewModel.showRemoveWatermarkDialog()
+                        },
+                        enabled = saveEnabled,
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.Transparent,
+                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                            .border(1.dp, Color(0xFFFFD54A).copy(alpha = 0.8f), RoundedCornerShape(10.dp)),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Outlined.FileDownload, null,
+                                tint = Color(0xFFFFD54A), modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(saveLabel, color = Color(0xFFFFD54A), fontSize = 13.sp,
+                                fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                        }
                     }
-                    ResultButton(stringResource(R.string.btn_view_in_gallery), Modifier.fillMaxWidth(), true) {
-                        try { context.startActivity(buildGalleryIntent(context)) }
-                        catch (_: Exception) {}
+                    // Gallery
+                    androidx.compose.material3.Surface(
+                        onClick = {
+                            try { context.startActivity(buildGalleryIntent(context)) }
+                            catch (_: Exception) {}
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.Transparent,
+                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                            .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp)),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Outlined.PhotoLibrary, null,
+                                tint = Color.White, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.btn_view_in_gallery), color = Color.White, fontSize = 12.sp,
+                                fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
+                        }
                     }
-                    ResultButton(stringResource(R.string.btn_retake), Modifier.fillMaxWidth(), true) {
-                        viewModel.resetToIdle()
+                    // Retake
+                    androidx.compose.material3.Surface(
+                        onClick = { viewModel.resetToIdle() },
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.Transparent,
+                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                            .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp)),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Outlined.CameraAlt, null,
+                                tint = Color.White, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.btn_retake), color = Color.White, fontSize = 12.sp,
+                                fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
+                        }
                     }
                 }
             }
@@ -823,20 +882,78 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
                 Spacer(Modifier.height(14.dp))
 
-                Column(
-                    modifier = Modifier.fillMaxWidth(0.75f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    PrimaryResultButton(saveLabel, Modifier.fillMaxWidth(), saveEnabled, isSaved = state.saveMessage != null) {
-                        if (isPro) viewModel.saveBothWithWatermark()
-                        else viewModel.showRemoveWatermarkDialog()
+                    // Save Videos — primary, yellow accent
+                    androidx.compose.material3.Surface(
+                        onClick = {
+                            if (isPro) viewModel.saveBothWithWatermark()
+                            else viewModel.showRemoveWatermarkDialog()
+                        },
+                        enabled = saveEnabled,
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.Transparent,
+                        modifier = Modifier.weight(1f).height(46.dp)
+                            .border(1.dp, Color(0xFFFFD54A).copy(alpha = 0.8f), RoundedCornerShape(10.dp)),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Outlined.FileDownload, null,
+                                tint = Color(0xFFFFD54A), modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text(saveLabel, color = Color(0xFFFFD54A), fontSize = 14.sp,
+                                fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                        }
                     }
-                    ResultButton(stringResource(R.string.btn_view_in_gallery), Modifier.fillMaxWidth(), true) {
-                        try { context.startActivity(buildGalleryIntent(context)) }
-                        catch (_: Exception) {}
+
+                    // View in Gallery
+                    androidx.compose.material3.Surface(
+                        onClick = {
+                            try { context.startActivity(buildGalleryIntent(context)) }
+                            catch (_: Exception) {}
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.Transparent,
+                        modifier = Modifier.weight(1f).height(46.dp)
+                            .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp)),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Outlined.PhotoLibrary, null,
+                                tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text(stringResource(R.string.btn_view_in_gallery), color = Color.White, fontSize = 13.sp,
+                                fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
+                        }
                     }
-                    ResultButton(stringResource(R.string.btn_retake), Modifier.fillMaxWidth(), true) {
-                        viewModel.resetToIdle()
+
+                    // Retake
+                    androidx.compose.material3.Surface(
+                        onClick = { viewModel.resetToIdle() },
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.Transparent,
+                        modifier = Modifier.weight(1f).height(46.dp)
+                            .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp)),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Outlined.CameraAlt, null,
+                                tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text(stringResource(R.string.btn_retake), color = Color.White, fontSize = 13.sp,
+                                fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
+                        }
                     }
                 }
 
