@@ -21,8 +21,8 @@
     <string name="save_popup_title">영상 저장</string>
     <string name="save_popup_pro_title">워터마크 제거 PRO</string>
     <string name="save_popup_pro_subtitle">평생 이용 가능</string>
-    <string name="save_popup_ad_title">광고 보고 저장 (무료)</string>
-    <string name="save_popup_ad_desc">이번 영상만 워터마크 제거</string>
+    <string name="save_popup_ad_title">광고 보고 무료 저장</string>
+    <string name="save_popup_ad_desc">이번 저장만 워터마크 제거</string>
     <string name="save_popup_watermark_title">기본 저장</string>
     <string name="save_popup_watermark_desc">워터마크 포함</string>
     <string name="btn_cancel">취소</string>
