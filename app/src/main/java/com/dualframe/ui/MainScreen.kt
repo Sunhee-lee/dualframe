@@ -46,7 +46,7 @@ import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.PhotoLibrary
-import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.WorkspacePremium
@@ -1016,13 +1016,13 @@ private fun RemoveWatermarkDialog(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.WorkspacePremium, null, tint = Color.White,
-                            modifier = Modifier.size(24.dp))
+                            modifier = Modifier.size(28.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 18.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
                     if (price != null) {
-                        Text(price, color = Color(0xFFEAEAEA), fontSize = 15.sp,
+                        Text(price, color = Color(0xFFF0F0F0), fontSize = 15.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(end = 6.dp))
                     }
@@ -1058,8 +1058,8 @@ private fun RemoveWatermarkDialog(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.PlayArrow, null, tint = Color(0xFF4CAF50),
-                    modifier = Modifier.size(24.dp).padding(end = 8.dp))
+                Icon(Icons.Filled.PlayArrow, null, tint = Color(0xFF4CAF50),
+                    modifier = Modifier.size(26.dp).padding(end = 8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
