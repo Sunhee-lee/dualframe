@@ -986,9 +986,6 @@ private fun RemoveWatermarkDialog(
             // Title
             Text(stringResource(R.string.save_popup_title), color = Color.White, fontSize = 22.sp,
                 fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(4.dp))
-            Text(stringResource(R.string.save_popup_desc), color = Color(0xFFAAAAAA), fontSize = 13.sp,
-                fontFamily = PretendardFont)
 
             Spacer(Modifier.height(16.dp))
 
@@ -1024,7 +1021,7 @@ private fun RemoveWatermarkDialog(
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
                     if (price != null) {
-                        Text(price, color = Color(0xFF111111), fontSize = 17.sp,
+                        Text(price, color = Color.White, fontSize = 17.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
                 }
