@@ -46,6 +46,7 @@ import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.WorkspacePremium
@@ -1021,9 +1022,9 @@ private fun RemoveWatermarkDialog(
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
                     if (price != null) {
-                        Text(price, color = Color(0xFFE0E0E0), fontSize = 15.sp,
+                        Text(price, color = Color(0xFFEAEAEA), fontSize = 15.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(end = 4.dp))
+                            modifier = Modifier.padding(end = 6.dp))
                     }
                 }
                 Spacer(Modifier.height(2.dp))
@@ -1057,7 +1058,8 @@ private fun RemoveWatermarkDialog(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("▶", color = Color(0xFF4CAF50), fontSize = 18.sp, modifier = Modifier.padding(end = 10.dp))
+                Icon(Icons.Outlined.PlayArrow, null, tint = Color(0xFF4CAF50),
+                    modifier = Modifier.size(24.dp).padding(end = 8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
