@@ -51,7 +51,6 @@ import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -571,19 +570,6 @@ private fun FocusRingOverlay(tapKey: Int, position: Offset) {
             )
         }
     }
-}
-
-/**
- * Thin semi-transparent border that marks the 16:9 guide region.
- * Drawn relative to the containing Box (i.e., the visible preview rect),
- * not the screen, so the frame always matches the on-screen crop.
- */
-@Composable
-private fun GuideBorder() {
-    Box(
-        Modifier.fillMaxSize()
-            .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(6.dp)),
-    )
 }
 
 @Composable

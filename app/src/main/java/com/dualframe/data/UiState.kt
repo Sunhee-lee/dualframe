@@ -9,12 +9,10 @@ data class UiState(
     val countdownRemaining: Int = 0,
     val errorMessage: String? = null,
     val exportProgress: Float = 0f,
-    val masterFilePath: String? = null,
     val cameraReady: Boolean = false,
     val flashOn: Boolean = false,
     val masterIsPortrait: Boolean = true,
     val wasFrontCamera: Boolean = false,
-    val recordingDeviceRotation: Int = 0,
     // Thumbnails of latest export results
     val thumbnailBitmap: Bitmap? = null,           // portrait thumbnail
     val landscapeThumbnailBitmap: Bitmap? = null,  // landscape thumbnail

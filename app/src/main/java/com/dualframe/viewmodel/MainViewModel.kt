@@ -1,7 +1,6 @@
 package com.dualframe.viewmodel
 
 import android.app.Application
-import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.util.Log
@@ -284,7 +283,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
 
-                    _uiState.update { it.copy(masterFilePath = masterFile?.absolutePath) }
                     startExportPipeline()
                 }
             }
@@ -614,27 +612,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissRemoveWatermarkDialog() {
         _uiState.update { it.copy(showRemoveWatermarkDialog = false) }
-    }
-
-    /**
-     * Build intent to open the saved video in the system's default viewer.
-     * Uses the saved content:// URI with FLAG_GRANT_READ_URI_PERMISSION.
-     * Falls back to generic gallery if no saved URI is available.
-     */
-    fun buildOpenGalleryIntent(): Intent {
-        // Try opening the specific saved video in gallery (shows the file + gallery context)
-        val savedUri = _uiState.value.savedNativeUri ?: _uiState.value.savedCroppedUri
-        if (savedUri != null) {
-            return Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(savedUri, "video/*")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-        }
-        // Fallback: open gallery app directly
-        return Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_APP_GALLERY)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
     }
 
     // ── Thumbnail ─────────────────────────────────────────────────────

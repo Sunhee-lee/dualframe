@@ -70,14 +70,6 @@ object FileStorage {
         }
     }
 
-    fun deletePendingUri(context: Context, uri: Uri?) {
-        if (uri == null) return
-        runCatching {
-            context.contentResolver.delete(uri, null, null)
-            Log.d(TAG, "Deleted pending Uri: $uri")
-        }
-    }
-
     fun cleanupStaleTemp(context: Context) {
         runCatching {
             val dir = File(context.cacheDir, TEMP_DIR)
@@ -94,16 +86,4 @@ object FileStorage {
         }
     }
 
-    fun cleanupAllTemp(context: Context) {
-        runCatching {
-            val dir = File(context.cacheDir, TEMP_DIR)
-            if (!dir.exists()) return
-            var count = 0
-            dir.listFiles()?.forEach { file ->
-                file.delete()
-                count++
-            }
-            if (count > 0) Log.i(TAG, "Cleaned all $count temp files")
-        }
-    }
 }

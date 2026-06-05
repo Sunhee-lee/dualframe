@@ -166,12 +166,6 @@ object WatermarkHelper {
         }
     }
 
-    /** Legacy alias — watermark only. */
-    suspend fun applyWatermark(
-        context: Context,
-        sourceFile: File,
-        outputFile: File,
-    ): File? = applyEffects(context, sourceFile, outputFile, applyWatermark = true, applyBeauty = false)
 
     private suspend fun runTransformer(
         context: Context,

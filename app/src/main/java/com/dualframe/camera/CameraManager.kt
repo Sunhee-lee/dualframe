@@ -299,9 +299,6 @@ class CameraManager(private val context: Context) {
         }
     }
 
-    fun hasTorch(): Boolean =
-        camera?.cameraInfo?.hasFlashUnit() == true
-
     // ── Recording ─────────────────────────────────────────────────────
 
     fun startRecording(
