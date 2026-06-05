@@ -1102,11 +1102,6 @@ private fun RemoveWatermarkDialog(
                 Text("›", color = Color(0xFF666666), fontSize = 20.sp)
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            Text(stringResource(R.string.btn_cancel), color = Color(0xFF666666), fontSize = 14.sp,
-                fontFamily = PretendardFont,
-                modifier = Modifier.clickable { onDismiss() }.padding(8.dp))
         }
     }
 }
