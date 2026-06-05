@@ -46,7 +46,7 @@ import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.PhotoLibrary
-import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.Icon
@@ -973,7 +973,7 @@ private fun RemoveWatermarkDialog(
                 .clip(RoundedCornerShape(20.dp))
                 .background(Color(0xFF141414))
                 .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {}
-                .padding(20.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Close
@@ -1021,7 +1021,7 @@ private fun RemoveWatermarkDialog(
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
                     if (price != null) {
-                        Text(price, color = Color.White, fontSize = 19.sp,
+                        Text(price, color = Color(0xFFDDDDDD), fontSize = 16.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -1077,7 +1077,7 @@ private fun RemoveWatermarkDialog(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.Save, null, tint = Color(0xFF888888),
+                Icon(Icons.Outlined.SaveAlt, null, tint = Color(0xFF888888),
                     modifier = Modifier.size(24.dp).padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 18.sp,
