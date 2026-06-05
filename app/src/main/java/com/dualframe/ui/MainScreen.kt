@@ -1079,7 +1079,7 @@ private fun RemoveWatermarkDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Outlined.SaveAlt, null, tint = Color(0xFFAAAAAA),
-                    modifier = Modifier.size(24.dp).padding(end = 10.dp))
+                    modifier = Modifier.size(26.dp).padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
