@@ -996,7 +996,7 @@ private fun RemoveWatermarkDialog(
             val goldBrush = Brush.horizontalGradient(
                 colors = listOf(Color(0xFFFFD700), Color(0xFFFFF176), Color(0xFFFFD700))
             )
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(goldBrush)
@@ -1009,22 +1009,28 @@ private fun RemoveWatermarkDialog(
                                 }
                         }
                     }
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
             ) {
-                Icon(Icons.Outlined.WorkspacePremium, null, tint = Color(0xFF111111),
-                    modifier = Modifier.size(28.dp).padding(end = 10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 16.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
-                    if (price != null) {
-                        Text(price, color = Color(0xFF111111), fontSize = 18.sp,
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.WorkspacePremium, null, tint = Color(0xFF111111),
+                            modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 16.sp,
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
-                    Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF444444), fontSize = 11.sp,
-                        fontFamily = PretendardFont)
+                    if (price != null) {
+                        Text(price, color = Color(0xFF111111), fontSize = 17.sp,
+                            fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+                    }
                 }
-                Text("›", color = Color(0xFF444444), fontSize = 20.sp)
+                Spacer(Modifier.height(2.dp))
+                Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF555555), fontSize = 12.sp,
+                    fontFamily = PretendardFont, modifier = Modifier.padding(start = 28.dp))
             }
 
             Spacer(Modifier.height(8.dp))
