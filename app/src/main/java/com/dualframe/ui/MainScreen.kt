@@ -43,6 +43,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Settings
@@ -722,11 +723,13 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         }
     }
 
+    val isSaved = state.saveMessage != null
     val saveLabel = when {
         state.appStatus == AppStatus.SAVING -> stringResource(R.string.label_saving)
-        state.saveMessage != null -> stringResource(R.string.label_saved)
+        isSaved -> stringResource(R.string.label_saved)
         else -> stringResource(R.string.btn_save_videos)
     }
+    val saveIcon = if (isSaved) Icons.Outlined.Check else Icons.Outlined.FileDownload
     val saveEnabled = state.appStatus != AppStatus.SAVING
 
     Box(
@@ -782,7 +785,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    SaveResultButton(Icons.Outlined.FileDownload, saveLabel, saveEnabled) {
+                    SaveResultButton(saveIcon, saveLabel, saveEnabled) {
                         if (isPro) viewModel.saveBothWithWatermark()
                         else viewModel.showRemoveWatermarkDialog()
                     }
@@ -830,7 +833,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     modifier = Modifier.fillMaxWidth(0.75f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    SaveResultButton(Icons.Outlined.FileDownload, saveLabel, saveEnabled) {
+                    SaveResultButton(saveIcon, saveLabel, saveEnabled) {
                         if (isPro) viewModel.saveBothWithWatermark()
                         else viewModel.showRemoveWatermarkDialog()
                     }
