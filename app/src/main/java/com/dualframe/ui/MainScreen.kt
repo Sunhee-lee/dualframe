@@ -46,7 +46,9 @@ import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -1010,7 +1012,8 @@ private fun RemoveWatermarkDialog(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("♕", fontSize = 24.sp, color = Color(0xFF111111), modifier = Modifier.padding(end = 10.dp))
+                Icon(Icons.Outlined.WorkspacePremium, null, tint = Color(0xFF111111),
+                    modifier = Modifier.size(28.dp).padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 16.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
@@ -1071,7 +1074,8 @@ private fun RemoveWatermarkDialog(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("↓", color = Color(0xFF888888), fontSize = 18.sp, modifier = Modifier.padding(end = 10.dp))
+                Icon(Icons.Outlined.Save, null, tint = Color(0xFF888888),
+                    modifier = Modifier.size(22.dp).padding(end = 10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 16.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)

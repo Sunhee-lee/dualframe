@@ -24,7 +24,7 @@
     <string name="save_popup_desc">저장 방식을 선택하세요.</string>
     <string name="save_popup_pro_title">PRO 업그레이드</string>
     <string name="save_popup_pro_price">₩7,900</string>
-    <string name="save_popup_pro_subtitle">워터마크 영구 제거 · 평생 사용 가능</string>
+    <string name="save_popup_pro_subtitle">한 번 결제로 평생 사용</string>
     <string name="save_popup_pro_benefit1">워터마크 영구 제거</string>
     <string name="save_popup_pro_benefit2">모든 광고 제거</string>
     <string name="save_popup_pro_benefit3">추가 결제 없음</string>
