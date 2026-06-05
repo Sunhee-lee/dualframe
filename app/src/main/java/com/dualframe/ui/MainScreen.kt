@@ -1076,13 +1076,9 @@ private fun RemoveWatermarkDialog(
                     Icon(Icons.Outlined.SaveAlt, null, tint = Color(0xFFAAAAAA),
                         modifier = Modifier.size(26.dp))
                 }
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 18.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(3.dp))
-                    Text(stringResource(R.string.save_popup_watermark_desc), color = Color(0xFFAAAAAA), fontSize = 13.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.Normal)
-                }
+                Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 18.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f))
                 Text("›", color = Color(0xFF666666), fontSize = 20.sp)
             }
 
