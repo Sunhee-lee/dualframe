@@ -991,7 +991,7 @@ private fun RemoveWatermarkDialog(
 
             // 1. PRO Upgrade — gold gradient background
             val goldBrush = Brush.horizontalGradient(
-                colors = listOf(Color(0xFFFFD700), Color(0xFFFFF176), Color(0xFFFFD700))
+                colors = listOf(Color(0xFFE8C252), Color(0xFFF0D474), Color(0xFFE8C252))
             )
             Column(
                 modifier = Modifier.fillMaxWidth()
