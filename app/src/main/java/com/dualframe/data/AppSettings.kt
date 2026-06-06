@@ -70,5 +70,4 @@ object SettingsStore {
 
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 }
