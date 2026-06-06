@@ -50,7 +50,7 @@ fun BottomActionBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SwitchCameraButton(enabled && !isRecording, onSwitchCamera)
+        SwitchCameraButton(enabled && !isRecording && !isCountdown, onSwitchCamera)
         RecordDot(isRecording, isCountdown, isExporting, enabled, onRecord)
         GalleryButton(onGallery)
     }
