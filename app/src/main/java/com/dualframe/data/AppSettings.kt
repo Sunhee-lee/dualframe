@@ -26,6 +26,7 @@ object SettingsStore {
     private const val KEY_AUDIO = "audio_enabled"
     private const val KEY_COUNTDOWN = "countdown_seconds"
     private const val KEY_QUALITY = "video_quality"
+    private const val KEY_INITIALIZED = "settings_initialized"
     private const val KEY_MIRROR_FRONT = "mirror_front_camera"
     private const val KEY_FRONT_EFFECT = "front_camera_effect"
     private const val KEY_SCREEN_AWAKE = "keep_screen_awake"
@@ -60,6 +61,14 @@ object SettingsStore {
         }
     }
 
+    fun isFirstLaunch(context: Context): Boolean =
+        !prefs(context).getBoolean(KEY_INITIALIZED, false)
+
+    fun markInitialized(context: Context) {
+        prefs(context).edit { putBoolean(KEY_INITIALIZED, true) }
+    }
+
     private fun prefs(context: Context): SharedPreferences =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 }

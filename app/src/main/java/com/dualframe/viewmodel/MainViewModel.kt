@@ -116,7 +116,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }.ifEmpty { listOf(VideoQuality.FHD) }
 
         var settings = _uiState.value.settings
-        if (settings.videoQuality !in supportedQualities) {
+        val app = getApplication<android.app.Application>()
+        if (SettingsStore.isFirstLaunch(app)) {
+            settings = settings.copy(videoQuality = supportedQualities.first())
+            Log.i(TAG, "First launch: set quality to best available ${settings.videoQuality}")
+            SettingsStore.markInitialized(app)
+        } else if (settings.videoQuality !in supportedQualities) {
             settings = settings.copy(videoQuality = supportedQualities.first())
             Log.i(TAG, "Auto-corrected quality to ${settings.videoQuality}")
         }
