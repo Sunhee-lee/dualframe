@@ -221,6 +221,43 @@ fun MainScreen(
                 Modifier.width(fitWidth),
                 deviceRotation = deviceRotation, appStatus = state.appStatus,
             )
+
+            // Countdown overlay
+            if (state.appStatus == AppStatus.COUNTDOWN && state.countdownRemaining > 0) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val scale = remember { Animatable(1.5f) }
+                    val alpha = remember { Animatable(1f) }
+                    LaunchedEffect(state.countdownRemaining) {
+                        scale.snapTo(1.5f)
+                        alpha.snapTo(1f)
+                        launch { scale.animateTo(1f, tween(600)) }
+                        launch { alpha.animateTo(0.6f, tween(800)) }
+                    }
+                    Text(
+                        text = "${state.countdownRemaining}",
+                        color = Color.White.copy(alpha = alpha.value),
+                        fontSize = (72 * scale.value).sp,
+                        fontFamily = PretendardFont,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+
+            // Camera switch fade
+            val switchAlpha = remember { Animatable(0f) }
+            LaunchedEffect(isFrontCamera) {
+                switchAlpha.snapTo(1f)
+                switchAlpha.animateTo(0f, tween(350))
+            }
+            if (switchAlpha.value > 0.01f) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                        .background(Color.Black.copy(alpha = switchAlpha.value)),
+                )
+            }
         }
 
         ExportStatusStub(state)
