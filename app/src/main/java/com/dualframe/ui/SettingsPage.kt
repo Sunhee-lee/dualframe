@@ -249,6 +249,7 @@ fun SettingsPage(
 
     // Camera selection dialog
     if (showCameraDialog) {
+        BackHandler { showCameraDialog = false }
         Box(
             modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
                 .clickable { showCameraDialog = false },
@@ -279,6 +280,7 @@ fun SettingsPage(
 
     // Language selection dialog
     if (showLanguageDialog) {
+        BackHandler { showLanguageDialog = false }
         Box(
             modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
                 .clickable { showLanguageDialog = false },
@@ -308,6 +310,7 @@ fun SettingsPage(
     }
 
     if (showProSheet) {
+        BackHandler { showProSheet = false }
         ProUpgradeSheet(
             context = context,
             isPro = isPro,
