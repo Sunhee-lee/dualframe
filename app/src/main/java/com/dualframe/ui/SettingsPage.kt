@@ -488,9 +488,6 @@ private fun AutoSavePage(
                         fontFamily = PretendardFont)
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            Text(stringResource(R.string.settings_auto_save_battery), color = Color(0xFF666666), fontSize = 12.sp,
-                fontFamily = PretendardFont, modifier = Modifier.padding(horizontal = 20.dp))
         }
     }
 }

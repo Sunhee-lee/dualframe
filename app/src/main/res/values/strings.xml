@@ -58,8 +58,7 @@
     <string name="settings_camera_front">Front</string>
     <string name="settings_auto_save">Auto Save</string>
     <string name="settings_auto_save_desc">Automatically save videos after recording.</string>
-    <string name="settings_auto_save_enabled">Auto save is enabled.\nVideos will be saved to gallery automatically after recording.</string>
-    <string name="settings_auto_save_battery">* Auto save may increase battery usage.</string>
+    <string name="settings_auto_save_enabled">Auto save is enabled.\nVideos will be saved to your gallery automatically.</string>
     <string name="settings_auto_save_pro_only">Auto Save is a PRO feature.\nUnlock watermark removal, ad-free saving, and auto save with lifetime access.</string>
     <string name="settings_view_pro">View PRO Benefits</string>
 
