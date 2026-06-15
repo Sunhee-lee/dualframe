@@ -834,19 +834,12 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    if (isAutoSave) {
-                        SaveResultButton(
-                            icon = if (isSaved) Icons.Outlined.Check else saveIcon,
-                            label = saveLabel,
-                            enabled = false,
-                            forceGreen = isSaved,
-                            onClick = {},
-                        )
-                    } else {
-                        SaveResultButton(saveIcon, saveLabel, saveEnabled) {
-                            if (isPro) viewModel.saveBothWithWatermark()
-                            else viewModel.showRemoveWatermarkDialog()
-                        }
+                    SaveResultButton(saveIcon, saveLabel,
+                        enabled = if (isAutoSave) false else saveEnabled,
+                        forceGreen = isAutoSave && isSaved,
+                    ) {
+                        if (isPro) viewModel.saveBothWithWatermark()
+                        else viewModel.showRemoveWatermarkDialog()
                     }
                     IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery)) {
                         try { context.startActivity(buildGalleryIntent(context)) }
