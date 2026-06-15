@@ -442,15 +442,18 @@ private fun AutoSavePage(
                 Text(stringResource(R.string.settings_auto_save_pro_only), color = Color(0xFFAAAAAA), fontSize = 13.sp,
                     fontFamily = PretendardFont)
                 Spacer(Modifier.height(12.dp))
+                val goldBrush = Brush.horizontalGradient(
+                    colors = listOf(Color(0xFFD4AF37), Color(0xFFF5D76E), Color(0xFFC89B2A))
+                )
                 Box(
                     modifier = Modifier.fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF4CAF50))
+                        .background(goldBrush)
                         .clickable { onShowPro() }
                         .padding(12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(stringResource(R.string.settings_view_pro), color = Color.White, fontSize = 15.sp,
+                    Text(stringResource(R.string.settings_view_pro), color = Color(0xFF1A1A1A), fontSize = 15.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
                 }
             }
