@@ -530,7 +530,7 @@ fun ProUpgradeSheet(
                                 colors = listOf(Color(0xFF2A2215), Color(0xFF161616), Color(0xFF111111))
                             )
                         )
-                        .border(1.5.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
                 )
                 Icon(Icons.Rounded.WorkspacePremium, null,
                     modifier = Modifier.size(52.dp)
@@ -551,7 +551,7 @@ fun ProUpgradeSheet(
                             .offset(x = (-6).dp, y = (-6).dp)
                             .clip(CircleShape)
                             .background(Color(0xFF22C55E))
-                            .border(2.dp, Color.White, CircleShape),
+                            .border(1.dp, Color.White, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(Icons.Rounded.Check, null, tint = Color.White,
