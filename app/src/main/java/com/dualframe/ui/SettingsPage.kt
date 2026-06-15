@@ -37,7 +37,6 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.MailOutline
 import androidx.compose.material.icons.rounded.SaveAlt
 import androidx.compose.material.icons.rounded.StarBorder
-import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch

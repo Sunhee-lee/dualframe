@@ -41,19 +41,12 @@
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System Default</string>
     <string name="settings_language_english">English</string>
-    <string name="settings_language_korean">한국어</string>
-    <string name="settings_language_restart">Restart the app to apply the language change.</string>
 
     <!-- Settings page -->
     <string name="settings_title">Settings</string>
     <string name="settings_more">More</string>
-    <string name="settings_pro_title">PRO</string>
-    <string name="settings_pro_upgrade">PRO Upgrade</string>
     <string name="settings_pro_active">Active</string>
-    <string name="settings_pro_in_use">Active</string>
-    <string name="settings_pro_desc">Remove watermarks · Ad-free · Auto save</string>
     <string name="settings_pro_active_msg">PRO is active.</string>
-    <string name="settings_section_camera">Camera Settings</string>
     <string name="settings_default_camera">Default Camera</string>
     <string name="settings_camera_rear">Rear</string>
     <string name="settings_camera_front">Front</string>
@@ -62,27 +55,17 @@
     <string name="settings_auto_save_enabled">Auto save is enabled.\nVideos will be saved to your gallery automatically.</string>
     <string name="settings_auto_save_pro_only">Auto Save is a PRO feature.\nUnlock watermark removal, ad-free saving, and auto save with lifetime access.</string>
     <string name="settings_view_pro">View PRO Benefits</string>
-
-    <string name="settings_view_pro_suffix">Benefits</string>
-    <string name="settings_section_support">Support</string>
     <string name="settings_review">Rate DualFrame</string>
     <string name="settings_contact">Contact Us</string>
-    <string name="pro_sheet_title">Upgrade to PRO</string>
-    <string name="pro_sheet_benefit1_title">Remove Watermark</string>
-    <string name="pro_sheet_benefit1_desc">No watermark added to saved videos.</string>
-    <string name="pro_sheet_benefit2_title">Ad-free Saving</string>
-    <string name="pro_sheet_benefit2_desc">Save quickly without watching ads.</string>
-    <string name="pro_sheet_benefit3_title">Auto Save</string>
-    <string name="pro_sheet_benefit3_desc">Automatically save after recording.</string>
-    <string name="pro_lifetime">Lifetime PRO</string>
     <string name="pro_sheet_title_full">DualFrame PRO</string>
     <string name="pro_sheet_subtitle">One-time purchase. Lifetime access.</string>
     <string name="pro_sheet_get">Get PRO</string>
     <string name="pro_sheet_thanks">Thank you for supporting DualFrame!</string>
     <string name="pro_sheet_restore">Restore Purchase</string>
     <string name="pro_sheet_close">Close</string>
-    <string name="pro_sheet_buy">Upgrade to PRO</string>
-    <string name="pro_sheet_later">Later</string>
+    <string name="pro_sheet_benefit1_title">Remove Watermark</string>
+    <string name="pro_sheet_benefit2_title">Ad-free Saving</string>
+    <string name="pro_sheet_benefit3_title">Auto Save</string>
 
     <!-- Settings tiles -->
     <string name="label_on">ON</string>

@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="record_red">#FFFF1744</color>
-    <color name="dark_surface">#FF1A1A1A</color>
     <color name="ic_launcher_foreground">#FFFFFFFF</color>
 </resources>

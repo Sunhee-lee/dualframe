@@ -41,19 +41,12 @@
     <string name="settings_language">언어</string>
     <string name="settings_language_system">시스템 기본값</string>
     <string name="settings_language_english">English</string>
-    <string name="settings_language_korean">한국어</string>
-    <string name="settings_language_restart">앱을 다시 시작하면 언어 설정이 적용됩니다.</string>
 
     <!-- Settings page -->
     <string name="settings_title">설정</string>
     <string name="settings_more">설정</string>
-    <string name="settings_pro_title">PRO</string>
-    <string name="settings_pro_upgrade">PRO 업그레이드</string>
     <string name="settings_pro_active">활성화됨</string>
-    <string name="settings_pro_in_use">이용 중</string>
-    <string name="settings_pro_desc">워터마크 제거 · 광고 없이 저장 · 자동 저장</string>
     <string name="settings_pro_active_msg">PRO가 활성화되어 있습니다.</string>
-    <string name="settings_section_camera">카메라 설정</string>
     <string name="settings_default_camera">기본 카메라</string>
     <string name="settings_camera_rear">후면</string>
     <string name="settings_camera_front">전면</string>
@@ -62,26 +55,17 @@
     <string name="settings_auto_save_enabled">자동 저장이 활성화되었습니다.\n촬영 후 영상이 자동으로 갤러리에 저장됩니다.</string>
     <string name="settings_auto_save_pro_only">자동 저장은 PRO 기능입니다.\n워터마크 제거, 광고 없이 저장, 자동 저장을 평생 이용할 수 있습니다.</string>
     <string name="settings_view_pro">PRO 혜택 보기</string>
-    <string name="settings_view_pro_suffix">혜택 보기</string>
-    <string name="settings_section_support">지원</string>
     <string name="settings_review">리뷰 남기기</string>
     <string name="settings_contact">문의하기</string>
-    <string name="pro_sheet_title">PRO로 업그레이드</string>
-    <string name="pro_sheet_benefit1_title">워터마크 제거</string>
-    <string name="pro_sheet_benefit1_desc">저장되는 영상에 워터마크가 추가되지 않습니다.</string>
-    <string name="pro_sheet_benefit2_title">광고 없이 저장</string>
-    <string name="pro_sheet_benefit2_desc">광고 없이 빠르고 쾌적하게 이용할 수 있습니다.</string>
-    <string name="pro_sheet_benefit3_title">자동 저장</string>
-    <string name="pro_sheet_benefit3_desc">촬영 완료 후 저장 버튼 없이 자동으로 저장됩니다.</string>
-    <string name="pro_lifetime">Lifetime PRO</string>
     <string name="pro_sheet_title_full">DualFrame PRO</string>
     <string name="pro_sheet_subtitle">한 번 구매로 평생 이용</string>
     <string name="pro_sheet_get">PRO 구매</string>
     <string name="pro_sheet_thanks">DualFrame을 지원해 주셔서 감사합니다!</string>
     <string name="pro_sheet_restore">구매 복원</string>
     <string name="pro_sheet_close">닫기</string>
-    <string name="pro_sheet_buy">PRO로 업그레이드</string>
-    <string name="pro_sheet_later">나중에</string>
+    <string name="pro_sheet_benefit1_title">워터마크 제거</string>
+    <string name="pro_sheet_benefit2_title">광고 없이 저장</string>
+    <string name="pro_sheet_benefit3_title">자동 저장</string>
 
     <!-- Settings tiles -->
     <string name="label_on">켜짐</string>
