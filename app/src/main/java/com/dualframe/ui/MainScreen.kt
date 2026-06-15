@@ -902,11 +902,6 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     }
                 }
 
-                if (isPro) {
-                    Spacer(Modifier.height(16.dp))
-                    Text("DualFrame PRO", color = Color(0xFF666666), fontSize = 12.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
-                }
             }
         }
     }
