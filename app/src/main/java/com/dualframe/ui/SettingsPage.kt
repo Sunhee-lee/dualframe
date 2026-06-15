@@ -27,7 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.WorkspacePremium
-import androidx.compose.material.icons.rounded.CameraSwitch
+import androidx.compose.material.icons.rounded.Cameraswitch
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
@@ -176,7 +176,7 @@ fun SettingsPage(
         )
         Spacer(Modifier.height(12.dp))
         SettingsRow(
-            icon = Icons.Rounded.CameraSwitch,
+            icon = Icons.Rounded.Cameraswitch,
             title = stringResource(R.string.settings_default_camera),
             value = if (settings.defaultFrontCamera) stringResource(R.string.settings_camera_front)
                     else stringResource(R.string.settings_camera_rear),
