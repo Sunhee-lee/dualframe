@@ -12,6 +12,8 @@ data class AppSettings(
     val frontCameraEffect: Boolean = true,
     val keepScreenAwake: Boolean = true,
     val showGuides: Boolean = true,
+    val autoSave: Boolean = false,
+    val defaultFrontCamera: Boolean = false,
 )
 
 enum class VideoQuality(val label: String) {
@@ -31,6 +33,8 @@ object SettingsStore {
     private const val KEY_FRONT_EFFECT = "front_camera_effect"
     private const val KEY_SCREEN_AWAKE = "keep_screen_awake"
     private const val KEY_GUIDES = "show_guides"
+    private const val KEY_AUTO_SAVE = "auto_save"
+    private const val KEY_DEFAULT_FRONT = "default_front_camera"
 
     fun load(context: Context): AppSettings {
         val prefs = prefs(context)
@@ -46,6 +50,8 @@ object SettingsStore {
             frontCameraEffect = prefs.getBoolean(KEY_FRONT_EFFECT, true),
             keepScreenAwake = prefs.getBoolean(KEY_SCREEN_AWAKE, true),
             showGuides = prefs.getBoolean(KEY_GUIDES, true),
+            autoSave = prefs.getBoolean(KEY_AUTO_SAVE, false),
+            defaultFrontCamera = prefs.getBoolean(KEY_DEFAULT_FRONT, false),
         )
     }
 
@@ -58,6 +64,8 @@ object SettingsStore {
             putBoolean(KEY_FRONT_EFFECT, settings.frontCameraEffect)
             putBoolean(KEY_SCREEN_AWAKE, settings.keepScreenAwake)
             putBoolean(KEY_GUIDES, settings.showGuides)
+            putBoolean(KEY_AUTO_SAVE, settings.autoSave)
+            putBoolean(KEY_DEFAULT_FRONT, settings.defaultFrontCamera)
         }
     }
 

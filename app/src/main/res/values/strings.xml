@@ -38,6 +38,37 @@
     <string name="toast_watermark_removed">Watermarks removed from both saved videos.</string>
     <string name="toast_export_fallback_fhd">4K export not supported on this device. Saved in FHD.</string>
 
+    <!-- Settings page -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_more">More</string>
+    <string name="settings_pro_title">PRO</string>
+    <string name="settings_pro_upgrade">Upgrade</string>
+    <string name="settings_pro_active">Active</string>
+    <string name="settings_pro_desc">Remove watermarks · Ad-free · Auto save</string>
+    <string name="settings_pro_active_msg">PRO is active.</string>
+    <string name="settings_section_camera">Camera Settings</string>
+    <string name="settings_default_camera">Default Camera</string>
+    <string name="settings_camera_rear">Rear</string>
+    <string name="settings_camera_front">Front</string>
+    <string name="settings_auto_save">Auto Save</string>
+    <string name="settings_auto_save_desc">Automatically save videos after recording without pressing the save button.</string>
+    <string name="settings_auto_save_enabled">Auto save is enabled.\nVideos will be saved to gallery automatically after recording.</string>
+    <string name="settings_auto_save_battery">* Auto save may increase battery usage.</string>
+    <string name="settings_auto_save_pro_only">Auto save is a PRO feature.\nRemove watermarks · Ad-free save · Auto save</string>
+    <string name="settings_view_pro">View PRO</string>
+    <string name="settings_section_support">Support</string>
+    <string name="settings_review">Leave a Review</string>
+    <string name="settings_contact">Contact Us</string>
+    <string name="pro_sheet_title">Upgrade to PRO</string>
+    <string name="pro_sheet_benefit1_title">Remove Watermark</string>
+    <string name="pro_sheet_benefit1_desc">No watermark added to saved videos.</string>
+    <string name="pro_sheet_benefit2_title">Ad-free Saving</string>
+    <string name="pro_sheet_benefit2_desc">Save quickly without watching ads.</string>
+    <string name="pro_sheet_benefit3_title">Auto Save</string>
+    <string name="pro_sheet_benefit3_desc">Automatically save after recording.</string>
+    <string name="pro_sheet_buy">Upgrade to PRO</string>
+    <string name="pro_sheet_later">Later</string>
+
     <!-- Settings tiles -->
     <string name="label_on">ON</string>
     <string name="label_off">OFF</string>

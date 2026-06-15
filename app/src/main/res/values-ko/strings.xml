@@ -38,6 +38,37 @@
     <string name="toast_watermark_removed">가로/세로 영상의 워터마크가 제거되었습니다.</string>
     <string name="toast_export_fallback_fhd">이 기기에서는 4K 저장이 제한되어 FHD로 저장되었습니다.</string>
 
+    <!-- Settings page -->
+    <string name="settings_title">설정</string>
+    <string name="settings_more">더보기</string>
+    <string name="settings_pro_title">PRO</string>
+    <string name="settings_pro_upgrade">Upgrade</string>
+    <string name="settings_pro_active">Active</string>
+    <string name="settings_pro_desc">워터마크 제거 · 광고 없이 저장 · 자동 저장</string>
+    <string name="settings_pro_active_msg">PRO가 활성화되어 있습니다.</string>
+    <string name="settings_section_camera">카메라 설정</string>
+    <string name="settings_default_camera">기본 카메라</string>
+    <string name="settings_camera_rear">후면</string>
+    <string name="settings_camera_front">전면</string>
+    <string name="settings_auto_save">자동 저장</string>
+    <string name="settings_auto_save_desc">촬영 완료 후 저장 버튼 없이 영상을 자동으로 저장합니다.</string>
+    <string name="settings_auto_save_enabled">자동 저장이 활성화되었습니다.\n촬영이 완료되면 영상이 자동으로 갤러리에 저장됩니다.</string>
+    <string name="settings_auto_save_battery">* 자동 저장은 배터리 사용량이 증가할 수 있습니다.</string>
+    <string name="settings_auto_save_pro_only">자동 저장은 PRO 기능입니다.\n워터마크 제거 · 광고 없이 저장 · 자동 저장 기능을 이용할 수 있습니다.</string>
+    <string name="settings_view_pro">PRO 보기</string>
+    <string name="settings_section_support">지원</string>
+    <string name="settings_review">리뷰 남기기</string>
+    <string name="settings_contact">문의하기</string>
+    <string name="pro_sheet_title">PRO로 업그레이드</string>
+    <string name="pro_sheet_benefit1_title">워터마크 제거</string>
+    <string name="pro_sheet_benefit1_desc">저장되는 영상에 워터마크가 추가되지 않습니다.</string>
+    <string name="pro_sheet_benefit2_title">광고 없이 저장</string>
+    <string name="pro_sheet_benefit2_desc">광고 없이 빠르고 쾌적하게 이용할 수 있습니다.</string>
+    <string name="pro_sheet_benefit3_title">자동 저장</string>
+    <string name="pro_sheet_benefit3_desc">촬영 완료 후 저장 버튼 없이 자동으로 저장됩니다.</string>
+    <string name="pro_sheet_buy">PRO로 업그레이드</string>
+    <string name="pro_sheet_later">나중에</string>
+
     <!-- Settings tiles -->
     <string name="label_on">켜짐</string>
     <string name="label_off">꺼짐</string>

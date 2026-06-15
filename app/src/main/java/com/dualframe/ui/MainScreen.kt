@@ -152,6 +152,16 @@ fun MainScreen(
     // Back button confirmation dialog
     var showExitDialog by remember { mutableStateOf(false) }
     var settingsExpanded by remember { mutableStateOf(false) }
+    var showSettingsPage by remember { mutableStateOf(false) }
+
+    if (showSettingsPage) {
+        SettingsPage(
+            settings = state.settings,
+            onSettingsChange = { viewModel.updateSettings(it) },
+            onBack = { showSettingsPage = false },
+        )
+        return
+    }
     BackHandler(enabled = true) {
         android.util.Log.d("BackHandler", "Back pressed — showExitDialog=true")
         showExitDialog = true
@@ -324,6 +334,10 @@ fun MainScreen(
                     val idx = qualities.indexOf(state.settings.videoQuality)
                     val next = qualities[(idx + 1) % qualities.size]
                     viewModel.updateSettings(state.settings.copy(videoQuality = next))
+                },
+                onMoreClick = {
+                    settingsExpanded = false
+                    showSettingsPage = true
                 },
             )
         }

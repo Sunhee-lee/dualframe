@@ -74,6 +74,7 @@ fun SettingsPanel(
     onKeepScreenToggle: () -> Unit,
     onSelfieEffectToggle: () -> Unit,
     onResolutionCycle: () -> Unit,
+    onMoreClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
@@ -116,6 +117,8 @@ fun SettingsPanel(
                 if (flashOn) stringResource(R.string.label_on) else stringResource(R.string.label_off),
                 flashOn, rot, onFlashToggle)
         }
+
+        TextTile(stringResource(R.string.settings_more), rot, onMoreClick)
     }
 }
 
