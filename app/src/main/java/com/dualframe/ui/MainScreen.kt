@@ -1046,7 +1046,7 @@ private fun RemoveWatermarkDialog(
                 colors = listOf(Color(0xFFD4AF37), Color(0xFFF5D76E), Color(0xFFC89B2A))
             )
             Row(
-                modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(goldBrush)
                     .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp))
@@ -1103,7 +1103,7 @@ private fun RemoveWatermarkDialog(
 
             // 2. Watch Ad
             Row(
-                modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF1A1A1A))
                     .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp))
@@ -1145,7 +1145,7 @@ private fun RemoveWatermarkDialog(
 
             // 3. Basic Save
             Row(
-                modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF1A1A1A))
                     .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp))
