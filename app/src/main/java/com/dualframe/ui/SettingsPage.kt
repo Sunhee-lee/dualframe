@@ -51,8 +51,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -507,6 +509,9 @@ fun ProUpgradeSheet(
             Spacer(Modifier.height(8.dp))
 
             // Crown icon with decorative background
+            val crownGoldBrush = Brush.linearGradient(
+                colors = listOf(Color(0xFFD4AF37), Color(0xFFF5D76E), Color(0xFFD4AF37), Color(0xFFF0D060))
+            )
             Box(
                 modifier = Modifier.size(100.dp),
                 contentAlignment = Alignment.Center,
@@ -521,8 +526,17 @@ fun ProUpgradeSheet(
                         )
                 )
                 Icon(Icons.Rounded.WorkspacePremium, null,
-                    tint = Color(0xFFD4AF37),
-                    modifier = Modifier.size(52.dp))
+                    modifier = Modifier.size(52.dp)
+                        .graphicsLayer(alpha = 0.99f)
+                        .drawWithCache {
+                            onDrawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = crownGoldBrush,
+                                    blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop,
+                                )
+                            }
+                        })
                 if (isPro) {
                     Icon(Icons.Rounded.Verified, null,
                         tint = Color(0xFF22C55E),
