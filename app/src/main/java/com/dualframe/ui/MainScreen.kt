@@ -152,7 +152,12 @@ fun MainScreen(
     // Back button confirmation dialog
     var showExitDialog by remember { mutableStateOf(false) }
     var settingsExpanded by remember { mutableStateOf(false) }
-    var showSettingsPage by remember { mutableStateOf(false) }
+    var showSettingsPage by remember {
+        val prefs = context.getSharedPreferences("dualframe_settings", android.content.Context.MODE_PRIVATE)
+        val reopen = prefs.getBoolean("reopen_settings", false)
+        if (reopen) prefs.edit().remove("reopen_settings").apply()
+        mutableStateOf(reopen)
+    }
 
     if (showSettingsPage) {
         SettingsPage(

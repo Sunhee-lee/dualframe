@@ -331,6 +331,8 @@ private fun applyLanguage(
 ) {
     if (settings.appLanguage == lang) return
     onSettingsChange(settings.copy(appLanguage = lang))
+    val prefs = context.getSharedPreferences("dualframe_settings", Context.MODE_PRIVATE)
+    prefs.edit().putBoolean("reopen_settings", true).apply()
     (context as? Activity)?.recreate()
 }
 
