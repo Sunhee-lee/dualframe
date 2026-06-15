@@ -134,7 +134,7 @@ private fun ZoomTile(zoomRatio: Float, rotation: Float, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(displayText, color = RailTheme.activeColor, fontSize = 13.sp,
+        Text(displayText, color = RailTheme.iconColor, fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold, fontFamily = RailTheme.font,
             modifier = Modifier.rotate(rotation))
     }
