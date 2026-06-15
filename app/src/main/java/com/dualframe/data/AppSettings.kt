@@ -14,6 +14,7 @@ data class AppSettings(
     val showGuides: Boolean = true,
     val autoSave: Boolean = false,
     val defaultFrontCamera: Boolean = false,
+    val appLanguage: String = "system",
 )
 
 enum class VideoQuality(val label: String) {
@@ -35,6 +36,7 @@ object SettingsStore {
     private const val KEY_GUIDES = "show_guides"
     private const val KEY_AUTO_SAVE = "auto_save"
     private const val KEY_DEFAULT_FRONT = "default_front_camera"
+    private const val KEY_LANGUAGE = "app_language"
 
     fun load(context: Context): AppSettings {
         val prefs = prefs(context)
@@ -52,6 +54,7 @@ object SettingsStore {
             showGuides = prefs.getBoolean(KEY_GUIDES, true),
             autoSave = prefs.getBoolean(KEY_AUTO_SAVE, false),
             defaultFrontCamera = prefs.getBoolean(KEY_DEFAULT_FRONT, false),
+            appLanguage = prefs.getString(KEY_LANGUAGE, "system") ?: "system",
         )
     }
 
@@ -66,6 +69,7 @@ object SettingsStore {
             putBoolean(KEY_GUIDES, settings.showGuides)
             putBoolean(KEY_AUTO_SAVE, settings.autoSave)
             putBoolean(KEY_DEFAULT_FRONT, settings.defaultFrontCamera)
+            putString(KEY_LANGUAGE, settings.appLanguage)
         }
     }
 

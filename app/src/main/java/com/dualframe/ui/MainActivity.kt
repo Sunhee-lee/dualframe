@@ -1,9 +1,12 @@
 package com.dualframe.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.WindowManager
+import java.util.Locale
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,6 +53,19 @@ class MainActivity : ComponentActivity() {
     ) { permissions ->
         hasCameraPermission = permissions[Manifest.permission.CAMERA] == true
         hasAudioPermission = permissions[Manifest.permission.RECORD_AUDIO] == true
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = newBase.getSharedPreferences("dualframe_settings", Context.MODE_PRIVATE)
+        val lang = prefs.getString("app_language", "system") ?: "system"
+        if (lang == "system") {
+            super.attachBaseContext(newBase)
+        } else {
+            val locale = Locale(lang)
+            val config = Configuration(newBase.resources.configuration)
+            config.setLocale(locale)
+            super.attachBaseContext(newBase.createConfigurationContext(config))
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CameraSwitch
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Star
@@ -66,6 +67,7 @@ fun SettingsPage(
     var showProSheet by remember { mutableStateOf(false) }
     var showAutoSavePage by remember { mutableStateOf(false) }
     var showCameraDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
 
     if (showAutoSavePage) {
         AutoSavePage(
@@ -161,6 +163,17 @@ fun SettingsPage(
                 value = if (settings.autoSave) "ON" else "OFF",
                 onClick = { showAutoSavePage = true },
             )
+            SettingsDivider()
+            SettingsRow(
+                icon = Icons.Outlined.Language,
+                title = stringResource(R.string.settings_language),
+                value = when (settings.appLanguage) {
+                    "en" -> stringResource(R.string.settings_language_english)
+                    "ko" -> stringResource(R.string.settings_language_korean)
+                    else -> stringResource(R.string.settings_language_system)
+                },
+                onClick = { showLanguageDialog = true },
+            )
         }
 
         Spacer(Modifier.height(24.dp))
@@ -239,6 +252,41 @@ fun SettingsPage(
         }
     }
 
+    // Language selection dialog
+    if (showLanguageDialog) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
+                .clickable { showLanguageDialog = false },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(0.7f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF1E1E1E))
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(stringResource(R.string.settings_language), color = Color.White, fontSize = 18.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(16.dp))
+                CameraOption(stringResource(R.string.settings_language_system), settings.appLanguage == "system") {
+                    applyLanguage(context, settings, "system", onSettingsChange)
+                    showLanguageDialog = false
+                }
+                Spacer(Modifier.height(8.dp))
+                CameraOption(stringResource(R.string.settings_language_english), settings.appLanguage == "en") {
+                    applyLanguage(context, settings, "en", onSettingsChange)
+                    showLanguageDialog = false
+                }
+                Spacer(Modifier.height(8.dp))
+                CameraOption(stringResource(R.string.settings_language_korean), settings.appLanguage == "ko") {
+                    applyLanguage(context, settings, "ko", onSettingsChange)
+                    showLanguageDialog = false
+                }
+            }
+        }
+    }
+
     if (showProSheet) {
         ProUpgradeSheet(
             context = context,
@@ -246,6 +294,17 @@ fun SettingsPage(
             onPurchased = { showProSheet = false },
         )
     }
+}
+
+private fun applyLanguage(
+    context: Context,
+    settings: AppSettings,
+    lang: String,
+    onSettingsChange: (AppSettings) -> Unit,
+) {
+    if (settings.appLanguage == lang) return
+    onSettingsChange(settings.copy(appLanguage = lang))
+    (context as? Activity)?.recreate()
 }
 
 @Composable
