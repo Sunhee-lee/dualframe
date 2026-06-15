@@ -60,8 +60,8 @@
     <string name="settings_auto_save_desc">Automatically save videos after recording without pressing the save button.</string>
     <string name="settings_auto_save_enabled">Auto save is enabled.\nVideos will be saved to gallery automatically after recording.</string>
     <string name="settings_auto_save_battery">* Auto save may increase battery usage.</string>
-    <string name="settings_auto_save_pro_only">Auto save is a PRO feature.\nRemove watermarks · Ad-free save · Auto save</string>
-    <string name="settings_view_pro">View PRO</string>
+    <string name="settings_auto_save_pro_only">Auto save is a PRO feature.\nRemove watermarks, ad-free saving, and auto save with lifetime access.</string>
+    <string name="settings_view_pro">View PRO Benefits</string>
     <string name="settings_section_support">Support</string>
     <string name="settings_review">Rate DualFrame</string>
     <string name="settings_contact">Contact Us</string>
