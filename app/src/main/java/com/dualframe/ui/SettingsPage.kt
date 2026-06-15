@@ -102,8 +102,7 @@ fun SettingsPage(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.Black)
-            .verticalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxSize().background(Color.Black),
     ) {
         // Top bar
         Row(
@@ -116,6 +115,12 @@ fun SettingsPage(
             Text(stringResource(R.string.settings_title), color = Color.White, fontSize = 20.sp,
                 fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
         }
+
+        Column(
+            modifier = Modifier.fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.Center,
+        ) {
 
         Spacer(Modifier.height(12.dp))
 
@@ -241,6 +246,7 @@ fun SettingsPage(
             fontFamily = PretendardFont,
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
     }
 
     // Camera selection dialog
@@ -359,15 +365,14 @@ private fun AutoSavePage(
     Column(
         modifier = Modifier.fillMaxSize().background(Color.Black),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        // Close button
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
         ) {
-            Icon(Icons.Outlined.ArrowBack, null, tint = Color.White,
-                modifier = Modifier.size(28.dp).clickable { onBack() }.padding(4.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.settings_auto_save), color = Color.White, fontSize = 20.sp,
-                fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+            Icon(Icons.Rounded.Close, null, tint = Color(0xFF888888),
+                modifier = Modifier.size(24.dp)
+                    .align(Alignment.TopEnd)
+                    .clickable { onBack() })
         }
 
         Column(
