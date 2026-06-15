@@ -1056,7 +1056,7 @@ private fun RemoveWatermarkDialog(
                                 }
                         }
                     }
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .padding(start = 10.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
@@ -1068,7 +1068,7 @@ private fun RemoveWatermarkDialog(
                     Icon(Icons.Outlined.WorkspacePremium, null, tint = Color.White,
                         modifier = Modifier.size(24.dp))
                 }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
@@ -1078,9 +1078,10 @@ private fun RemoveWatermarkDialog(
                 }
                 if (price != null) {
                     Text(price, color = Color(0xFFF0F0F0), fontSize = 15.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(end = 6.dp))
+                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
                 }
+                Spacer(Modifier.width(4.dp))
+                Text("›", color = Color(0xFF666666), fontSize = 20.sp)
             }
 
             Spacer(Modifier.height(8.dp))
