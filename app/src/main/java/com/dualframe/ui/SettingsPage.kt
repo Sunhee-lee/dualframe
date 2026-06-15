@@ -147,7 +147,7 @@ fun SettingsPage(
                 contentAlignment = Alignment.Center,
             ) {
                 val iconGold = Brush.linearGradient(
-                    colors = listOf(Color.White, Color(0xFFD4AF37), Color(0xFFF5D76E), Color.White)
+                    colors = listOf(Color(0xFFF5D76E), Color.White, Color(0xFFF5D76E))
                 )
                 Icon(Icons.Rounded.WorkspacePremium, null,
                     modifier = Modifier.size(34.dp)
