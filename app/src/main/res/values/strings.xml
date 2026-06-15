@@ -19,7 +19,7 @@
     <string name="btn_retake">Retake</string>
     <!-- Save options popup -->
     <string name="save_popup_title">Save Videos</string>
-    <string name="save_popup_pro_title">Watermark-Free PRO</string>
+    <string name="save_popup_pro_title">DualFrame PRO</string>
     <string name="save_popup_pro_subtitle">Lifetime Access</string>
     <string name="save_popup_ad_title">Watch Ad &amp; Save for Free</string>
     <string name="save_popup_ad_desc">Watermark-free for these videos only</string>

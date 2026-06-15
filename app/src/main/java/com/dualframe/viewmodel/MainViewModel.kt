@@ -150,6 +150,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 cameraManager.useFrontCamera.value && newSettings.frontCameraEffect
         }
 
+        // If default camera changed, switch to match
+        if (newSettings.defaultFrontCamera != oldSettings.defaultFrontCamera) {
+            val currentlyFront = cameraManager.useFrontCamera.value
+            if (currentlyFront != newSettings.defaultFrontCamera) {
+                switchCamera()
+            }
+        }
+
         // If quality changed, refresh supported options and rebind camera
         if (newSettings.videoQuality != oldSettings.videoQuality) {
             refreshSupportedCapabilities()

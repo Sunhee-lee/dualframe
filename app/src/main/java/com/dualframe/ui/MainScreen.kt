@@ -1063,6 +1063,7 @@ private fun RemoveWatermarkDialog(
                     Icon(Icons.Outlined.WorkspacePremium, null, tint = Color.White,
                         modifier = Modifier.size(24.dp))
                 }
+                Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
@@ -1104,10 +1105,9 @@ private fun RemoveWatermarkDialog(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.PlayArrow, null, tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(26.dp))
-                }
+                Icon(Icons.Filled.PlayArrow, null, tint = Color(0xFF4CAF50),
+                    modifier = Modifier.size(26.dp))
+                Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 18.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
@@ -1130,10 +1130,9 @@ private fun RemoveWatermarkDialog(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.SaveAlt, null, tint = Color(0xFFAAAAAA),
-                        modifier = Modifier.size(26.dp))
-                }
+                Icon(Icons.Outlined.SaveAlt, null, tint = Color(0xFFAAAAAA),
+                    modifier = Modifier.size(26.dp))
+                Spacer(Modifier.width(14.dp))
                 val watermarkDesc = stringResource(R.string.save_popup_watermark_desc)
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 18.sp,

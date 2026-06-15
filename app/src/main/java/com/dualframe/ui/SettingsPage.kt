@@ -56,7 +56,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dualframe.data.AppSettings
@@ -600,11 +603,19 @@ fun ProUpgradeSheet(
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        if (price != null) "${stringResource(R.string.pro_sheet_get)} · $price"
-                        else stringResource(R.string.pro_sheet_get),
-                        color = Color(0xFF1A1A1A), fontSize = 17.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+                    val label = stringResource(R.string.pro_sheet_get)
+                    if (price != null) {
+                        Text(
+                            buildAnnotatedString {
+                                withStyle(SpanStyle(color = Color(0xFF1A1A1A))) { append("$label · ") }
+                                withStyle(SpanStyle(color = Color.White)) { append(price) }
+                            },
+                            fontSize = 17.sp,
+                            fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+                    } else {
+                        Text(label, color = Color(0xFF1A1A1A), fontSize = 17.sp,
+                            fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -635,12 +646,12 @@ private fun SettingsRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-            .heightIn(min = 72.dp)
+            .height(72.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFF141414))
             .border(0.5.dp, Color(0xFF252525), RoundedCornerShape(20.dp))
             .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 22.dp),
+            .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(28.dp))
