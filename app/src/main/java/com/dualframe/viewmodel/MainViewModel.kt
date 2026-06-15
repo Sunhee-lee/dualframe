@@ -66,6 +66,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Load persisted settings
         val settings = SettingsStore.load(application)
         _uiState.update { it.copy(settings = settings) }
+        cameraManager.setInitialCamera(settings.defaultFrontCamera)
     }
 
     // ── Camera ────────────────────────────────────────────────────────

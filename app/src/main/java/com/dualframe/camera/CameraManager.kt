@@ -60,6 +60,10 @@ class CameraManager(private val context: Context) {
     private val _useFrontCamera = MutableStateFlow(false)
     val useFrontCamera: StateFlow<Boolean> = _useFrontCamera.asStateFlow()
 
+    fun setInitialCamera(front: Boolean) {
+        _useFrontCamera.value = front
+    }
+
     /** The GPU renderer that drives both preview TextureViews. */
     val renderer = DualPreviewRenderer()
 
