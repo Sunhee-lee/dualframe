@@ -368,22 +368,19 @@ private fun AutoSavePage(
     BackHandler { onBack() }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.Black),
+        modifier = Modifier.fillMaxSize().background(Color.Black)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.Center,
     ) {
         // Close button
         Box(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(end = 12.dp, bottom = 8.dp),
         ) {
             Icon(Icons.Rounded.Close, null, tint = Color(0xFF888888),
                 modifier = Modifier.size(24.dp)
                     .align(Alignment.TopEnd)
                     .clickable { onBack() })
         }
-
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Center,
-        ) {
 
         // Auto save toggle card
         Row(
@@ -474,7 +471,6 @@ private fun AutoSavePage(
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.settings_auto_save_battery), color = Color(0xFF666666), fontSize = 12.sp,
                 fontFamily = PretendardFont, modifier = Modifier.padding(horizontal = 20.dp))
-        }
         }
     }
 }
