@@ -171,7 +171,7 @@ fun SettingsPage(
                 modifier = Modifier.size(22.dp))
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(32.dp))
 
         // Settings items - individual cards
         SettingsRow(
@@ -199,7 +199,7 @@ fun SettingsPage(
             onClick = { showLanguageDialog = true },
         )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(32.dp))
 
         SettingsRow(
             icon = Icons.Rounded.StarBorder,
