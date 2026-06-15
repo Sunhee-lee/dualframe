@@ -168,12 +168,21 @@ fun SettingsPage(
                 Text(
                     if (isPro) stringResource(R.string.settings_pro_active)
                     else stringResource(R.string.save_popup_pro_subtitle),
-                    color = Color(0xFF6B5E3A), fontSize = 14.sp,
+                    color = if (isPro) Color(0xFF22C55E) else Color(0xFF6B5E3A),
+                    fontSize = 14.sp,
                     fontFamily = PretendardFont)
             }
             if (isPro) {
-                Icon(Icons.Rounded.Verified, null, tint = Color(0xFF22C55E),
-                    modifier = Modifier.size(24.dp))
+                Box(
+                    modifier = Modifier.size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF22C55E))
+                        .border(1.5.dp, Color.White, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Rounded.Check, null, tint = Color.White,
+                        modifier = Modifier.size(16.dp))
+                }
                 Spacer(Modifier.width(6.dp))
             } else {
                 val price = BillingManager.getInstance(context).formattedPrice
@@ -550,11 +559,18 @@ fun ProUpgradeSheet(
                             }
                         })
                 if (isPro) {
-                    Icon(Icons.Rounded.Verified, null,
-                        tint = Color(0xFF22C55E),
+                    Box(
                         modifier = Modifier.size(28.dp)
                             .align(Alignment.BottomEnd)
-                            .offset(x = (-8).dp, y = (-8).dp))
+                            .offset(x = (-8).dp, y = (-8).dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF22C55E))
+                            .border(1.5.dp, Color.White, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Rounded.Check, null, tint = Color.White,
+                            modifier = Modifier.size(18.dp))
+                    }
                 }
             }
 
