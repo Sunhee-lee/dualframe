@@ -432,7 +432,7 @@ private fun AutoSavePage(
                     Icon(Icons.Outlined.WorkspacePremium, null, tint = Color(0xFFD4A828),
                         modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("PRO", color = Color(0xFFD4A828), fontSize = 14.sp,
+                    Text("DualFrame PRO", color = Color(0xFFD4A828), fontSize = 14.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(8.dp))
@@ -444,14 +444,22 @@ private fun AutoSavePage(
                 )
                 Box(
                     modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
+                        .heightIn(min = 60.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(goldBrush)
+                        .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp))
                         .clickable { onShowPro() }
-                        .padding(12.dp),
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(stringResource(R.string.settings_view_pro), color = Color(0xFF1A1A1A), fontSize = 15.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                    val suffix = stringResource(R.string.settings_view_pro_suffix)
+                    Text(
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(color = Color(0xFF1A1A1A))) { append("PRO ") }
+                            withStyle(SpanStyle(color = Color.White)) { append(suffix) }
+                        },
+                        fontSize = 17.sp,
+                        fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                 }
             }
         } else if (settings.autoSave) {

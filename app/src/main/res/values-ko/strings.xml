@@ -62,6 +62,7 @@
     <string name="settings_auto_save_battery">* 자동 저장은 배터리 사용량이 증가할 수 있습니다.</string>
     <string name="settings_auto_save_pro_only">자동 저장은 PRO 기능입니다.\n워터마크 제거, 광고 없이 저장, 자동 저장을 평생 이용할 수 있습니다.</string>
     <string name="settings_view_pro">PRO 혜택 보기</string>
+    <string name="settings_view_pro_suffix">혜택 보기</string>
     <string name="settings_section_support">지원</string>
     <string name="settings_review">리뷰 남기기</string>
     <string name="settings_contact">문의하기</string>
