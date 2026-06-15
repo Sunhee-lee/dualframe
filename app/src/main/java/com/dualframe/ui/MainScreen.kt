@@ -1069,7 +1069,7 @@ private fun RemoveWatermarkDialog(
                     contentAlignment = Alignment.Center,
                 ) {
                     val iconGold = Brush.linearGradient(
-                        colors = listOf(Color.White, Color(0xFFF5E6A8), Color.White)
+                        colors = listOf(Color.White, Color(0xFFD4AF37), Color(0xFFF5D76E), Color.White)
                     )
                     Icon(Icons.Outlined.WorkspacePremium, null,
                         modifier = Modifier.size(24.dp)
