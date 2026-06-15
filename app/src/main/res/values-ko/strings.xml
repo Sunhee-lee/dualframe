@@ -46,7 +46,7 @@
 
     <!-- Settings page -->
     <string name="settings_title">설정</string>
-    <string name="settings_more">더보기</string>
+    <string name="settings_more">설정</string>
     <string name="settings_pro_title">PRO</string>
     <string name="settings_pro_upgrade">PRO 업그레이드</string>
     <string name="settings_pro_active">Active</string>

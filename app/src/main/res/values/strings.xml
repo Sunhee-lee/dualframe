@@ -46,7 +46,7 @@
 
     <!-- Settings page -->
     <string name="settings_title">Settings</string>
-    <string name="settings_more">More</string>
+    <string name="settings_more">Settings</string>
     <string name="settings_pro_title">PRO</string>
     <string name="settings_pro_upgrade">PRO Upgrade</string>
     <string name="settings_pro_active">Active</string>
