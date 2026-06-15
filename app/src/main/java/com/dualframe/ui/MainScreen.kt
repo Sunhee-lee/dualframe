@@ -965,25 +965,19 @@ private fun SaveResultButton(
     forceGreen: Boolean = false,
     onClick: () -> Unit,
 ) {
-    androidx.compose.material3.Surface(
-        onClick = onClick,
-        enabled = enabled,
-        shape = RoundedCornerShape(10.dp),
-        color = Color.Transparent,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
+    Box(
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (enabled || forceGreen) SaveGreenBrush else Brush.horizontalGradient(listOf(Color(0xFF1A1A1A), Color(0xFF1A1A1A))),
+                RoundedCornerShape(10.dp))
+            .then(if (enabled) Modifier.clickable { onClick() } else Modifier),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize()
-                .background(if (enabled || forceGreen) SaveGreenBrush else Brush.horizontalGradient(listOf(Color(0xFF1A1A1A), Color(0xFF1A1A1A))),
-                    RoundedCornerShape(10.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(label, color = Color.White, fontSize = 18.sp,
-                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(label, color = Color.White, fontSize = 18.sp,
+                fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
         }
     }
 }
