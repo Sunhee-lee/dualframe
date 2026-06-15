@@ -220,7 +220,7 @@ fun MainScreen(
                     if (!isRecording) {
                         Icon(Icons.Outlined.Settings, null,
                             tint = if (settingsExpanded) RailTheme.activeColor else RailTheme.iconColor,
-                            modifier = Modifier.size(20.dp))
+                            modifier = Modifier.size(24.dp))
                     }
                 }
             }
