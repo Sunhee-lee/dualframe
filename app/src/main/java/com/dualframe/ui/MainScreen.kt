@@ -772,6 +772,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
     }
 
     val isSaved = state.saveMessage != null
+    val isAutoSave = state.settings.autoSave && isPro
     val saveLabel = when {
         state.appStatus == AppStatus.SAVING -> stringResource(R.string.label_saving)
         isSaved -> stringResource(R.string.label_saved)
@@ -833,9 +834,14 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    SaveResultButton(saveIcon, saveLabel, saveEnabled) {
-                        if (isPro) viewModel.saveBothWithWatermark()
-                        else viewModel.showRemoveWatermarkDialog()
+                    if (isAutoSave) {
+                        Text(saveLabel, color = if (isSaved) Color(0xFF4CAF50) else Color(0xFFAAAAAA),
+                            fontSize = 14.sp, fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                    } else {
+                        SaveResultButton(saveIcon, saveLabel, saveEnabled) {
+                            if (isPro) viewModel.saveBothWithWatermark()
+                            else viewModel.showRemoveWatermarkDialog()
+                        }
                     }
                     IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery)) {
                         try { context.startActivity(buildGalleryIntent(context)) }
@@ -879,11 +885,18 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
                 Column(
                     modifier = Modifier.fillMaxWidth(0.75f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    SaveResultButton(saveIcon, saveLabel, saveEnabled) {
-                        if (isPro) viewModel.saveBothWithWatermark()
-                        else viewModel.showRemoveWatermarkDialog()
+                    if (isAutoSave) {
+                        Text(saveLabel, color = if (isSaved) Color(0xFF4CAF50) else Color(0xFFAAAAAA),
+                            fontSize = 14.sp, fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(vertical = 12.dp))
+                    } else {
+                        SaveResultButton(saveIcon, saveLabel, saveEnabled) {
+                            if (isPro) viewModel.saveBothWithWatermark()
+                            else viewModel.showRemoveWatermarkDialog()
+                        }
                     }
                     IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery)) {
                         try { context.startActivity(buildGalleryIntent(context)) }
