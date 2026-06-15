@@ -173,8 +173,16 @@ fun SettingsPage(
                     fontFamily = PretendardFont)
             }
             if (isPro) {
-                Icon(Icons.Rounded.Check, null, tint = Color(0xFF22C55E),
-                    modifier = Modifier.size(24.dp))
+                Box(
+                    modifier = Modifier.size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF22C55E))
+                        .border(2.dp, Color.White, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Rounded.Check, null, tint = Color.White,
+                        modifier = Modifier.size(20.dp))
+                }
                 Spacer(Modifier.width(6.dp))
             } else {
                 val price = BillingManager.getInstance(context).formattedPrice
@@ -549,16 +557,16 @@ fun ProUpgradeSheet(
                         })
                 if (isPro) {
                     Box(
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(32.dp)
                             .align(Alignment.BottomEnd)
-                            .offset(x = (-8).dp, y = (-8).dp)
+                            .offset(x = (-6).dp, y = (-6).dp)
                             .clip(CircleShape)
                             .background(Color(0xFF22C55E))
-                            .border(1.5.dp, Color.White, CircleShape),
+                            .border(2.dp, Color.White, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(Icons.Rounded.Check, null, tint = Color.White,
-                            modifier = Modifier.size(18.dp))
+                            modifier = Modifier.size(20.dp))
                     }
                 }
             }
