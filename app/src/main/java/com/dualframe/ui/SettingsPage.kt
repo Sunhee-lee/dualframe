@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,13 +22,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.CameraSwitch
-import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.WorkspacePremium
+import androidx.compose.material.icons.rounded.CameraSwitch
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.MailOutline
+import androidx.compose.material.icons.rounded.SaveAlt
+import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -122,35 +124,48 @@ fun SettingsPage(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Outlined.WorkspacePremium, null,
-                tint = if (isPro) Color(0xFF4CAF50) else Color(0xFFD4A828),
-                modifier = Modifier.size(32.dp))
+            Icon(Icons.Rounded.WorkspacePremium, null,
+                tint = Color(0xFF4CAF50),
+                modifier = Modifier.size(42.dp))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_pro_title), color = Color.White, fontSize = 17.sp,
+                Text(stringResource(R.string.settings_pro_title), color = Color.White, fontSize = 18.sp,
                     fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
-                Text(stringResource(R.string.settings_pro_desc), color = Color(0xFF888888), fontSize = 12.sp,
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    if (isPro) stringResource(R.string.settings_pro_active)
+                    else stringResource(R.string.settings_pro_upgrade),
+                    color = Color(0xFF888888), fontSize = 13.sp,
                     fontFamily = PretendardFont)
             }
-            Text(
-                if (isPro) stringResource(R.string.settings_pro_active)
-                else stringResource(R.string.settings_pro_upgrade),
-                color = if (isPro) Color(0xFF4CAF50) else Color(0xFFD4A828),
-                fontSize = 14.sp, fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.width(4.dp))
-            Icon(Icons.Outlined.ChevronRight, null, tint = Color(0xFF555555),
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (isPro) Color(0xFF4CAF50).copy(alpha = 0.15f)
+                        else Color(0xFF4CAF50)
+                    )
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    if (isPro) stringResource(R.string.settings_pro_active)
+                    else stringResource(R.string.settings_pro_upgrade),
+                    color = if (isPro) Color(0xFF4CAF50) else Color.White,
+                    fontSize = 13.sp, fontFamily = PretendardFont,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Rounded.ChevronRight, null,
+                tint = Color.White.copy(alpha = 0.54f),
                 modifier = Modifier.size(20.dp))
         }
 
         Spacer(Modifier.height(24.dp))
 
-        // Camera Settings section
-        SectionHeader(stringResource(R.string.settings_section_camera))
-
         SettingsCard {
             SettingsRow(
-                icon = Icons.Outlined.CameraSwitch,
+                icon = Icons.Rounded.CameraSwitch,
                 title = stringResource(R.string.settings_default_camera),
                 value = if (settings.defaultFrontCamera) stringResource(R.string.settings_camera_front)
                         else stringResource(R.string.settings_camera_rear),
@@ -158,32 +173,28 @@ fun SettingsPage(
             )
             SettingsDivider()
             SettingsRow(
-                icon = Icons.Outlined.SaveAlt,
+                icon = Icons.Rounded.SaveAlt,
                 title = stringResource(R.string.settings_auto_save),
                 value = if (settings.autoSave) "ON" else "OFF",
                 onClick = { showAutoSavePage = true },
             )
             SettingsDivider()
             SettingsRow(
-                icon = Icons.Outlined.Language,
+                icon = Icons.Rounded.Language,
                 title = stringResource(R.string.settings_language),
                 value = when (settings.appLanguage) {
                     "en" -> stringResource(R.string.settings_language_english)
-                    "ko" -> stringResource(R.string.settings_language_korean)
                     else -> stringResource(R.string.settings_language_system)
                 },
                 onClick = { showLanguageDialog = true },
             )
         }
 
-        Spacer(Modifier.height(24.dp))
-
-        // Support section
-        SectionHeader(stringResource(R.string.settings_section_support))
+        Spacer(Modifier.height(16.dp))
 
         SettingsCard {
             SettingsRow(
-                icon = Icons.Outlined.Star,
+                icon = Icons.Rounded.StarBorder,
                 title = stringResource(R.string.settings_review),
                 onClick = {
                     val uri = Uri.parse("market://details?id=${context.packageName}")
@@ -196,7 +207,7 @@ fun SettingsPage(
             )
             SettingsDivider()
             SettingsRow(
-                icon = Icons.Outlined.Mail,
+                icon = Icons.Rounded.MailOutline,
                 title = stringResource(R.string.settings_contact),
                 onClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
@@ -276,11 +287,6 @@ fun SettingsPage(
                 Spacer(Modifier.height(8.dp))
                 CameraOption(stringResource(R.string.settings_language_english), settings.appLanguage == "en") {
                     applyLanguage(context, settings, "en", onSettingsChange)
-                    showLanguageDialog = false
-                }
-                Spacer(Modifier.height(8.dp))
-                CameraOption(stringResource(R.string.settings_language_korean), settings.appLanguage == "ko") {
-                    applyLanguage(context, settings, "ko", onSettingsChange)
                     showLanguageDialog = false
                 }
             }
@@ -541,13 +547,6 @@ private fun ProBenefitRow(icon: ImageVector, title: String, desc: String) {
 // ── Shared Components ──
 
 @Composable
-private fun SectionHeader(title: String) {
-    Text(title, color = Color(0xFF888888), fontSize = 13.sp,
-        fontFamily = PretendardFont, fontWeight = FontWeight.Medium,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
-}
-
-@Composable
 private fun SettingsCard(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
@@ -571,7 +570,7 @@ private fun SettingsRow(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = Color(0xFFCCCCCC), modifier = Modifier.size(22.dp))
+        Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(28.dp))
         Spacer(Modifier.width(12.dp))
         Text(title, color = Color.White, fontSize = 16.sp, fontFamily = PretendardFont,
             modifier = Modifier.weight(1f))
@@ -580,7 +579,7 @@ private fun SettingsRow(
                 fontFamily = PretendardFont, fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(4.dp))
         }
-        Icon(Icons.Outlined.ChevronRight, null, tint = Color(0xFF555555),
+        Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = 0.54f),
             modifier = Modifier.size(20.dp))
     }
 }
