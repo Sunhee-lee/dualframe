@@ -73,6 +73,8 @@
     <string name="pro_sheet_benefit3_title">Auto Save</string>
     <string name="pro_sheet_benefit3_desc">Automatically save after recording.</string>
     <string name="pro_lifetime">Lifetime PRO</string>
+    <string name="pro_sheet_title_full">DualFrame PRO</string>
+    <string name="pro_sheet_subtitle">One-time purchase. Lifetime access.</string>
     <string name="pro_sheet_get">Get PRO</string>
     <string name="pro_sheet_thanks">Thank you for supporting DualFrame!</string>
     <string name="pro_sheet_restore">Restore Purchase</string>

@@ -525,7 +525,7 @@ fun ProUpgradeSheet(
 
             Spacer(Modifier.height(16.dp))
 
-            Text(stringResource(R.string.settings_pro_title), color = Color.White, fontSize = 24.sp,
+            Text(stringResource(R.string.pro_sheet_title_full), color = Color.White, fontSize = 24.sp,
                 fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
 
             Spacer(Modifier.height(6.dp))
@@ -537,10 +537,8 @@ fun ProUpgradeSheet(
                 Text(stringResource(R.string.pro_sheet_thanks), color = Color(0xFF888888), fontSize = 14.sp,
                     fontFamily = PretendardFont)
             } else {
-                Text(stringResource(R.string.pro_lifetime), color = Color(0xFFD4AF37), fontSize = 16.sp,
-                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp))
-                Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF888888), fontSize = 14.sp,
+                Text(stringResource(R.string.pro_sheet_subtitle), color = Color(0xFF888888), fontSize = 14.sp,
                     fontFamily = PretendardFont)
             }
 
@@ -580,14 +578,16 @@ fun ProUpgradeSheet(
                     fontFamily = PretendardFont,
                     modifier = Modifier.clickable { onDismiss() }.padding(8.dp))
             } else {
-                // Gold gradient buy button
+                // Gold gradient buy button — same size as save popup PRO card
                 val goldBrush = Brush.horizontalGradient(
                     colors = listOf(Color(0xFFD4AF37), Color(0xFFF5D76E), Color(0xFFC89B2A))
                 )
                 Box(
                     modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .heightIn(min = 60.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(goldBrush)
+                        .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp))
                         .clickable {
                             val activity = context as? Activity
                             if (activity != null) {
@@ -597,11 +597,11 @@ fun ProUpgradeSheet(
                                     }
                             }
                         }
-                        .padding(14.dp),
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        if (price != null) "${stringResource(R.string.pro_sheet_get)}  $price"
+                        if (price != null) "${stringResource(R.string.pro_sheet_get)} · $price"
                         else stringResource(R.string.pro_sheet_get),
                         color = Color(0xFF1A1A1A), fontSize = 17.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.Bold)

@@ -73,7 +73,9 @@
     <string name="pro_sheet_benefit3_title">자동 저장</string>
     <string name="pro_sheet_benefit3_desc">촬영 완료 후 저장 버튼 없이 자동으로 저장됩니다.</string>
     <string name="pro_lifetime">Lifetime PRO</string>
-    <string name="pro_sheet_get">Get PRO</string>
+    <string name="pro_sheet_title_full">DualFrame PRO</string>
+    <string name="pro_sheet_subtitle">한 번 구매로 평생 이용</string>
+    <string name="pro_sheet_get">PRO 구매</string>
     <string name="pro_sheet_thanks">DualFrame을 지원해 주셔서 감사합니다!</string>
     <string name="pro_sheet_restore">구매 복원</string>
     <string name="pro_sheet_close">닫기</string>
