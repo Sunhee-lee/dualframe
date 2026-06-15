@@ -168,21 +168,13 @@ fun SettingsPage(
                 Text(
                     if (isPro) stringResource(R.string.settings_pro_active)
                     else stringResource(R.string.save_popup_pro_subtitle),
-                    color = if (isPro) Color(0xFF22C55E) else Color(0xFF6B5E3A),
+                    color = if (isPro) Color.White else Color(0xFF6B5E3A),
                     fontSize = 14.sp,
                     fontFamily = PretendardFont)
             }
             if (isPro) {
-                Box(
-                    modifier = Modifier.size(24.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF22C55E))
-                        .border(1.5.dp, Color.White, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Rounded.Check, null, tint = Color.White,
-                        modifier = Modifier.size(16.dp))
-                }
+                Icon(Icons.Rounded.Check, null, tint = Color(0xFF22C55E),
+                    modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(6.dp))
             } else {
                 val price = BillingManager.getInstance(context).formattedPrice
