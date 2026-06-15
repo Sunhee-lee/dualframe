@@ -1084,17 +1084,19 @@ private fun RemoveWatermarkDialog(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 18.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     Spacer(Modifier.height(3.dp))
                     Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF6B5E3A), fontSize = 13.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.Normal)
+                        fontFamily = PretendardFont, fontWeight = FontWeight.Normal,
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
                 if (price != null) {
                     Text(price, color = Color(0xFFF0F0F0), fontSize = 15.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.width(4.dp))
-                Text("›", color = Color(0xFF666666), fontSize = 20.sp)
+                Text("›", color = Color.White, fontSize = 20.sp)
             }
 
             Spacer(Modifier.height(8.dp))
@@ -1129,10 +1131,12 @@ private fun RemoveWatermarkDialog(
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_ad_title), color = Color.White, fontSize = 18.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     Spacer(Modifier.height(3.dp))
                     Text(stringResource(R.string.save_popup_ad_desc), color = Color(0xFFAAAAAA), fontSize = 13.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.Normal)
+                        fontFamily = PretendardFont, fontWeight = FontWeight.Normal,
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
                 Text("›", color = Color(0xFF666666), fontSize = 20.sp)
             }
@@ -1155,7 +1159,8 @@ private fun RemoveWatermarkDialog(
                 val watermarkDesc = stringResource(R.string.save_popup_watermark_desc)
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_watermark_title), color = Color.White, fontSize = 18.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     if (watermarkDesc.isNotEmpty()) {
                         Spacer(Modifier.height(3.dp))
                         Text(watermarkDesc, color = Color(0xFFAAAAAA), fontSize = 13.sp,
