@@ -543,20 +543,6 @@ fun ProUpgradeSheet(
                                 )
                             }
                         })
-                if (isPro) {
-                    Box(
-                        modifier = Modifier.size(32.dp)
-                            .align(Alignment.BottomEnd)
-                            .offset(x = (-6).dp, y = (-6).dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF22C55E))
-                            .border(1.dp, Color.White, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Rounded.Check, null, tint = Color.White,
-                            modifier = Modifier.size(20.dp))
-                    }
-                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -590,29 +576,30 @@ fun ProUpgradeSheet(
             Spacer(Modifier.height(28.dp))
 
             if (isPro) {
-                // Restore Purchase button
+                // Close button (primary action)
                 Box(
                     modifier = Modifier.fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(Color(0xFF1E1E1E))
                         .border(0.5.dp, Color(0xFF333333), RoundedCornerShape(14.dp))
-                        .clickable {
-                            android.widget.Toast.makeText(context,
-                                context.getString(R.string.settings_pro_active_msg),
-                                android.widget.Toast.LENGTH_SHORT).show()
-                        }
+                        .clickable { onDismiss() }
                         .padding(14.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(stringResource(R.string.pro_sheet_restore), color = Color.White, fontSize = 16.sp,
+                    Text(stringResource(R.string.pro_sheet_close), color = Color.White, fontSize = 16.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
                 }
 
                 Spacer(Modifier.height(12.dp))
 
-                Text(stringResource(R.string.pro_sheet_close), color = Color(0xFF888888), fontSize = 14.sp,
+                // Restore purchase (secondary text link)
+                Text(stringResource(R.string.pro_sheet_restore), color = Color(0xFF666666), fontSize = 13.sp,
                     fontFamily = PretendardFont,
-                    modifier = Modifier.clickable { onDismiss() }.padding(8.dp))
+                    modifier = Modifier.clickable {
+                        android.widget.Toast.makeText(context,
+                            context.getString(R.string.settings_pro_active_msg),
+                            android.widget.Toast.LENGTH_SHORT).show()
+                    }.padding(8.dp))
             } else {
                 // Gold gradient buy button — same size as save popup PRO card
                 val goldBrush = Brush.horizontalGradient(
