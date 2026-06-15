@@ -452,13 +452,7 @@ private fun AutoSavePage(
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    val suffix = stringResource(R.string.settings_view_pro_suffix)
-                    Text(
-                        buildAnnotatedString {
-                            withStyle(SpanStyle(color = Color(0xFF1A1A1A))) { append("PRO ") }
-                            withStyle(SpanStyle(color = Color.White)) { append(suffix) }
-                        },
-                        fontSize = 17.sp,
+                    Text(stringResource(R.string.settings_view_pro), color = Color(0xFF1A1A1A), fontSize = 17.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                 }
             }
