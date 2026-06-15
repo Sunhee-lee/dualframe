@@ -1042,7 +1042,7 @@ private fun RemoveWatermarkDialog(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(goldBrush)
-                    .border(0.5.dp, Color(0xFF252525), RoundedCornerShape(12.dp))
+                    .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp))
                     .clickable {
                         val activity = context as? android.app.Activity
                         if (activity != null) {
@@ -1080,7 +1080,7 @@ private fun RemoveWatermarkDialog(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF1A1A1A))
-                    .border(0.5.dp, Color(0xFF252525), RoundedCornerShape(12.dp))
+                    .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp))
                     .clickable {
                         onDismiss()
                         val activity = context as? android.app.Activity
@@ -1121,7 +1121,7 @@ private fun RemoveWatermarkDialog(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF1A1A1A))
-                    .border(0.5.dp, Color(0xFF252525), RoundedCornerShape(12.dp))
+                    .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp))
                     .clickable { onDismiss(); viewModel.saveBothWithWatermark() }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
