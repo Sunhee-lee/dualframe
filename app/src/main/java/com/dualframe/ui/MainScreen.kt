@@ -70,7 +70,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -1065,8 +1068,18 @@ private fun RemoveWatermarkDialog(
                         .background(Color.Black.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Outlined.WorkspacePremium, null, tint = Color.White,
-                        modifier = Modifier.size(24.dp))
+                    val iconGold = Brush.linearGradient(
+                        colors = listOf(Color.White, Color(0xFFF5E6A8), Color.White)
+                    )
+                    Icon(Icons.Outlined.WorkspacePremium, null,
+                        modifier = Modifier.size(24.dp)
+                            .graphicsLayer(alpha = 0.99f)
+                            .drawWithCache {
+                                onDrawWithContent {
+                                    drawContent()
+                                    drawRect(brush = iconGold, blendMode = BlendMode.SrcAtop)
+                                }
+                            })
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
