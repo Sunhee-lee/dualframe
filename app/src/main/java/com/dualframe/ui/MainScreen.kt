@@ -835,13 +835,13 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
                     if (isAutoSave) {
-                        Text(saveLabel, color = if (isSaved) Color(0xFF4CAF50) else Color(0xFFAAAAAA),
-                            fontSize = 14.sp, fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable(
-                                enabled = false,
-                                indication = null,
-                                interactionSource = remember { MutableInteractionSource() },
-                                onClick = {}))
+                        SaveResultButton(
+                            icon = if (isSaved) Icons.Outlined.Check else saveIcon,
+                            label = saveLabel,
+                            enabled = false,
+                            forceGreen = isSaved,
+                            onClick = {},
+                        )
                     } else {
                         SaveResultButton(saveIcon, saveLabel, saveEnabled) {
                             if (isPro) viewModel.saveBothWithWatermark()
@@ -972,6 +972,7 @@ private fun SaveResultButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     enabled: Boolean,
+    forceGreen: Boolean = false,
     onClick: () -> Unit,
 ) {
     androidx.compose.material3.Surface(
@@ -983,7 +984,7 @@ private fun SaveResultButton(
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
-                .background(if (enabled) SaveGreenBrush else Brush.horizontalGradient(listOf(Color(0xFF1A1A1A), Color(0xFF1A1A1A))),
+                .background(if (enabled || forceGreen) SaveGreenBrush else Brush.horizontalGradient(listOf(Color(0xFF1A1A1A), Color(0xFF1A1A1A))),
                     RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {

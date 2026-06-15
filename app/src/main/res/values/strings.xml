@@ -14,7 +14,7 @@
     <!-- Save screen -->
     <string name="btn_save_videos">Save Videos</string>
     <string name="label_saving">Saving…</string>
-    <string name="label_saved">Saved</string>
+    <string name="label_saved">✓ Saved</string>
     <string name="btn_view_in_gallery">View in Gallery</string>
     <string name="btn_retake">Retake</string>
     <!-- Save options popup -->
