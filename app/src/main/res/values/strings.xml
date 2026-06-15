@@ -50,6 +50,7 @@
     <string name="settings_pro_title">PRO</string>
     <string name="settings_pro_upgrade">PRO Upgrade</string>
     <string name="settings_pro_active">Active</string>
+    <string name="settings_pro_in_use">Active</string>
     <string name="settings_pro_desc">Remove watermarks · Ad-free · Auto save</string>
     <string name="settings_pro_active_msg">PRO is active.</string>
     <string name="settings_section_camera">Camera Settings</string>

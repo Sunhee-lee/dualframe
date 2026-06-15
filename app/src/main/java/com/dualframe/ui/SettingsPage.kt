@@ -173,17 +173,9 @@ fun SettingsPage(
                     fontFamily = PretendardFont)
             }
             if (isPro) {
-                Box(
-                    modifier = Modifier.size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF22C55E))
-                        .border(2.dp, Color.White, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Rounded.Check, null, tint = Color.White,
-                        modifier = Modifier.size(26.dp))
-                }
-                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.settings_pro_in_use), color = Color.White,
+                    fontSize = 14.sp, fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(4.dp))
             } else {
                 val price = BillingManager.getInstance(context).formattedPrice
                 if (price != null) {
