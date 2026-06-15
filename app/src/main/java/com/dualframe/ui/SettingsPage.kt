@@ -351,6 +351,8 @@ private fun AutoSavePage(
     onBack: () -> Unit,
     onShowPro: () -> Unit,
 ) {
+    BackHandler { onBack() }
+
     Column(
         modifier = Modifier.fillMaxSize().background(Color.Black),
     ) {
