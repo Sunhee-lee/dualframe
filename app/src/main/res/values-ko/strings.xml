@@ -48,7 +48,7 @@
     <string name="settings_title">설정</string>
     <string name="settings_more">더보기</string>
     <string name="settings_pro_title">PRO</string>
-    <string name="settings_pro_upgrade">Upgrade</string>
+    <string name="settings_pro_upgrade">PRO 업그레이드</string>
     <string name="settings_pro_active">Active</string>
     <string name="settings_pro_desc">워터마크 제거 · 광고 없이 저장 · 자동 저장</string>
     <string name="settings_pro_active_msg">PRO가 활성화되어 있습니다.</string>

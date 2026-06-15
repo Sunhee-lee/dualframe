@@ -48,7 +48,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_more">More</string>
     <string name="settings_pro_title">PRO</string>
-    <string name="settings_pro_upgrade">Upgrade</string>
+    <string name="settings_pro_upgrade">PRO Upgrade</string>
     <string name="settings_pro_active">Active</string>
     <string name="settings_pro_desc">Remove watermarks · Ad-free · Auto save</string>
     <string name="settings_pro_active_msg">PRO is active.</string>

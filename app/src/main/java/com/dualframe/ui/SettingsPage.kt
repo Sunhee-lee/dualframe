@@ -139,13 +139,16 @@ fun SettingsPage(
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_pro_title), color = Color.White, fontSize = 20.sp,
+                Text(
+                    if (isPro) stringResource(R.string.settings_pro_title)
+                    else stringResource(R.string.settings_pro_upgrade),
+                    color = Color(0xFF111111), fontSize = 20.sp,
                     fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(2.dp))
                 Text(
                     if (isPro) stringResource(R.string.settings_pro_active)
-                    else stringResource(R.string.pro_lifetime),
-                    color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp,
+                    else stringResource(R.string.save_popup_pro_subtitle),
+                    color = Color(0xFF6B5E3A), fontSize = 14.sp,
                     fontFamily = PretendardFont)
             }
             if (isPro) {
@@ -628,7 +631,7 @@ private fun SettingsRow(
             .background(Color(0xFF141414))
             .border(0.5.dp, Color(0xFF252525), RoundedCornerShape(20.dp))
             .clickable { onClick() }
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 22.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(28.dp))

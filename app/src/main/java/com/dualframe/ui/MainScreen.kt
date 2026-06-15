@@ -1035,9 +1035,8 @@ private fun RemoveWatermarkDialog(
 
             // 1. PRO Upgrade — premium gold gradient
             val goldBrush = Brush.horizontalGradient(
-                colors = listOf(Color(0xFFD4A828), Color(0xFFE8C85A), Color(0xFFD4A828))
+                colors = listOf(Color(0xFFD4AF37), Color(0xFFF5D76E), Color(0xFFC89B2A))
             )
-            // 1. PRO Upgrade — premium gold gradient
             Row(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
                     .clip(RoundedCornerShape(12.dp))
@@ -1055,9 +1054,14 @@ private fun RemoveWatermarkDialog(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.size(40.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(Color.Black.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Icon(Icons.Outlined.WorkspacePremium, null, tint = Color.White,
-                        modifier = Modifier.size(28.dp))
+                        modifier = Modifier.size(24.dp))
                 }
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 18.sp,
