@@ -165,18 +165,18 @@ fun SettingsPage(
 
         SettingsCard {
             SettingsRow(
+                icon = Icons.Rounded.SaveAlt,
+                title = stringResource(R.string.settings_auto_save),
+                value = if (settings.autoSave) "ON" else "OFF",
+                onClick = { showAutoSavePage = true },
+            )
+            SettingsDivider()
+            SettingsRow(
                 icon = Icons.Rounded.CameraSwitch,
                 title = stringResource(R.string.settings_default_camera),
                 value = if (settings.defaultFrontCamera) stringResource(R.string.settings_camera_front)
                         else stringResource(R.string.settings_camera_rear),
                 onClick = { showCameraDialog = true },
-            )
-            SettingsDivider()
-            SettingsRow(
-                icon = Icons.Rounded.SaveAlt,
-                title = stringResource(R.string.settings_auto_save),
-                value = if (settings.autoSave) "ON" else "OFF",
-                onClick = { showAutoSavePage = true },
             )
             SettingsDivider()
             SettingsRow(
