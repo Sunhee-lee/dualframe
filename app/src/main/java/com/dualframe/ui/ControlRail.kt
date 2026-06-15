@@ -99,7 +99,8 @@ fun SettingsPanel(
 
         ZoomTile(zoomRatio, rot, onZoomToggle)
 
-        TextTile(resolution, rot, onResolutionCycle, fontSize = 14.sp)
+        TextTile(resolution, rot, onResolutionCycle, fontSize = 14.sp,
+            isActive = resolution == "4K UHD")
 
         IconTile(Icons.Outlined.Timer,
             if (timerSeconds > 0) "${timerSeconds}s" else stringResource(R.string.label_off),
