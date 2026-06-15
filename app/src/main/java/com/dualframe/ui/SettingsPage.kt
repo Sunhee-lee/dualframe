@@ -172,11 +172,7 @@ fun SettingsPage(
                     fontSize = 14.sp,
                     fontFamily = PretendardFont)
             }
-            if (isPro) {
-                Text(stringResource(R.string.settings_pro_in_use), color = Color.White,
-                    fontSize = 14.sp, fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.width(4.dp))
-            } else {
+            if (!isPro) {
                 val price = BillingManager.getInstance(context).formattedPrice
                 if (price != null) {
                     Text(price, color = Color.White, fontSize = 16.sp,
