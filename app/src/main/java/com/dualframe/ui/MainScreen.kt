@@ -1084,7 +1084,7 @@ private fun RemoveWatermarkDialog(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.save_popup_pro_title), color = Color(0xFF111111), fontSize = 18.sp,
-                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
+                        fontFamily = PretendardFont, fontWeight = FontWeight.Bold,
                         maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     Spacer(Modifier.height(3.dp))
                     Text(stringResource(R.string.save_popup_pro_subtitle), color = Color(0xFF6B5E3A), fontSize = 13.sp,
