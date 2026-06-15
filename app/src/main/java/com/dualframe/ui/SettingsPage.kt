@@ -146,9 +146,18 @@ fun SettingsPage(
                     .background(Color.Black.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
             ) {
+                val iconGold = Brush.linearGradient(
+                    colors = listOf(Color.White, Color(0xFFD4AF37), Color(0xFFF5D76E), Color.White)
+                )
                 Icon(Icons.Rounded.WorkspacePremium, null,
-                    tint = Color.White,
-                    modifier = Modifier.size(34.dp))
+                    modifier = Modifier.size(34.dp)
+                        .graphicsLayer(alpha = 0.99f)
+                        .drawWithCache {
+                            onDrawWithContent {
+                                drawContent()
+                                drawRect(brush = iconGold, blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop)
+                            }
+                        })
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
