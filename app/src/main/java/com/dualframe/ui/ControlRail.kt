@@ -118,7 +118,7 @@ fun SettingsPanel(
                 flashOn, rot, onFlashToggle)
         }
 
-        TextTile("${stringResource(R.string.settings_more)}>", rot, onMoreClick)
+        TextTile("${stringResource(R.string.settings_more)} >", rot, onMoreClick)
     }
 }
 
