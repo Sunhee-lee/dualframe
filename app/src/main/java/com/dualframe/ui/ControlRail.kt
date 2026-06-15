@@ -119,7 +119,7 @@ fun SettingsPanel(
                 flashOn, rot, onFlashToggle)
         }
 
-        TextTile("${stringResource(R.string.settings_more)} >", rot, onMoreClick)
+        TextTile("${stringResource(R.string.settings_more)} >", rot, onMoreClick, fontSize = 14.sp)
     }
 }
 
@@ -134,7 +134,7 @@ private fun ZoomTile(zoomRatio: Float, rotation: Float, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(displayText, color = RailTheme.iconColor, fontSize = 13.sp,
+        Text(displayText, color = RailTheme.iconColor, fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold, fontFamily = RailTheme.font,
             modifier = Modifier.rotate(rotation))
     }
