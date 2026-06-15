@@ -530,6 +530,7 @@ fun ProUpgradeSheet(
                                 colors = listOf(Color(0xFF2A2215), Color(0xFF161616), Color(0xFF111111))
                             )
                         )
+                        .border(1.5.dp, Color.White.copy(alpha = 0.3f), CircleShape)
                 )
                 Icon(Icons.Rounded.WorkspacePremium, null,
                     modifier = Modifier.size(52.dp)
