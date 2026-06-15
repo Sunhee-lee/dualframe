@@ -174,14 +174,14 @@ fun SettingsPage(
             }
             if (isPro) {
                 Box(
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(40.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF22C55E))
                         .border(2.dp, Color.White, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Rounded.Check, null, tint = Color.White,
-                        modifier = Modifier.size(20.dp))
+                        modifier = Modifier.size(26.dp))
                 }
                 Spacer(Modifier.width(6.dp))
             } else {
