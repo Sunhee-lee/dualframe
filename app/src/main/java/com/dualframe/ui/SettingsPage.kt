@@ -150,9 +150,7 @@ fun SettingsPage(
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    if (isPro) stringResource(R.string.settings_pro_title)
-                    else stringResource(R.string.settings_pro_upgrade),
+                Text(stringResource(R.string.pro_sheet_title_full),
                     color = Color(0xFF111111), fontSize = 20.sp,
                     fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(2.dp))
