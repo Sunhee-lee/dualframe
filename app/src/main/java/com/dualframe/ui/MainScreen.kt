@@ -836,7 +836,12 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 ) {
                     if (isAutoSave) {
                         Text(saveLabel, color = if (isSaved) Color(0xFF4CAF50) else Color(0xFFAAAAAA),
-                            fontSize = 14.sp, fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                            fontSize = 14.sp, fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable(
+                                enabled = false,
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() },
+                                onClick = {}))
                     } else {
                         SaveResultButton(saveIcon, saveLabel, saveEnabled) {
                             if (isPro) viewModel.saveBothWithWatermark()
