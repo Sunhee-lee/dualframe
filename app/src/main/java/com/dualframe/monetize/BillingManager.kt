@@ -136,6 +136,7 @@ class BillingManager private constructor(private val context: Context) {
     }
 
     fun restorePurchases(showToast: Boolean = false, toastContext: android.content.Context? = null) {
+        Log.i(TAG, "restorePurchases: started (showToast=$showToast)")
         billingClient?.queryPurchasesAsync(
             QueryPurchasesParams.newBuilder()
                 .setProductType(BillingClient.ProductType.INAPP)
@@ -148,6 +149,8 @@ class BillingManager private constructor(private val context: Context) {
             }
             var found = false
             for (purchase in purchases) {
+                Log.i(TAG, "  purchase: products=${purchase.products} " +
+                    "state=${purchase.purchaseState} acknowledged=${purchase.isAcknowledged}")
                 if (PRODUCT_ID in purchase.products &&
                     purchase.purchaseState == Purchase.PurchaseState.PURCHASED
                 ) {
@@ -156,13 +159,14 @@ class BillingManager private constructor(private val context: Context) {
                     if (!purchase.isAcknowledged) {
                         acknowledgePurchase(purchase)
                     }
-                    Log.i(TAG, "Restored PRO purchase")
+                    Log.i(TAG, "  → PRO restored (active purchase found)")
                 }
             }
             if (!found) {
-                Log.i(TAG, "No existing PRO purchase found — revoking PRO")
+                Log.i(TAG, "  → No active purchase found — revoking PRO")
                 ProEntitlement.revokePro(context)
             }
+            Log.i(TAG, "restorePurchases: final isPro=${ProEntitlement.isProOwned(context)}")
             if (showToast) {
                 val ctx = toastContext ?: context
                 android.os.Handler(android.os.Looper.getMainLooper()).post {

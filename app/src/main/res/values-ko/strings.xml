@@ -47,7 +47,7 @@
     <string name="error_ad_repeated_desc">잠시 후 다시 시도하거나 워터마크 포함으로 저장해 주세요.</string>
     <string name="pro_purchase_success">PRO가 활성화되었습니다. 이제 광고와 워터마크 없이 저장할 수 있습니다.</string>
     <string name="pro_restore_success">구매가 복원되었습니다. PRO 기능을 사용할 수 있습니다.</string>
-    <string name="pro_purchase_failed">구매가 완료되지 않았습니다.</string>
+    <string name="pro_purchase_failed">복원할 구매 내역이 없습니다.</string>
     <string name="btn_retry">다시 시도</string>
     <string name="btn_save_with_watermark">워터마크 포함 저장</string>
     <string name="btn_view_pro">PRO 보기</string>

@@ -47,7 +47,7 @@
     <string name="error_ad_repeated_desc">Please try again later or save with watermark.</string>
     <string name="pro_purchase_success">PRO is now active. You can now save without ads or watermark.</string>
     <string name="pro_restore_success">Purchase restored. PRO features are now available.</string>
-    <string name="pro_purchase_failed">Purchase was not completed.</string>
+    <string name="pro_purchase_failed">No purchase found to restore.</string>
     <string name="btn_retry">Try again</string>
     <string name="btn_save_with_watermark">Save with watermark</string>
     <string name="btn_view_pro">View PRO</string>
