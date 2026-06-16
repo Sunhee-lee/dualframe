@@ -578,6 +578,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    /**
      * Save both exports to gallery WITHOUT watermark (rewarded/PRO path).
      */
     fun saveBothClean() {
