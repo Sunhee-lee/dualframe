@@ -61,7 +61,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var masterFile: File? = null
     private var timerJob: Job? = null
     private var countdownJob: Job? = null
-    private var adFailCount = 0
 
     init {
         // Load persisted settings
@@ -642,15 +641,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onAdRewarded() {
+        val app: android.app.Application = getApplication()
+        Log.i(TAG, "Ad watched — saving without watermark")
+        com.dualframe.monetize.AdGraceManager.resetGrace(app)
+        saveBothClean()
+    }
+
     fun onAdFailed() {
-        adFailCount++
-        Log.i(TAG, "Ad failed count: $adFailCount")
-        if (adFailCount <= 2) {
-            saveBothWithWatermark()
-        } else {
-            val app: android.app.Application = getApplication()
-            setError(app.getString(com.sunnlab.dualframe.R.string.error_ad_fail_pro_prompt))
+        val app: android.app.Application = getApplication()
+        val online = com.dualframe.monetize.AdGraceManager.isOnline(app)
+        Log.i(TAG, "Ad failed — online=$online")
+
+        if (!online) {
+            Log.i(TAG, "Offline — showing offline dialog")
+            _uiState.update { it.copy(adFailDialog = com.dualframe.data.AdFailType.OFFLINE) }
+            return
         }
+
+        if (com.dualframe.monetize.AdGraceManager.canUseGrace(app)) {
+            Log.i(TAG, "Grace save — saving without watermark (1st failure in 24h)")
+            com.dualframe.monetize.AdGraceManager.useGrace(app)
+            saveBothClean()
+            android.widget.Toast.makeText(app,
+                app.getString(com.sunnlab.dualframe.R.string.error_ad_grace_title) + "\n" +
+                app.getString(com.sunnlab.dualframe.R.string.error_ad_grace_desc),
+                android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+
+        Log.i(TAG, "Repeated ad failure — showing options dialog")
+        _uiState.update { it.copy(adFailDialog = com.dualframe.data.AdFailType.REPEATED_FAILURE) }
+    }
+
+    fun dismissAdFailDialog() {
+        _uiState.update { it.copy(adFailDialog = null) }
     }
 
     fun showRemoveWatermarkDialog() {

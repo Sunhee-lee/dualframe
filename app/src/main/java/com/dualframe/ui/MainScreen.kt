@@ -369,6 +369,37 @@ fun MainScreen(
         RemoveWatermarkDialog(viewModel, context) { viewModel.dismissRemoveWatermarkDialog() }
     }
 
+    // Ad failure dialogs
+    state.adFailDialog?.let { failType ->
+        AdFailDialog(
+            failType = failType,
+            onRetry = {
+                viewModel.dismissAdFailDialog()
+                val activity = context as? Activity
+                if (activity != null) {
+                    com.dualframe.monetize.AdRewardManager.showAd(
+                        activity = activity,
+                        onRewarded = {
+                            viewModel.onAdRewarded()
+                            android.widget.Toast.makeText(context,
+                                context.getString(R.string.toast_watermark_removed),
+                                android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                        onFailed = { viewModel.onAdFailed() },
+                    )
+                }
+            },
+            onSaveWithWatermark = {
+                viewModel.dismissAdFailDialog()
+                viewModel.saveBothWithWatermark()
+            },
+            onViewPro = {
+                viewModel.dismissAdFailDialog()
+                viewModel.showRemoveWatermarkDialog()
+            },
+        )
+    }
+
     // Exit confirmation — rendered last to appear on top of everything
     if (showExitDialog) {
         val dialogRot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
@@ -1112,7 +1143,7 @@ private fun RemoveWatermarkDialog(
                             com.dualframe.monetize.AdRewardManager.showAd(
                                 activity = activity,
                                 onRewarded = {
-                                    viewModel.saveBothClean()
+                                    viewModel.onAdRewarded()
                                     android.widget.Toast.makeText(context,
                                         context.getString(R.string.toast_watermark_removed),
                                         android.widget.Toast.LENGTH_SHORT).show()
@@ -1180,5 +1211,77 @@ private fun ErrorArea(state: UiState, onDismiss: () -> Unit) {
         Text(error, color = Color(0xFFCF6679), fontSize = 12.sp)
         Spacer(Modifier.height(4.dp))
         androidx.compose.material3.TextButton(onDismiss) { Text(stringResource(R.string.error_dismiss), color = Color(0xFFCF6679), fontSize = 11.sp) }
+    }
+}
+
+@Composable
+private fun AdFailDialog(
+    failType: com.dualframe.data.AdFailType,
+    onRetry: () -> Unit,
+    onSaveWithWatermark: () -> Unit,
+    onViewPro: () -> Unit,
+) {
+    val title = when (failType) {
+        com.dualframe.data.AdFailType.OFFLINE -> stringResource(R.string.error_ad_offline_title)
+        com.dualframe.data.AdFailType.REPEATED_FAILURE -> stringResource(R.string.error_ad_repeated_title)
+    }
+    val desc = when (failType) {
+        com.dualframe.data.AdFailType.OFFLINE -> stringResource(R.string.error_ad_offline_desc)
+        com.dualframe.data.AdFailType.REPEATED_FAILURE -> stringResource(R.string.error_ad_repeated_desc)
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(0.85f)
+                .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(title, color = Color.White, fontSize = 17.sp,
+                fontWeight = FontWeight.Bold, fontFamily = PretendardFont,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(8.dp))
+            Text(desc, color = Color(0xFFAAAAAA), fontSize = 14.sp,
+                fontFamily = PretendardFont,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(20.dp))
+
+            // Retry button
+            Box(
+                modifier = Modifier.fillMaxWidth().height(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF4CAF50))
+                    .clickable { onRetry() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(stringResource(R.string.btn_retry), color = Color.White, fontSize = 15.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Save with watermark button
+            Box(
+                modifier = Modifier.fillMaxWidth().height(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp))
+                    .clickable { onSaveWithWatermark() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(stringResource(R.string.btn_save_with_watermark), color = Color.White, fontSize = 15.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+            }
+
+            // PRO link (only for repeated failure)
+            if (failType == com.dualframe.data.AdFailType.REPEATED_FAILURE) {
+                Spacer(Modifier.height(14.dp))
+                Text(stringResource(R.string.btn_view_pro), color = Color(0xFF888888), fontSize = 13.sp,
+                    fontFamily = PretendardFont,
+                    modifier = Modifier.clickable { onViewPro() }.padding(4.dp))
+            }
+        }
     }
 }

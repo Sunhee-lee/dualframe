@@ -39,6 +39,15 @@
     <string name="error_save_failed">Failed to save videos. Please try again.</string>
     <string name="error_pro_verify_failed">Could not verify purchase. Please check your network and try again.</string>
     <string name="error_ad_fail_pro_prompt">Ad failed to load. Try PRO for ad-free saving.</string>
+    <string name="error_ad_offline_title">Internet connection required.</string>
+    <string name="error_ad_offline_desc">Please reconnect to watch an ad and save without watermark.</string>
+    <string name="error_ad_grace_title">Unable to load ad.</string>
+    <string name="error_ad_grace_desc">This video will be saved without watermark.</string>
+    <string name="error_ad_repeated_title">Ads are still unavailable.</string>
+    <string name="error_ad_repeated_desc">Please try again later or save with watermark.</string>
+    <string name="btn_retry">Try again</string>
+    <string name="btn_save_with_watermark">Save with watermark</string>
+    <string name="btn_view_pro">View PRO</string>
     <string name="toast_watermark_removed">Watermarks removed from both saved videos.</string>
     <string name="toast_export_fallback_fhd">4K export not supported on this device. Saved in FHD.</string>
 
