@@ -59,6 +59,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.fragment:fragment-ktx:1.8.6")
+    implementation("androidx.security:security-crypto:1.0.0")
 
     // Compose BOM — pins all Compose library versions together
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
