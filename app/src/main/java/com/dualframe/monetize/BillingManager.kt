@@ -135,7 +135,7 @@ class BillingManager private constructor(private val context: Context) {
         }
     }
 
-    fun restorePurchases() {
+    fun restorePurchases(showToast: Boolean = false) {
         billingClient?.queryPurchasesAsync(
             QueryPurchasesParams.newBuilder()
                 .setProductType(BillingClient.ProductType.INAPP)
@@ -162,6 +162,14 @@ class BillingManager private constructor(private val context: Context) {
             if (!found) {
                 Log.i(TAG, "No existing PRO purchase found — revoking PRO")
                 ProEntitlement.revokePro(context)
+            }
+            if (showToast) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    val msgRes = if (found) com.sunnlab.dualframe.R.string.pro_restore_success
+                                 else com.sunnlab.dualframe.R.string.pro_purchase_failed
+                    android.widget.Toast.makeText(context, context.getString(msgRes),
+                        android.widget.Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

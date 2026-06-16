@@ -20,11 +20,11 @@
     <!-- Save options popup -->
     <string name="save_popup_title">Save Videos</string>
     <string name="save_popup_pro_title">DualFrame PRO</string>
-    <string name="save_popup_pro_subtitle">Save instantly without ads</string>
+    <string name="save_popup_pro_subtitle">Save without ads or watermark</string>
     <string name="save_popup_ad_title">Watch ad to save for free</string>
-    <string name="save_popup_ad_desc">Save this video without watermark</string>
+    <string name="save_popup_ad_desc">Save without watermark</string>
     <string name="save_popup_watermark_title">Save with watermark</string>
-    <string name="save_popup_watermark_desc">Save instantly without ads</string>
+    <string name="save_popup_watermark_desc"></string>
     <string name="btn_cancel">Cancel</string>
 
     <!-- Exit dialog -->

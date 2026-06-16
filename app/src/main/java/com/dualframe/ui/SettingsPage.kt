@@ -596,7 +596,7 @@ fun ProUpgradeSheet(
                 Text(stringResource(R.string.pro_sheet_restore), color = Color(0xFF666666), fontSize = 13.sp,
                     fontFamily = PretendardFont,
                     modifier = Modifier.clickable {
-                        BillingManager.getInstance(context).restorePurchases()
+                        BillingManager.getInstance(context).restorePurchases(showToast = true)
                         android.widget.Toast.makeText(context,
                             context.getString(R.string.settings_pro_active_msg),
                             android.widget.Toast.LENGTH_SHORT).show()
@@ -653,10 +653,7 @@ fun ProUpgradeSheet(
                 Text(stringResource(R.string.pro_sheet_restore_prompt), color = Color(0xFF666666), fontSize = 12.sp,
                     fontFamily = PretendardFont,
                     modifier = Modifier.clickable {
-                        BillingManager.getInstance(context).restorePurchases()
-                        android.widget.Toast.makeText(context,
-                            context.getString(R.string.pro_restore_success),
-                            android.widget.Toast.LENGTH_SHORT).show()
+                        BillingManager.getInstance(context).restorePurchases(showToast = true)
                     }.padding(8.dp))
             }
         }

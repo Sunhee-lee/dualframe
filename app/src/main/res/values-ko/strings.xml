@@ -20,11 +20,11 @@
     <!-- Save options popup -->
     <string name="save_popup_title">영상 저장</string>
     <string name="save_popup_pro_title">DualFrame PRO</string>
-    <string name="save_popup_pro_subtitle">광고 없이 바로 저장</string>
+    <string name="save_popup_pro_subtitle">광고·워터마크 없이 저장</string>
     <string name="save_popup_ad_title">광고 보고 무료 저장</string>
-    <string name="save_popup_ad_desc">이번 영상은 워터마크 없이 저장</string>
+    <string name="save_popup_ad_desc">워터마크 없이 저장</string>
     <string name="save_popup_watermark_title">워터마크 포함 저장</string>
-    <string name="save_popup_watermark_desc">광고 없이 바로 저장</string>
+    <string name="save_popup_watermark_desc"></string>
     <string name="btn_cancel">취소</string>
 
     <!-- Exit dialog -->
