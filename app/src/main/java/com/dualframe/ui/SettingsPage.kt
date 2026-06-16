@@ -617,7 +617,16 @@ fun ProUpgradeSheet(
                             if (activity != null) {
                                 BillingManager.getInstance(context)
                                     .launchPurchase(activity) { success ->
-                                        if (success) onPurchased()
+                                        if (success) {
+                                            android.widget.Toast.makeText(context,
+                                                context.getString(R.string.pro_purchase_success),
+                                                android.widget.Toast.LENGTH_LONG).show()
+                                            onPurchased()
+                                        } else {
+                                            android.widget.Toast.makeText(context,
+                                                context.getString(R.string.pro_purchase_failed),
+                                                android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                             }
                         }
@@ -645,6 +654,9 @@ fun ProUpgradeSheet(
                     fontFamily = PretendardFont,
                     modifier = Modifier.clickable {
                         BillingManager.getInstance(context).restorePurchases()
+                        android.widget.Toast.makeText(context,
+                            context.getString(R.string.pro_restore_success),
+                            android.widget.Toast.LENGTH_SHORT).show()
                     }.padding(8.dp))
             }
         }

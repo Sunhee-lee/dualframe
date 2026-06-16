@@ -1043,6 +1043,7 @@ private fun RemoveWatermarkDialog(
     onDismiss: () -> Unit,
 ) {
     val price = com.dualframe.monetize.BillingManager.getInstance(context).formattedPrice
+    var isProcessing by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.82f))
@@ -1080,13 +1081,26 @@ private fun RemoveWatermarkDialog(
                     .background(goldBrush)
                     .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp))
                     .clickable {
+                        if (isProcessing) return@clickable
+                        isProcessing = true
                         val activity = context as? android.app.Activity
                         if (activity != null) {
                             com.dualframe.monetize.BillingManager.getInstance(context)
                                 .launchPurchase(activity) { success ->
-                                    if (success) { onDismiss(); viewModel.saveBothClean() }
+                                    isProcessing = false
+                                    if (success) {
+                                        android.widget.Toast.makeText(context,
+                                            context.getString(R.string.pro_purchase_success),
+                                            android.widget.Toast.LENGTH_LONG).show()
+                                        onDismiss()
+                                        viewModel.saveBothClean()
+                                    } else {
+                                        android.widget.Toast.makeText(context,
+                                            context.getString(R.string.pro_purchase_failed),
+                                            android.widget.Toast.LENGTH_SHORT).show()
+                                    }
                                 }
-                        }
+                        } else { isProcessing = false }
                     }
                     .padding(start = 10.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1137,6 +1151,8 @@ private fun RemoveWatermarkDialog(
                     .background(Color(0xFF1A1A1A))
                     .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp))
                     .clickable {
+                        if (isProcessing) return@clickable
+                        isProcessing = true
                         onDismiss()
                         val activity = context as? android.app.Activity
                         if (activity != null) {

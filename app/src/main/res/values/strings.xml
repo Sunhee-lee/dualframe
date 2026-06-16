@@ -36,7 +36,7 @@
     <string name="error_dismiss">Dismiss</string>
     <string name="error_ad_not_available">Ad not available. Please try again later.</string>
     <string name="error_storage_full">Not enough storage space to save videos.</string>
-    <string name="error_save_failed">Failed to save videos. Please try again.</string>
+    <string name="error_save_failed">Failed to save videos. Please check storage and try again.</string>
     <string name="error_pro_verify_failed">Could not verify purchase. Please check your network and try again.</string>
     <string name="error_ad_fail_pro_prompt">Ad failed to load. Try PRO for ad-free saving.</string>
     <string name="error_ad_offline_title">Internet connection required.</string>
@@ -45,6 +45,9 @@
     <string name="error_ad_grace_desc">This video will be saved without watermark.</string>
     <string name="error_ad_repeated_title">Ads are still unavailable.</string>
     <string name="error_ad_repeated_desc">Please try again later or save with watermark.</string>
+    <string name="pro_purchase_success">PRO is now active. You can now save without ads or watermark.</string>
+    <string name="pro_restore_success">Purchase restored. PRO features are now available.</string>
+    <string name="pro_purchase_failed">Purchase was not completed.</string>
     <string name="btn_retry">Try again</string>
     <string name="btn_save_with_watermark">Save with watermark</string>
     <string name="btn_view_pro">View PRO</string>
@@ -84,8 +87,11 @@
 
     <!-- Permissions -->
     <string name="permission_title">Camera and Microphone Permission Required</string>
-    <string name="permission_desc">DualFrame needs camera access to show previews and record video. Audio permission is optional but recommended for recording with sound.</string>
-    <string name="permission_grant">Grant Permissions</string>
+    <string name="permission_desc">Camera and microphone permissions are required to record videos.</string>
+    <string name="permission_grant">Request again</string>
+    <string name="permission_denied_title">Permissions are turned off</string>
+    <string name="permission_denied_desc">Please allow camera and microphone access in Settings.</string>
+    <string name="permission_open_settings">Open Settings</string>
 
     <!-- Settings tiles -->
     <string name="label_on">ON</string>

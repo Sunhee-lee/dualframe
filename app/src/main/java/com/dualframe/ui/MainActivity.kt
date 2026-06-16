@@ -2,9 +2,12 @@ package com.dualframe.ui
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.WindowManager
 import java.util.Locale
 import androidx.activity.ComponentActivity
@@ -111,12 +114,20 @@ class MainActivity : ComponentActivity() {
                         hasAudioPermission = hasAudioPermission,
                     )
                 } else {
+                    val permanentlyDenied = !shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)
+                        && ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
                     PermissionDeniedScreen(
+                        permanentlyDenied = permanentlyDenied,
                         onRequestAgain = {
                             permissionLauncher.launch(
                                 arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
                             )
-                        }
+                        },
+                        onOpenSettings = {
+                            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", packageName, null)
+                            })
+                        },
                     )
                 }
             }
@@ -147,7 +158,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun PermissionDeniedScreen(onRequestAgain: () -> Unit) {
+private fun PermissionDeniedScreen(
+    permanentlyDenied: Boolean,
+    onRequestAgain: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -157,18 +172,26 @@ private fun PermissionDeniedScreen(onRequestAgain: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringResource(R.string.permission_title),
+            text = if (permanentlyDenied) stringResource(R.string.permission_denied_title)
+                   else stringResource(R.string.permission_title),
             style = MaterialTheme.typography.headlineSmall,
             color = Color.White,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = stringResource(R.string.permission_desc),
+            text = if (permanentlyDenied) stringResource(R.string.permission_denied_desc)
+                   else stringResource(R.string.permission_desc),
             color = Color(0xFFAAAAAA),
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onRequestAgain) {
-            Text(stringResource(R.string.permission_grant))
+        if (permanentlyDenied) {
+            Button(onClick = onOpenSettings) {
+                Text(stringResource(R.string.permission_open_settings))
+            }
+        } else {
+            Button(onClick = onRequestAgain) {
+                Text(stringResource(R.string.permission_grant))
+            }
         }
     }
 }

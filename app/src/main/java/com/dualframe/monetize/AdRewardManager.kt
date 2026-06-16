@@ -10,6 +10,8 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.sunnlab.dualframe.BuildConfig
 
+// TODO: Add UMP consent flow (required for EU/EEA users)
+// TODO: Add privacy policy link to settings page
 object AdRewardManager {
 
     private const val TAG = "AdRewardManager"
