@@ -166,7 +166,7 @@ fun SettingsPage(
                 Spacer(Modifier.height(2.dp))
                 Text(
                     if (isPro) stringResource(R.string.settings_pro_active)
-                    else stringResource(R.string.save_popup_pro_subtitle),
+                    else stringResource(R.string.settings_pro_subtitle),
                     color = if (isPro) Color.White else Color(0xFF6B5E3A),
                     fontSize = 14.sp,
                     fontFamily = PretendardFont)
@@ -638,6 +638,14 @@ fun ProUpgradeSheet(
                             fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
                     }
                 }
+
+                Spacer(Modifier.height(14.dp))
+
+                Text(stringResource(R.string.pro_sheet_restore_prompt), color = Color(0xFF666666), fontSize = 12.sp,
+                    fontFamily = PretendardFont,
+                    modifier = Modifier.clickable {
+                        BillingManager.getInstance(context).restorePurchases()
+                    }.padding(8.dp))
             }
         }
     }
