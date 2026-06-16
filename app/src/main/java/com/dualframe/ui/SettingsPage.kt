@@ -27,7 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material.icons.rounded.Cameraswitch
 import androidx.compose.material.icons.rounded.Check
@@ -110,7 +110,7 @@ fun SettingsPage(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Outlined.ArrowBack, null, tint = Color.White,
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, null, tint = Color.White,
                 modifier = Modifier.size(28.dp).clickable { onBack() }.padding(4.dp))
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.settings_title), color = Color.White, fontSize = 20.sp,
