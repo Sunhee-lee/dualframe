@@ -496,9 +496,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Save both exports. If PRO is owned, save without watermark.
      * Otherwise save with watermark.
      */
+    private fun canSave(): Boolean {
+        val status = _uiState.value.appStatus
+        return status == AppStatus.EXPORT_COMPLETE || status == AppStatus.ERROR
+    }
+
     fun saveBothWithWatermark() {
         val state = _uiState.value
-        if (state.appStatus != AppStatus.EXPORT_COMPLETE) return
+        if (!canSave()) return
 
         val app: android.app.Application = getApplication()
 
@@ -581,7 +586,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun saveBothClean() {
         val state = _uiState.value
-        if (state.appStatus != AppStatus.EXPORT_COMPLETE && state.appStatus != AppStatus.SAVING) return
+        if (!canSave() && state.appStatus != AppStatus.SAVING) return
         val nativePath = state.nativeTempPath ?: return
         val croppedPath = state.croppedTempPath ?: return
 
