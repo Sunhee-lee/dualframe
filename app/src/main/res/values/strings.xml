@@ -68,7 +68,7 @@
     <string name="pro_sheet_benefit3_title">Auto Save</string>
 
     <!-- Permissions -->
-    <string name="permission_title">Camera Permission Required</string>
+    <string name="permission_title">Camera and Microphone Permission Required</string>
     <string name="permission_desc">DualFrame needs camera access to show previews and record video. Audio permission is optional but recommended for recording with sound.</string>
     <string name="permission_grant">Grant Permissions</string>
 
