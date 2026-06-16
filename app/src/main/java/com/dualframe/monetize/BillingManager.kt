@@ -221,13 +221,19 @@ class BillingManager private constructor(private val context: Context) {
         }
     }
 
-    private fun acknowledgePurchase(purchase: Purchase) {
+    private fun acknowledgePurchase(purchase: Purchase, retryCount: Int = 0) {
         val params = AcknowledgePurchaseParams.newBuilder()
             .setPurchaseToken(purchase.purchaseToken)
             .build()
 
         billingClient?.acknowledgePurchase(params) { result ->
             Log.i(TAG, "acknowledge: code=${result.responseCode} msg=${result.debugMessage}")
+            if (result.responseCode != BillingClient.BillingResponseCode.OK && retryCount < 3) {
+                Log.w(TAG, "Acknowledge failed, retrying (${retryCount + 1}/3)")
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    acknowledgePurchase(purchase, retryCount + 1)
+                }, (retryCount + 1) * 2000L)
+            }
         }
     }
 
