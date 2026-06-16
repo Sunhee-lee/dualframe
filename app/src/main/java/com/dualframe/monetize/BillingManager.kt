@@ -142,6 +142,10 @@ class BillingManager private constructor(private val context: Context) {
                 .build()
         ) { result, purchases ->
             Log.i(TAG, "restorePurchases: code=${result.responseCode} count=${purchases.size}")
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                Log.w(TAG, "restorePurchases query failed — keeping current state")
+                return@queryPurchasesAsync
+            }
             var found = false
             for (purchase in purchases) {
                 if (PRODUCT_ID in purchase.products &&
