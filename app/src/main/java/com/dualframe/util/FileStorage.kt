@@ -31,6 +31,12 @@ object FileStorage {
         return File(dir, "DF_${stamp}_$suffix.mp4")
     }
 
+    fun hasEnoughStorage(context: Context, requiredBytes: Long): Boolean {
+        val stat = android.os.StatFs(context.cacheDir.absolutePath)
+        val available = stat.availableBytes
+        return available > requiredBytes
+    }
+
     fun saveToMediaStore(context: Context, sourceFile: File, displayName: String): Uri? {
         val contentValues = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, displayName)

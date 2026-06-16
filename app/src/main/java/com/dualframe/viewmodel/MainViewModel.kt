@@ -61,6 +61,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var masterFile: File? = null
     private var timerJob: Job? = null
     private var countdownJob: Job? = null
+    private var adFailCount = 0
 
     init {
         // Load persisted settings
@@ -500,8 +501,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val state = _uiState.value
         if (state.appStatus != AppStatus.EXPORT_COMPLETE) return
 
+        val app: android.app.Application = getApplication()
+
+        // Storage check
+        val nativeFile = state.nativeTempPath?.let { File(it) }
+        val croppedFile = state.croppedTempPath?.let { File(it) }
+        val requiredBytes = (nativeFile?.length() ?: 0L) + (croppedFile?.length() ?: 0L) + 50_000_000L
+        if (!FileStorage.hasEnoughStorage(app, requiredBytes)) {
+            setError(app.getString(com.sunnlab.dualframe.R.string.error_storage_full))
+            return
+        }
+
         // PRO users get clean save automatically
-        if (com.dualframe.monetize.ProEntitlement.isProOwned(getApplication())) {
+        if (com.dualframe.monetize.ProEntitlement.isProOwned(app)) {
             saveBothClean()
             return
         }
@@ -558,7 +570,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appStatus = AppStatus.EXPORT_COMPLETE,
                     savedNativeUri = uriN,
                     savedCroppedUri = uriC,
-                    saveMessage = if (uriN != null && uriC != null) "Saved" else "Save failed",
+                    saveMessage = if (uriN != null && uriC != null) "Saved"
+                        else getApplication<android.app.Application>().getString(com.sunnlab.dualframe.R.string.error_save_failed),
                 )
             }
         }
@@ -622,9 +635,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appStatus = AppStatus.EXPORT_COMPLETE,
                     savedNativeUri = uriN,
                     savedCroppedUri = uriC,
-                    saveMessage = if (uriN != null && uriC != null) "Saved" else "Save failed",
+                    saveMessage = if (uriN != null && uriC != null) "Saved"
+                        else getApplication<android.app.Application>().getString(com.sunnlab.dualframe.R.string.error_save_failed),
                 )
             }
+        }
+    }
+
+    fun onAdFailed() {
+        adFailCount++
+        Log.i(TAG, "Ad failed count: $adFailCount")
+        if (adFailCount <= 2) {
+            saveBothWithWatermark()
+        } else {
+            val app: android.app.Application = getApplication()
+            setError(app.getString(com.sunnlab.dualframe.R.string.error_ad_fail_pro_prompt))
         }
     }
 

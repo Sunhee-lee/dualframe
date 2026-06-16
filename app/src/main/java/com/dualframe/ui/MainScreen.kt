@@ -1117,7 +1117,7 @@ private fun RemoveWatermarkDialog(
                                         context.getString(R.string.toast_watermark_removed),
                                         android.widget.Toast.LENGTH_SHORT).show()
                                 },
-                                onFailed = { viewModel.clearError() },
+                                onFailed = { viewModel.onAdFailed() },
                             )
                         }
                     }
