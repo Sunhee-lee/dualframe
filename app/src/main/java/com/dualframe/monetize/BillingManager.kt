@@ -135,7 +135,7 @@ class BillingManager private constructor(private val context: Context) {
         }
     }
 
-    fun restorePurchases(showToast: Boolean = false) {
+    fun restorePurchases(showToast: Boolean = false, toastContext: android.content.Context? = null) {
         billingClient?.queryPurchasesAsync(
             QueryPurchasesParams.newBuilder()
                 .setProductType(BillingClient.ProductType.INAPP)
@@ -164,10 +164,11 @@ class BillingManager private constructor(private val context: Context) {
                 ProEntitlement.revokePro(context)
             }
             if (showToast) {
+                val ctx = toastContext ?: context
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
                     val msgRes = if (found) com.sunnlab.dualframe.R.string.pro_restore_success
                                  else com.sunnlab.dualframe.R.string.pro_purchase_failed
-                    android.widget.Toast.makeText(context, context.getString(msgRes),
+                    android.widget.Toast.makeText(ctx, ctx.getString(msgRes),
                         android.widget.Toast.LENGTH_SHORT).show()
                 }
             }
