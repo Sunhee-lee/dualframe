@@ -20,4 +20,9 @@ object ProEntitlement {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_PRO, true).apply()
     }
+
+    fun revokePro(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_PRO, false).apply()
+    }
 }

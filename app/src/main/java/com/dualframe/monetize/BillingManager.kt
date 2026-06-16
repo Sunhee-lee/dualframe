@@ -156,7 +156,8 @@ class BillingManager private constructor(private val context: Context) {
                 }
             }
             if (!found) {
-                Log.i(TAG, "No existing PRO purchase found")
+                Log.i(TAG, "No existing PRO purchase found — revoking PRO")
+                ProEntitlement.revokePro(context)
             }
         }
     }
