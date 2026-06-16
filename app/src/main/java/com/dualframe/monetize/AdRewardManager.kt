@@ -19,6 +19,7 @@ object AdRewardManager {
 
     fun loadAd(activity: Activity) {
         if (rewardedAd != null || isLoading) return
+        if (activity.isFinishing || activity.isDestroyed) return
         isLoading = true
         RewardedAd.load(
             activity,
@@ -76,18 +77,24 @@ object AdRewardManager {
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 rewardedAd = null
-                loadAd(activity)
+                if (!activity.isFinishing && !activity.isDestroyed) {
+                    loadAd(activity)
+                }
             }
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
                 rewardedAd = null
-                onFailed(activity.getString(com.sunnlab.dualframe.R.string.error_ad_not_available))
-                loadAd(activity)
+                if (!activity.isFinishing && !activity.isDestroyed) {
+                    onFailed(activity.getString(com.sunnlab.dualframe.R.string.error_ad_not_available))
+                    loadAd(activity)
+                }
             }
         }
 
         ad.show(activity) { _ ->
             Log.i(TAG, "User earned reward")
-            onRewarded()
+            if (!activity.isFinishing && !activity.isDestroyed) {
+                onRewarded()
+            }
         }
     }
 
