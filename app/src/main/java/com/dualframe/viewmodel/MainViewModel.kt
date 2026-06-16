@@ -478,10 +478,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             // Auto-save: if PRO + autoSave enabled, save immediately
             val currentSettings = _uiState.value.settings
-            if (currentSettings.autoSave &&
-                com.dualframe.monetize.ProEntitlement.isProOwned(getApplication())) {
-                Log.i(TAG, "Auto-save triggered")
-                saveBothWithWatermark()
+            if (currentSettings.autoSave) {
+                com.dualframe.monetize.BillingManager.getInstance(getApplication()).restorePurchases()
+                if (com.dualframe.monetize.ProEntitlement.isProOwned(getApplication())) {
+                    Log.i(TAG, "Auto-save triggered (PRO verified)")
+                    saveBothWithWatermark()
+                } else {
+                    Log.w(TAG, "Auto-save skipped — PRO not verified")
+                }
             }
         }
     }

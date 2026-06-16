@@ -32,10 +32,12 @@ object ProEntitlement {
         prefs(context).getBoolean(KEY_PRO, false)
 
     fun grantPro(context: Context) {
+        Log.i(TAG, "PRO granted")
         prefs(context).edit().putBoolean(KEY_PRO, true).apply()
     }
 
     fun revokePro(context: Context) {
+        Log.i(TAG, "PRO revoked")
         prefs(context).edit().putBoolean(KEY_PRO, false).apply()
     }
 }
