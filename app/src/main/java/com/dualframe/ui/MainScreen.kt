@@ -803,6 +803,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
     }
 
     val isSaved = state.saveMessage != null
+    val isSavedClean = state.saveMessage == "Saved"
     val isAutoSave = state.settings.autoSave && isPro
     val saveLabel = when {
         state.appStatus == AppStatus.SAVING -> stringResource(R.string.label_saving)
@@ -810,7 +811,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
         else -> stringResource(R.string.btn_save_videos)
     }
     val saveIcon = if (isSaved) Icons.Outlined.Check else Icons.Outlined.FileDownload
-    val saveEnabled = state.appStatus != AppStatus.SAVING && !isSaved
+    val saveEnabled = state.appStatus != AppStatus.SAVING && !isSavedClean
 
     Box(
         modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
@@ -867,7 +868,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 ) {
                     SaveResultButton(saveIcon, saveLabel,
                         enabled = if (isAutoSave) false else saveEnabled,
-                        forceGreen = isSaved,
+                        forceGreen = isSavedClean,
                     ) {
                         if (isPro) viewModel.saveBothWithWatermark()
                         else viewModel.showRemoveWatermarkDialog()
@@ -919,7 +920,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 ) {
                     SaveResultButton(saveIcon, saveLabel,
                         enabled = if (isAutoSave) false else saveEnabled,
-                        forceGreen = isSaved,
+                        forceGreen = isSavedClean,
                     ) {
                         if (isPro) viewModel.saveBothWithWatermark()
                         else viewModel.showRemoveWatermarkDialog()

@@ -559,13 +559,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 FileStorage.saveToMediaStore(app, sourceCropped, croppedFile.name)
             }
 
-            // Clean temp files after successful save
+            // Clean watermarked temp files only — keep originals for potential re-save
             if (uriN != null && uriC != null) {
                 withContext(Dispatchers.IO) {
                     FileStorage.deleteTempFile(sourceNative)
                     FileStorage.deleteTempFile(sourceCropped)
-                    FileStorage.deleteTempFile(nativeFile)
-                    FileStorage.deleteTempFile(croppedFile)
                 }
             }
 
@@ -574,14 +572,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appStatus = AppStatus.EXPORT_COMPLETE,
                     savedNativeUri = uriN,
                     savedCroppedUri = uriC,
-                    saveMessage = if (uriN != null && uriC != null) "Saved"
+                    saveMessage = if (uriN != null && uriC != null) "SavedWithWatermark"
                         else getApplication<android.app.Application>().getString(com.sunnlab.dualframe.R.string.error_save_failed),
                 )
             }
         }
     }
-
-    /**
      * Save both exports to gallery WITHOUT watermark (rewarded/PRO path).
      */
     fun saveBothClean() {
