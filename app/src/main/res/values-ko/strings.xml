@@ -67,6 +67,11 @@
     <string name="pro_sheet_benefit2_title">광고 없이 저장</string>
     <string name="pro_sheet_benefit3_title">자동 저장</string>
 
+    <!-- Permissions -->
+    <string name="permission_title">카메라 권한이 필요합니다</string>
+    <string name="permission_desc">DualFrame은 카메라 미리보기와 영상 촬영을 위해 카메라 권한이 필요합니다. 오디오 권한은 선택 사항이지만 소리 녹음을 위해 권장됩니다.</string>
+    <string name="permission_grant">권한 허용</string>
+
     <!-- Settings tiles -->
     <string name="label_on">켜짐</string>
     <string name="label_off">꺼짐</string>

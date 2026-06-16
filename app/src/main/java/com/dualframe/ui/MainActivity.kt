@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
+import com.sunnlab.dualframe.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -155,19 +157,18 @@ private fun PermissionDeniedScreen(onRequestAgain: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Camera Permission Required",
+            text = stringResource(R.string.permission_title),
             style = MaterialTheme.typography.headlineSmall,
             color = Color.White,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "DualFrame needs camera access to show previews and record video. " +
-                "Audio permission is optional but recommended for recording with sound.",
+            text = stringResource(R.string.permission_desc),
             color = Color(0xFFAAAAAA),
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onRequestAgain) {
-            Text("Grant Permissions")
+            Text(stringResource(R.string.permission_grant))
         }
     }
 }
