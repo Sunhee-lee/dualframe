@@ -58,14 +58,14 @@
     <string name="settings_review">리뷰 남기기</string>
     <string name="settings_contact">문의하기</string>
     <string name="pro_sheet_title_full">DualFrame PRO</string>
-    <string name="pro_sheet_subtitle">한 번 구매로 평생 이용</string>
-    <string name="pro_sheet_get">PRO 구매</string>
+    <string name="pro_sheet_subtitle">한 번 구매로 계속 사용하세요</string>
+    <string name="pro_sheet_get">PRO 잠금 해제</string>
     <string name="pro_sheet_thanks">DualFrame을 지원해 주셔서 감사합니다!</string>
     <string name="pro_sheet_restore">구매 복원</string>
     <string name="pro_sheet_close">닫기</string>
-    <string name="pro_sheet_benefit1_title">워터마크 제거</string>
+    <string name="pro_sheet_benefit1_title">워터마크 없이 저장</string>
     <string name="pro_sheet_benefit2_title">광고 없이 저장</string>
-    <string name="pro_sheet_benefit3_title">자동 저장</string>
+    <string name="pro_sheet_benefit3_title">촬영 후 자동 저장</string>
 
     <!-- Permissions -->
     <string name="permission_title">카메라와 마이크 권한이 필요합니다</string>

@@ -58,14 +58,14 @@
     <string name="settings_review">Rate DualFrame</string>
     <string name="settings_contact">Contact Us</string>
     <string name="pro_sheet_title_full">DualFrame PRO</string>
-    <string name="pro_sheet_subtitle">One-time purchase. Lifetime access.</string>
-    <string name="pro_sheet_get">Get PRO</string>
+    <string name="pro_sheet_subtitle">Buy once, use forever.</string>
+    <string name="pro_sheet_get">Unlock PRO</string>
     <string name="pro_sheet_thanks">Thank you for supporting DualFrame!</string>
     <string name="pro_sheet_restore">Restore Purchase</string>
     <string name="pro_sheet_close">Close</string>
-    <string name="pro_sheet_benefit1_title">Remove Watermark</string>
-    <string name="pro_sheet_benefit2_title">Ad-free Saving</string>
-    <string name="pro_sheet_benefit3_title">Auto Save</string>
+    <string name="pro_sheet_benefit1_title">Save without Watermark</string>
+    <string name="pro_sheet_benefit2_title">Save without Ads</string>
+    <string name="pro_sheet_benefit3_title">Auto Save after Recording</string>
 
     <!-- Permissions -->
     <string name="permission_title">Camera and Microphone Permission Required</string>
