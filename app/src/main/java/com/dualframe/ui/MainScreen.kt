@@ -10,6 +10,11 @@ import android.view.TextureView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -473,12 +478,26 @@ private fun StatusChip(status: AppStatus) {
 private fun RecStatusChip(durationSeconds: Int, isPaused: Boolean) {
     val bg = if (isPaused) Color(0x44888888) else Color(0x44FF1744)
     val dot = if (isPaused) Color(0xFF888888) else Color(0xFFFF1744)
+
+    // Pulse the dot alpha when paused to draw attention (in case user forgot to resume)
+    val infiniteTransition = rememberInfiniteTransition(label = "pauseBlink")
+    val dotAlpha by infiniteTransition.animateFloat(
+        initialValue = if (isPaused) 0.3f else 1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pauseBlinkAlpha",
+    )
+
     Row(
         Modifier.background(bg, RoundedCornerShape(10.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(7.dp).clip(CircleShape).background(dot))
+        Box(Modifier.size(7.dp).clip(CircleShape)
+            .background(if (isPaused) dot.copy(alpha = dotAlpha) else dot))
         Spacer(Modifier.width(5.dp))
         Text(
             text = formatDuration(durationSeconds),

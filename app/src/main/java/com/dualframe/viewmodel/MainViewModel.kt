@@ -350,8 +350,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 // We do NOT auto-stop — user retains full control. CameraX will
                 // finalize the file if storage runs out during recording.
                 val remaining = computeRemainingSeconds()
+                // 4K UHD uses ~5MB/s, so 5min threshold triggers too often.
+                // Lower threshold to 3min for UHD, keep 5min for FHD/HD.
+                val badgeThreshold = if (_uiState.value.settings.videoQuality == com.dualframe.data.VideoQuality.UHD) 3 * 60 else 5 * 60
                 _uiState.update {
-                    it.copy(remainingRecordingSeconds = if (remaining != null && remaining <= 5 * 60) remaining else null)
+                    it.copy(remainingRecordingSeconds = if (remaining != null && remaining <= badgeThreshold) remaining else null)
                 }
             }
         }
