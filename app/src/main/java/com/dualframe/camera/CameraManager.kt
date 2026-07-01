@@ -94,10 +94,34 @@ class CameraManager(private val context: Context) {
 
             logDiagnostics("bindInternal", quality)
 
+            // Check stabilization support before binding
+            val cameraSelector = currentCameraSelector()
+            val provider2 = provider
+            val stabSupport = try {
+                val cameraInfo = provider2.getCameraInfo(cameraSelector)
+                val camera2Info = androidx.camera.camera2.interop.Camera2CameraInfo.from(cameraInfo)
+                val modes = camera2Info.getCameraCharacteristic(
+                    android.hardware.camera2.CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES
+                )
+                val hasPreview = modes?.contains(android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION) == true
+                val hasVideo = modes?.contains(android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON) == true
+                Log.i(TAG, "Stabilization support: preview=$hasPreview video=$hasVideo")
+                Pair(hasPreview, hasVideo)
+            } catch (e: Exception) {
+                Log.w(TAG, "Stabilization check failed: ${e.message}")
+                Pair(false, false)
+            }
+
             // Build Preview — no explicit aspect ratio target. The ViewPort (9:16)
             // drives the crop rect for VideoCapture. Preview gets the raw sensor buffer;
             // the renderer applies the matching crop for WYSIWYG via masterVisualAspect.
             preview = Preview.Builder()
+                .apply {
+                    if (stabSupport.first) {
+                        setPreviewStabilizationEnabled(true)
+                        Log.i(TAG, "Preview stabilization: ON")
+                    }
+                }
                 .build().also { previewUseCase ->
                 previewUseCase.surfaceProvider = Preview.SurfaceProvider { request ->
                     onSurfaceRequested(request)
@@ -122,15 +146,20 @@ class CameraManager(private val context: Context) {
             // No setTargetFrameRate — CameraX picks the optimal fps automatically.
             // This is a stability-first policy: the camera HAL chooses the best
             // frame rate for the selected quality, typically 30fps.
-            videoCapture = VideoCapture.withOutput(recorder)
+            videoCapture = VideoCapture.Builder(recorder)
+                .apply {
+                    if (stabSupport.second) {
+                        setVideoStabilizationEnabled(true)
+                        Log.i(TAG, "Video stabilization: ON")
+                    }
+                }
+                .build()
 
             // Preview mirroring: DO NOT mirror here. The SurfaceTexture transform
             // matrix (stMatrix) already includes horizontal flip for front cameras.
             // Adding another mirror would double-flip → reversed preview.
             // Saved-file mirroring is handled separately in the export/save pipeline.
             renderer.mirrorHorizontally = false
-
-            val cameraSelector = currentCameraSelector()
 
             // Bind via UseCaseGroup + ViewPort. ViewPort is 9:16 PORTRAIT because:
             // 1. Portrait (9:16) is the primary output — native copy, zero quality loss

@@ -476,13 +476,89 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
 
-            // Auto-save: if PRO + autoSave enabled, save immediately
+            // Auto-save: if PRO + autoSave enabled, save in background and reset to IDLE
             val currentSettings = _uiState.value.settings
             if (currentSettings.autoSave &&
                 com.dualframe.monetize.ProEntitlement.isProOwned(getApplication())) {
-                Log.i(TAG, "Auto-save triggered")
-                saveBothWithWatermark()
+                Log.i(TAG, "Auto-save triggered — running in background")
+                autoSaveInBackground(nativeFile.absolutePath, croppedFile.absolutePath)
             }
+        }
+    }
+
+    /**
+     * Auto-save path: keep app in IDLE so the user can continue recording immediately.
+     * Save runs in background, toast fires on completion.
+     */
+    private fun autoSaveInBackground(nativePath: String, croppedPath: String) {
+        // Reset UI to IDLE right away so the camera screen is usable
+        _uiState.update {
+            it.copy(
+                appStatus = AppStatus.IDLE,
+                thumbnailBitmap = null,
+                landscapeThumbnailBitmap = null,
+                nativeTempPath = null,
+                croppedTempPath = null,
+                nativeExportInfo = null,
+                croppedExportInfo = null,
+                savedNativeUri = null,
+                savedCroppedUri = null,
+                saveMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            val app: android.app.Application = getApplication()
+            val nativeFile = File(nativePath)
+            val croppedFile = File(croppedPath)
+
+            val isFront = cameraManager.useFrontCamera.value
+            val beauty = isFront && _uiState.value.settings.frontCameraEffect
+            val mirror = isFront
+            val needsTransform = beauty || mirror
+
+            val sourceNative: File = if (needsTransform) {
+                val processed = FileStorage.createExportFile(app, "tmp_portrait")
+                WatermarkHelper.applyEffects(
+                    app, nativeFile, processed,
+                    applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                ) ?: nativeFile
+            } else nativeFile
+
+            val sourceCropped: File = if (needsTransform) {
+                val processed = FileStorage.createExportFile(app, "tmp_landscape")
+                WatermarkHelper.applyEffects(
+                    app, croppedFile, processed,
+                    applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                ) ?: croppedFile
+            } else croppedFile
+
+            val uriN = withContext(Dispatchers.IO) {
+                FileStorage.saveToMediaStore(app, sourceNative, nativeFile.name)
+            }
+            val uriC = withContext(Dispatchers.IO) {
+                FileStorage.saveToMediaStore(app, sourceCropped, croppedFile.name)
+            }
+
+            withContext(Dispatchers.IO) {
+                FileStorage.deleteTempFile(sourceNative)
+                FileStorage.deleteTempFile(sourceCropped)
+                FileStorage.deleteTempFile(nativeFile)
+                FileStorage.deleteTempFile(croppedFile)
+            }
+
+            val success = uriN != null && uriC != null
+            Log.i(TAG, "Auto-save completed: success=$success")
+            _uiState.update {
+                if (success) it.copy(showAutoSaveCompleteToast = true)
+                else it.copy(showAutoSaveFailToast = true)
+            }
+        }
+    }
+
+    fun dismissAutoSaveToasts() {
+        _uiState.update {
+            it.copy(showAutoSaveCompleteToast = false, showAutoSaveFailToast = false)
         }
     }
 

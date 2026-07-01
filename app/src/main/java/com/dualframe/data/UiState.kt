@@ -31,6 +31,8 @@ data class UiState(
     val showRemoveWatermarkDialog: Boolean = false,
     val adFailDialog: AdFailType? = null,
     val showFhdFallbackToast: Boolean = false,
+    val showAutoSaveCompleteToast: Boolean = false,
+    val showAutoSaveFailToast: Boolean = false,
     // Settings
     val settings: AppSettings = AppSettings(),
     val supportedQualities: List<VideoQuality> = VideoQuality.entries,

@@ -360,6 +360,24 @@ fun MainScreen(
         }
     }
 
+    // Auto-save completion toasts
+    if (state.showAutoSaveCompleteToast) {
+        LaunchedEffect(Unit) {
+            android.widget.Toast.makeText(context,
+                context.getString(R.string.toast_auto_save_complete),
+                android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.dismissAutoSaveToasts()
+        }
+    }
+    if (state.showAutoSaveFailToast) {
+        LaunchedEffect(Unit) {
+            android.widget.Toast.makeText(context,
+                context.getString(R.string.toast_auto_save_failed),
+                android.widget.Toast.LENGTH_LONG).show()
+            viewModel.dismissAutoSaveToasts()
+        }
+    }
+
     // Fullscreen result overlay
     if (state.appStatus == AppStatus.EXPORT_COMPLETE || state.appStatus == AppStatus.SAVING) {
         ResultActions(state, viewModel, context, deviceRotation)
