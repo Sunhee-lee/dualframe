@@ -81,8 +81,9 @@ private fun SwitchCameraButton(enabled: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun PauseResumeButton(paused: Boolean, onClick: () -> Unit) {
+    val bg = if (paused) Color(0xFFFF1744) else Color(0xFF1A1A1A)
     Box(
-        Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
+        Modifier.size(48.dp).clip(CircleShape).background(bg)
             .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {

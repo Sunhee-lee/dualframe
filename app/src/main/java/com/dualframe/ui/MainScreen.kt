@@ -23,7 +23,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,7 +81,6 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -178,6 +176,10 @@ fun MainScreen(
     }
 
     val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
+    val exposureIndex by viewModel.cameraManager.exposureIndex.collectAsState()
+    val exposureRange = remember(state.cameraReady, isFrontCamera) {
+        viewModel.cameraManager.exposureCompensationRange()?.let { (min, max, _) -> min..max }
+    }
     val isRecording = state.appStatus == AppStatus.RECORDING
     val isPaused = state.appStatus == AppStatus.PAUSED
     val isRecordingOrPaused = isRecording || isPaused
@@ -309,6 +311,8 @@ fun MainScreen(
                 isFrontCamera = isFrontCamera,
                 resolution = state.settings.videoQuality.label.substringBefore(" (").replace(" ", "\n"),
                 deviceRotation = deviceRotation,
+                exposureIndex = exposureIndex,
+                exposureRange = exposureRange,
                 onAudioToggle = {
                     viewModel.updateSettings(state.settings.copy(audioEnabled = !state.settings.audioEnabled))
                 },
@@ -337,6 +341,15 @@ fun MainScreen(
                     val idx = qualities.indexOf(state.settings.videoQuality)
                     val next = qualities[(idx + 1) % qualities.size]
                     viewModel.updateSettings(state.settings.copy(videoQuality = next))
+                },
+                onExposureCycle = {
+                    val range = exposureRange ?: return@SettingsPanel
+                    // 5-step cycle: -2, -1, 0, +1, +2, then wraps. Clamp to device range.
+                    val steps = listOf(-2, -1, 0, 1, 2).filter { it in range }
+                    if (steps.isEmpty()) return@SettingsPanel
+                    val currentPos = steps.indexOf(exposureIndex).let { if (it < 0) steps.indexOf(0) else it }
+                    val next = steps[(currentPos + 1) % steps.size]
+                    viewModel.cameraManager.setExposureCompensation(next)
                 },
                 onMoreClick = {
                     settingsExpanded = false
@@ -482,19 +495,11 @@ private fun RecStatusChip(durationSeconds: Int, isPaused: Boolean) {
     ) {
         Box(Modifier.size(7.dp).clip(CircleShape).background(dot))
         Spacer(Modifier.width(5.dp))
-        if (isPaused) {
-            Text(
-                text = stringResource(R.string.recording_paused_prefix) + " " + formatDuration(durationSeconds),
-                color = Color.White, fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace,
-            )
-        } else {
-            Text(
-                text = formatDuration(durationSeconds),
-                color = Color.White, fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace,
-            )
-        }
+        Text(
+            text = formatDuration(durationSeconds),
+            color = Color.White, fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace,
+        )
     }
 }
 
@@ -604,7 +609,6 @@ private fun PreviewPanels(
                 }
             }
             FocusRingOverlay(pFocusKey, pFocusPos)
-            ExposureSliderOverlay(pFocusKey, pFocusPos, cameraManager)
         }
 
         var lFocusKey by remember { mutableIntStateOf(0) }
@@ -670,7 +674,6 @@ private fun PreviewPanels(
             }
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
-            ExposureSliderOverlay(lFocusKey, lFocusPos, cameraManager)
         }
     }
 }
@@ -739,95 +742,6 @@ private fun FocusRingOverlay(tapKey: Int, position: Offset) {
                 center = position,
                 style = Stroke(width = 1.5.dp.toPx()),
             )
-        }
-    }
-}
-
-@Composable
-private fun ExposureSliderOverlay(
-    tapKey: Int,
-    focusPos: Offset,
-    cameraManager: com.dualframe.camera.CameraManager,
-) {
-    if (tapKey == 0) return
-    val range = remember(tapKey) { cameraManager.exposureCompensationRange() } ?: return
-    val (minIdx, maxIdx, _) = range
-
-    var index by remember(tapKey) { mutableIntStateOf(0) }
-    var alpha by remember { mutableStateOf(0f) }
-    var lastTouchAtMs by remember(tapKey) { mutableStateOf(System.currentTimeMillis()) }
-
-    LaunchedEffect(tapKey) {
-        cameraManager.setExposureCompensation(0)
-        index = 0
-        alpha = 1f
-        // Auto-hide 3s after last touch
-        while (true) {
-            delay(500)
-            val idle = System.currentTimeMillis() - lastTouchAtMs
-            if (idle >= 3000) { alpha = 0f; break }
-        }
-    }
-
-    if (alpha == 0f) return
-
-    val density = LocalDensity.current
-    val sliderHeightDp = 120.dp
-    val sliderWidthDp = 28.dp
-    val gapDp = 12.dp
-
-    // Slider positioned to the right of focus ring, kept within bounds
-    val sliderTopPx = with(density) { (focusPos.y - sliderHeightDp.toPx() / 2f).coerceAtLeast(0f) }
-    val sliderLeftPx = with(density) { focusPos.x + 22.dp.toPx() + gapDp.toPx() }
-
-    val sliderHeightPx = with(density) { sliderHeightDp.toPx() }
-    val dragState = androidx.compose.foundation.gestures.rememberDraggableState { dragY ->
-        lastTouchAtMs = System.currentTimeMillis()
-        val delta = (-dragY / sliderHeightPx) * (maxIdx - minIdx)
-        val newIdx = (index + delta.toInt()).coerceIn(minIdx, maxIdx)
-        if (newIdx != index) {
-            index = newIdx
-            cameraManager.setExposureCompensation(newIdx)
-        }
-    }
-
-    Box(Modifier.fillMaxSize()) {
-        Box(
-            Modifier
-                .offset {
-                    androidx.compose.ui.unit.IntOffset(sliderLeftPx.toInt(), sliderTopPx.toInt())
-                }
-                .size(sliderWidthDp, sliderHeightDp)
-                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-                .draggable(
-                    state = dragState,
-                    orientation = androidx.compose.foundation.gestures.Orientation.Vertical,
-                    onDragStarted = { lastTouchAtMs = System.currentTimeMillis() },
-                    onDragStopped = { lastTouchAtMs = System.currentTimeMillis() },
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                Modifier.fillMaxSize().padding(vertical = 6.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("+", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                val pctFromCenter = if (maxIdx != minIdx) (index - minIdx).toFloat() / (maxIdx - minIdx) else 0.5f
-                Box(
-                    Modifier.width(4.dp).height(60.dp)
-                        .background(Color(0x66FFFFFF), RoundedCornerShape(2.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val fillOffset = ((1f - pctFromCenter) * 56).toInt()
-                    Box(
-                        Modifier.offset(y = (fillOffset - 28).dp)
-                            .size(10.dp)
-                            .background(Color(0xFFFFC107), CircleShape),
-                    )
-                }
-                Text("−", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
         }
     }
 }

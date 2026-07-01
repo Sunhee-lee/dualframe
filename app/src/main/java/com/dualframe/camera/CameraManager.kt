@@ -270,6 +270,7 @@ class CameraManager(private val context: Context) {
     suspend fun switchCamera(onError: (String) -> Unit): Boolean {
         val owner = boundLifecycleOwner ?: return false
         _useFrontCamera.value = !_useFrontCamera.value
+        _exposureIndex.value = 0  // Reset exposure when switching cameras
         Log.i(TAG, "Switching to ${if (_useFrontCamera.value) "front" else "back"} camera")
         return bindInternal(owner, boundQuality, onError)
     }
@@ -322,6 +323,9 @@ class CameraManager(private val context: Context) {
         cam.cameraControl.startFocusAndMetering(action)
     }
 
+    private val _exposureIndex = MutableStateFlow(0)
+    val exposureIndex: StateFlow<Int> = _exposureIndex.asStateFlow()
+
     /** Exposure compensation range (min, max, step in EV units). Returns null if unsupported. */
     fun exposureCompensationRange(): Triple<Int, Int, Float>? {
         val cam = camera ?: return null
@@ -341,6 +345,7 @@ class CameraManager(private val context: Context) {
             state.exposureCompensationRange.lower,
             state.exposureCompensationRange.upper,
         )
+        _exposureIndex.value = clamped
         cam.cameraControl.setExposureCompensationIndex(clamped)
     }
 
