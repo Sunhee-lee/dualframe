@@ -18,7 +18,6 @@ import androidx.compose.material.icons.outlined.MicOff
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material.icons.rounded.FlashOff
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material3.Icon
@@ -67,8 +66,6 @@ fun SettingsPanel(
     isFrontCamera: Boolean,
     resolution: String,
     deviceRotation: Int,
-    exposureIndex: Int = 0,
-    exposureRange: IntRange? = null,
     onAudioToggle: () -> Unit,
     onZoomToggle: () -> Unit,
     onGuideToggle: () -> Unit,
@@ -77,7 +74,6 @@ fun SettingsPanel(
     onKeepScreenToggle: () -> Unit,
     onSelfieEffectToggle: () -> Unit,
     onResolutionCycle: () -> Unit,
-    onExposureCycle: () -> Unit = {},
     onMoreClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -102,10 +98,6 @@ fun SettingsPanel(
             keepScreenOn, rot, onKeepScreenToggle)
 
         ZoomTile(zoomRatio, rot, onZoomToggle)
-
-        if (exposureRange != null) {
-            BrightnessTile(exposureIndex, rot, onExposureCycle)
-        }
 
         TextTile(resolution, rot, onResolutionCycle, fontSize = 14.sp,
             isActive = resolution.contains("4K"))
@@ -145,32 +137,6 @@ private fun ZoomTile(zoomRatio: Float, rotation: Float, onClick: () -> Unit) {
         Text(displayText, color = RailTheme.iconColor, fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold, fontFamily = RailTheme.font,
             modifier = Modifier.rotate(rotation))
-    }
-}
-
-@Composable
-private fun BrightnessTile(exposureIndex: Int, rotation: Float, onClick: () -> Unit) {
-    val isActive = exposureIndex != 0
-    val label = if (exposureIndex > 0) "+$exposureIndex" else "$exposureIndex"
-    Box(
-        modifier = Modifier.size(RailTheme.tileSize)
-            .clip(RoundedCornerShape(RailTheme.tileRadius))
-            .background(RailTheme.tileBg)
-            .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(RailTheme.tileRadius))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(1.dp),
-            modifier = Modifier.rotate(rotation)) {
-            Icon(Icons.Outlined.WbSunny, null,
-                tint = if (isActive) RailTheme.activeColor else RailTheme.iconColor,
-                modifier = Modifier.size(RailTheme.iconSize))
-            Text(label,
-                color = if (isActive) RailTheme.activeColor else RailTheme.inactiveColor,
-                fontSize = 11.sp, lineHeight = 11.sp,
-                fontWeight = FontWeight.Medium, fontFamily = RailTheme.font)
-        }
     }
 }
 

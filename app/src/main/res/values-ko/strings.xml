@@ -80,7 +80,7 @@
     <string name="settings_auto_save_pro_only">자동 저장은 PRO 기능입니다.\n워터마크 제거, 광고 없이 저장, 자동 저장을 평생 이용할 수 있습니다.</string>
     <string name="settings_view_pro">PRO 혜택 보기</string>
     <string name="settings_review">리뷰 남기기</string>
-    <string name="settings_contact">문의하기</string>
+    <string name="settings_contact">문의 및 제안</string>
     <string name="pro_sheet_title_full">DualFrame PRO</string>
     <string name="pro_sheet_subtitle">광고 없이 바로 저장하세요</string>
     <string name="pro_sheet_get">PRO 잠금 해제</string>

@@ -176,10 +176,6 @@ fun MainScreen(
     }
 
     val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
-    val exposureIndex by viewModel.cameraManager.exposureIndex.collectAsState()
-    val exposureRange = remember(state.cameraReady, isFrontCamera) {
-        viewModel.cameraManager.exposureCompensationRange()?.let { (min, max, _) -> min..max }
-    }
     val isRecording = state.appStatus == AppStatus.RECORDING
     val isPaused = state.appStatus == AppStatus.PAUSED
     val isRecordingOrPaused = isRecording || isPaused
@@ -311,8 +307,6 @@ fun MainScreen(
                 isFrontCamera = isFrontCamera,
                 resolution = state.settings.videoQuality.label.substringBefore(" (").replace(" ", "\n"),
                 deviceRotation = deviceRotation,
-                exposureIndex = exposureIndex,
-                exposureRange = exposureRange,
                 onAudioToggle = {
                     viewModel.updateSettings(state.settings.copy(audioEnabled = !state.settings.audioEnabled))
                 },
@@ -341,15 +335,6 @@ fun MainScreen(
                     val idx = qualities.indexOf(state.settings.videoQuality)
                     val next = qualities[(idx + 1) % qualities.size]
                     viewModel.updateSettings(state.settings.copy(videoQuality = next))
-                },
-                onExposureCycle = {
-                    val range = exposureRange ?: return@SettingsPanel
-                    // 5-step cycle: -2, -1, 0, +1, +2, then wraps. Clamp to device range.
-                    val steps = listOf(-2, -1, 0, 1, 2).filter { it in range }
-                    if (steps.isEmpty()) return@SettingsPanel
-                    val currentPos = steps.indexOf(exposureIndex).let { if (it < 0) steps.indexOf(0) else it }
-                    val next = steps[(currentPos + 1) % steps.size]
-                    viewModel.cameraManager.setExposureCompensation(next)
                 },
                 onMoreClick = {
                     settingsExpanded = false
