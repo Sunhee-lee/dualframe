@@ -136,6 +136,14 @@ class MainActivity : ComponentActivity() {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Auto-finalize recording if user leaves while paused (session may be lost)
+        if (this::viewModel.isInitialized) {
+            viewModel.onAppBackgrounded()
+        }
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         // Re-apply immersive mode when focus returns (e.g., after permission dialog)

@@ -55,6 +55,11 @@
     <string name="toast_export_fallback_fhd">이 기기에서는 4K 저장이 제한되어 FHD로 저장되었습니다.</string>
     <string name="toast_auto_save_complete">✓ 저장 완료</string>
     <string name="toast_auto_save_failed">자동 저장에 실패했습니다. 수동으로 저장해 주세요.</string>
+    <string name="recording_paused_prefix">일시정지</string>
+    <string name="recording_remaining_min">남은 시간 %1$d분</string>
+    <string name="recording_remaining_sec">남은 시간 %1$d초</string>
+    <string name="recording_ended_early_title">녹화가 조기 종료되었습니다</string>
+    <string name="recording_ended_early_desc">저장공간이 거의 다 차서 녹화가 자동으로 중단되었습니다. 지금까지 촬영된 부분은 저장되었습니다.</string>
 
     <string name="settings_language">언어</string>
     <string name="settings_language_system">시스템 기본값</string>

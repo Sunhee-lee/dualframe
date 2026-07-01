@@ -186,7 +186,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         try {
             val status = _uiState.value.appStatus
             when {
-                status == AppStatus.RECORDING -> stopRecording()
+                status == AppStatus.RECORDING || status == AppStatus.PAUSED -> stopRecording()
                 status == AppStatus.COUNTDOWN -> cancelCountdown()
                 status == AppStatus.IDLE || status == AppStatus.EXPORT_COMPLETE || status == AppStatus.ERROR -> {
                     val countdown = _uiState.value.settings.countdownSeconds
@@ -199,6 +199,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         } finally {
             isToggling = false
+        }
+    }
+
+    fun togglePause() {
+        val status = _uiState.value.appStatus
+        when (status) {
+            AppStatus.RECORDING -> {
+                cameraManager.pauseRecording()
+                _uiState.update { it.copy(appStatus = AppStatus.PAUSED) }
+            }
+            AppStatus.PAUSED -> {
+                cameraManager.resumeRecording()
+                _uiState.update { it.copy(appStatus = AppStatus.RECORDING) }
+            }
+            else -> { /* no-op */ }
+        }
+    }
+
+    fun onAppBackgrounded() {
+        val status = _uiState.value.appStatus
+        if (status == AppStatus.PAUSED) {
+            Log.i(TAG, "App backgrounded while paused — auto stopping")
+            stopRecording()
         }
     }
 
@@ -243,6 +266,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 landscapeThumbnailBitmap = null,
                 nativeExportInfo = null,
                 croppedExportInfo = null,
+                remainingRecordingSeconds = null,
+                endedEarlyDueToStorage = false,
             )
         }
 
@@ -265,6 +290,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun stopRecording() {
         cameraManager.stopRecording()
         stopTimer()
+        _uiState.update { it.copy(remainingRecordingSeconds = null) }
     }
 
     private fun onRecordingEvent(event: VideoRecordEvent) {
@@ -312,9 +338,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         timerJob = viewModelScope.launch {
             while (true) {
                 delay(1000)
-                _uiState.update { it.copy(recordingDurationSeconds = it.recordingDurationSeconds + 1) }
+                val status = _uiState.value.appStatus
+                if (status == AppStatus.PAUSED) continue
+
+                // Update elapsed time only during RECORDING
+                if (status == AppStatus.RECORDING) {
+                    _uiState.update { it.copy(recordingDurationSeconds = it.recordingDurationSeconds + 1) }
+                }
+
+                // Compute remaining recording seconds based on live file size
+                val remaining = computeRemainingSeconds()
+                _uiState.update {
+                    it.copy(remainingRecordingSeconds = if (remaining != null && remaining <= 5 * 60) remaining else null)
+                }
+
+                // Auto-stop when 30s buffer reached to allow file finalize
+                if (remaining != null && remaining <= 30 && status == AppStatus.RECORDING) {
+                    Log.w(TAG, "Auto-stopping recording: only ${remaining}s of storage left")
+                    _uiState.update { it.copy(endedEarlyDueToStorage = true) }
+                    stopRecording()
+                    break
+                }
             }
         }
+    }
+
+    private fun computeRemainingSeconds(): Int? {
+        val app: android.app.Application = getApplication()
+        val cacheDir = app.cacheDir
+        val available = try {
+            android.os.StatFs(cacheDir.absolutePath).availableBytes
+        } catch (_: Exception) { return null }
+
+        val master = masterFile ?: return null
+        val elapsedSec = _uiState.value.recordingDurationSeconds
+        if (!master.exists() || elapsedSec <= 0) {
+            // Fallback: estimate from nominal bitrate
+            val bitrate = when (_uiState.value.settings.videoQuality) {
+                com.dualframe.data.VideoQuality.UHD -> 40_000_000L
+                com.dualframe.data.VideoQuality.FHD -> 16_000_000L
+                else -> 8_000_000L
+            }
+            val bytesPerSec = bitrate / 8
+            return (available / bytesPerSec).toInt()
+        }
+
+        // Live rate: actual bytes / elapsed seconds
+        val bytesPerSec = (master.length() / elapsedSec.toLong()).coerceAtLeast(1L)
+        // Need buffer for finalizing (moov atom, cropped export ≈ 2x master size)
+        val reserveBytes = 50_000_000L
+        val usable = (available - reserveBytes).coerceAtLeast(0L)
+        return (usable / bytesPerSec).toInt()
     }
 
     private fun stopTimer() {
@@ -477,11 +551,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Auto-save: if PRO + autoSave enabled, save in background and reset to IDLE
+            // Skip auto-save if recording ended early due to storage — user needs to see the situation
             val currentSettings = _uiState.value.settings
+            val endedEarly = _uiState.value.endedEarlyDueToStorage
             if (currentSettings.autoSave &&
-                com.dualframe.monetize.ProEntitlement.isProOwned(getApplication())) {
+                com.dualframe.monetize.ProEntitlement.isProOwned(getApplication()) &&
+                !endedEarly) {
                 Log.i(TAG, "Auto-save triggered — running in background")
                 autoSaveInBackground(nativeFile.absolutePath, croppedFile.absolutePath)
+            } else if (endedEarly) {
+                Log.w(TAG, "Auto-save skipped: recording ended early due to storage")
             }
         }
     }
@@ -805,6 +884,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 countdownRemaining = 0,
                 exportProgress = 0f,
                 errorMessage = null,
+                endedEarlyDueToStorage = false,
+                remainingRecordingSeconds = null,
             )
         }
     }

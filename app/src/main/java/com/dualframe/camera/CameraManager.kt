@@ -322,6 +322,28 @@ class CameraManager(private val context: Context) {
         cam.cameraControl.startFocusAndMetering(action)
     }
 
+    /** Exposure compensation range (min, max, step in EV units). Returns null if unsupported. */
+    fun exposureCompensationRange(): Triple<Int, Int, Float>? {
+        val cam = camera ?: return null
+        val state = cam.cameraInfo.exposureState
+        if (!state.isExposureCompensationSupported) return null
+        return Triple(state.exposureCompensationRange.lower,
+            state.exposureCompensationRange.upper,
+            state.exposureCompensationStep.toFloat())
+    }
+
+    /** Set exposure compensation index (within the reported range). */
+    fun setExposureCompensation(index: Int) {
+        val cam = camera ?: return
+        val state = cam.cameraInfo.exposureState
+        if (!state.isExposureCompensationSupported) return
+        val clamped = index.coerceIn(
+            state.exposureCompensationRange.lower,
+            state.exposureCompensationRange.upper,
+        )
+        cam.cameraControl.setExposureCompensationIndex(clamped)
+    }
+
     // ── Torch (flash) ─────────────────────────────────────────────────
 
     fun setTorch(enabled: Boolean) {
@@ -395,6 +417,24 @@ class CameraManager(private val context: Context) {
             null
         } finally {
             isStartingRecording = false
+        }
+    }
+
+    fun pauseRecording() {
+        try {
+            activeRecording?.pause()
+            Log.i(TAG, "Recording paused")
+        } catch (e: Exception) {
+            Log.e(TAG, "pauseRecording error", e)
+        }
+    }
+
+    fun resumeRecording() {
+        try {
+            activeRecording?.resume()
+            Log.i(TAG, "Recording resumed")
+        } catch (e: Exception) {
+            Log.e(TAG, "resumeRecording error", e)
         }
     }
 

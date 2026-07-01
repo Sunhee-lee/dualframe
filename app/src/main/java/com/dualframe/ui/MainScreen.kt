@@ -81,6 +81,7 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -177,6 +178,8 @@ fun MainScreen(
 
     val zoomRatio by viewModel.cameraManager.zoomRatio.collectAsState()
     val isRecording = state.appStatus == AppStatus.RECORDING
+    val isPaused = state.appStatus == AppStatus.PAUSED
+    val isRecordingOrPaused = isRecording || isPaused
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -191,33 +194,23 @@ fun MainScreen(
                 Text("DualFrame", color = Color.White, fontSize = 18.sp,
                     fontWeight = FontWeight.Bold, fontFamily = PretendardFont)
                 Spacer(Modifier.width(7.dp))
-                if (isRecording) {
-                    Row(
-                        Modifier.background(Color(0x44FF1744), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(Modifier.size(7.dp).clip(CircleShape).background(Color(0xFFFF1744)))
-                        Spacer(Modifier.width(5.dp))
-                        Text(
-                            text = formatDuration(state.recordingDurationSeconds),
-                            color = Color.White, fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace,
-                        )
-                    }
-                } else {
-                    StatusChip(state.appStatus)
+                when {
+                    isRecording -> RecStatusChip(state.recordingDurationSeconds, isPaused = false)
+                    isPaused -> RecStatusChip(state.recordingDurationSeconds, isPaused = true)
+                    else -> StatusChip(state.appStatus)
                 }
                 Spacer(Modifier.weight(1f))
-                // Gear icon — always occupies space, invisible during recording
-                Box(
-                    Modifier.size(44.dp)
-                        .then(if (!isRecording) Modifier
-                            .clickable { settingsExpanded = !settingsExpanded }
-                        else Modifier),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (!isRecording) {
+                // Right slot: storage badge (if recording w/ ≤5min) OR gear icon (if not recording)
+                if (isRecordingOrPaused) {
+                    state.remainingRecordingSeconds?.let { remaining ->
+                        StorageWarningBadge(remaining)
+                    }
+                } else {
+                    Box(
+                        Modifier.size(44.dp)
+                            .clickable { settingsExpanded = !settingsExpanded },
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Icon(Icons.Outlined.Settings, null,
                             tint = if (settingsExpanded) RailTheme.activeColor else RailTheme.iconColor,
                             modifier = Modifier.size(24.dp))
@@ -289,6 +282,7 @@ fun MainScreen(
             },
             onRecord = { viewModel.toggleRecording(hasAudioPermission) },
             onSwitchCamera = { viewModel.switchCamera() },
+            onPause = { viewModel.togglePause() },
         )
 
         ErrorArea(state) { viewModel.clearError() }
@@ -463,6 +457,7 @@ private fun StatusChip(status: AppStatus) {
         AppStatus.IDLE -> stringResource(R.string.status_ready) to Color(0xFF4CAF50)
         AppStatus.COUNTDOWN -> stringResource(R.string.status_countdown) to Color(0xFFFFA726)
         AppStatus.RECORDING -> stringResource(R.string.status_rec) to Color(0xFFFF1744)
+        AppStatus.PAUSED -> stringResource(R.string.recording_paused_prefix) to Color(0xFF888888)
         AppStatus.EXPORTING_NATIVE -> stringResource(R.string.status_exporting) to Color(0xFFFFA726)
         AppStatus.EXPORTING_CROPPED -> stringResource(R.string.status_exporting) to Color(0xFFFFA726)
         AppStatus.EXPORT_COMPLETE -> stringResource(R.string.status_done) to Color(0xFF66BB6A)
@@ -473,6 +468,72 @@ private fun StatusChip(status: AppStatus) {
         fontFamily = PretendardFont,
         modifier = Modifier.background(color.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp))
+}
+
+@Composable
+private fun RecStatusChip(durationSeconds: Int, isPaused: Boolean) {
+    val bg = if (isPaused) Color(0x44888888) else Color(0x44FF1744)
+    val dot = if (isPaused) Color(0xFF888888) else Color(0xFFFF1744)
+    Row(
+        Modifier.background(bg, RoundedCornerShape(10.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(dot))
+        Spacer(Modifier.width(5.dp))
+        if (isPaused) {
+            Text(
+                text = stringResource(R.string.recording_paused_prefix) + " " + formatDuration(durationSeconds),
+                color = Color.White, fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace,
+            )
+        } else {
+            Text(
+                text = formatDuration(durationSeconds),
+                color = Color.White, fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StorageWarningBadge(remainingSeconds: Int) {
+    val isRed = remainingSeconds <= 60
+    val bg = if (isRed) Color(0x66E53935) else Color(0x66FFB300)
+    val fg = if (isRed) Color(0xFFFF5252) else Color(0xFFFFC107)
+    val label = if (remainingSeconds >= 60) {
+        stringResource(R.string.recording_remaining_min, remainingSeconds / 60)
+    } else {
+        stringResource(R.string.recording_remaining_sec, remainingSeconds)
+    }
+    Row(
+        Modifier.background(bg, RoundedCornerShape(10.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("⚠", color = fg, fontSize = 13.sp)
+        Spacer(Modifier.width(4.dp))
+        Text(label, color = Color.White, fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold, fontFamily = PretendardFont)
+    }
+}
+
+@Composable
+private fun EndedEarlyBanner() {
+    Column(
+        Modifier.fillMaxWidth()
+            .background(Color(0xFF3D2A00), RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Text(stringResource(R.string.recording_ended_early_title),
+            color = Color(0xFFFFB300), fontSize = 13.sp,
+            fontWeight = FontWeight.Bold, fontFamily = PretendardFont)
+        Spacer(Modifier.height(4.dp))
+        Text(stringResource(R.string.recording_ended_early_desc),
+            color = Color(0xFFCCCCCC), fontSize = 11.sp,
+            fontFamily = PretendardFont)
+    }
 }
 
 // ── Preview Panels (GPU dual render via TextureViews) ─────────────────
@@ -507,7 +568,7 @@ private fun PreviewPanels(
                             cameraManager.focusAt(pos.x / size.width, pos.y / size.height)
                         },
                         onGesture = { _, zoom ->
-                            if (!cameraManager.isRecording && zoom != 1f)
+                            if (zoom != 1f)
                                 cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
                         },
                     )
@@ -542,6 +603,7 @@ private fun PreviewPanels(
                 }
             }
             FocusRingOverlay(pFocusKey, pFocusPos)
+            ExposureSliderOverlay(pFocusKey, pFocusPos, cameraManager)
         }
 
         var lFocusKey by remember { mutableIntStateOf(0) }
@@ -567,9 +629,8 @@ private fun PreviewPanels(
                             cameraManager.focusAt(normX, masterY.coerceIn(0f, 1f))
                         },
                         onGesture = { pan, zoom ->
-                            if (cameraManager.isRecording) return@detectTapPanZoom
                             if (zoom != 1f) cameraManager.setZoomRatio(cameraManager.currentZoomRatio * zoom)
-                            if (pan.y != 0f) {
+                            if (!cameraManager.isRecording && pan.y != 0f) {
                                 val sensitivity = 2f / size.height
                                 landscapeOffset = (landscapeOffset - pan.y * sensitivity).coerceIn(-1f, 1f)
                                 renderer.landscapeCropOffsetY = landscapeOffset
@@ -608,6 +669,7 @@ private fun PreviewPanels(
             }
             CropPositionIndicator(landscapeOffset)
             FocusRingOverlay(lFocusKey, lFocusPos)
+            ExposureSliderOverlay(lFocusKey, lFocusPos, cameraManager)
         }
     }
 }
@@ -676,6 +738,94 @@ private fun FocusRingOverlay(tapKey: Int, position: Offset) {
                 center = position,
                 style = Stroke(width = 1.5.dp.toPx()),
             )
+        }
+    }
+}
+
+@Composable
+private fun ExposureSliderOverlay(
+    tapKey: Int,
+    focusPos: Offset,
+    cameraManager: com.dualframe.camera.CameraManager,
+) {
+    if (tapKey == 0) return
+    val range = remember(tapKey) { cameraManager.exposureCompensationRange() } ?: return
+    val (minIdx, maxIdx, _) = range
+
+    var index by remember(tapKey) { mutableIntStateOf(0) }
+    var alpha by remember { mutableStateOf(0f) }
+    var lastTouchAtMs by remember(tapKey) { mutableStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(tapKey) {
+        cameraManager.setExposureCompensation(0)
+        index = 0
+        alpha = 1f
+        // Auto-hide 3s after last touch
+        while (true) {
+            delay(500)
+            val idle = System.currentTimeMillis() - lastTouchAtMs
+            if (idle >= 3000) { alpha = 0f; break }
+        }
+    }
+
+    if (alpha == 0f) return
+
+    val density = LocalDensity.current
+    val sliderHeightDp = 120.dp
+    val sliderWidthDp = 28.dp
+    val gapDp = 12.dp
+
+    // Slider positioned to the right of focus ring, kept within bounds
+    val sliderTopPx = with(density) { (focusPos.y - sliderHeightDp.toPx() / 2f).coerceAtLeast(0f) }
+    val sliderLeftPx = with(density) { focusPos.x + 22.dp.toPx() + gapDp.toPx() }
+
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .offset {
+                    androidx.compose.ui.unit.IntOffset(sliderLeftPx.toInt(), sliderTopPx.toInt())
+                }
+                .size(sliderWidthDp, sliderHeightDp)
+                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                .pointerInput(tapKey) {
+                    androidx.compose.foundation.gestures.detectVerticalDragGestures(
+                        onDragStart = { lastTouchAtMs = System.currentTimeMillis() },
+                        onDragEnd = { lastTouchAtMs = System.currentTimeMillis() },
+                    ) { change, dragY ->
+                        change.consume()
+                        lastTouchAtMs = System.currentTimeMillis()
+                        val heightPx = sliderHeightDp.toPx()
+                        val delta = (-dragY / heightPx) * (maxIdx - minIdx)
+                        val newIdx = (index + delta.toInt()).coerceIn(minIdx, maxIdx)
+                        if (newIdx != index) {
+                            index = newIdx
+                            cameraManager.setExposureCompensation(newIdx)
+                        }
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                Modifier.fillMaxSize().padding(vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("+", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                val pctFromCenter = if (maxIdx != minIdx) (index - minIdx).toFloat() / (maxIdx - minIdx) else 0.5f
+                Box(
+                    Modifier.width(4.dp).height(60.dp)
+                        .background(Color(0x66FFFFFF), RoundedCornerShape(2.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val fillOffset = ((1f - pctFromCenter) * 56).toInt()
+                    Box(
+                        Modifier.offset(y = (fillOffset - 28).dp)
+                            .size(10.dp)
+                            .background(Color(0xFFFFC107), CircleShape),
+                    )
+                }
+                Text("−", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -842,6 +992,15 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
             // Back handler for landscape save screen
             BackHandler { viewModel.resetToIdle() }
 
+            if (state.endedEarlyDueToStorage) {
+                Box(
+                    Modifier.fillMaxWidth().rotate(landscapeRot)
+                        .padding(horizontal = 30.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    EndedEarlyBanner()
+                }
+            }
             Row(
                 modifier = Modifier.fillMaxSize()
                     .rotate(landscapeRot)
@@ -907,6 +1066,10 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                if (state.endedEarlyDueToStorage) {
+                    EndedEarlyBanner()
+                    Spacer(Modifier.height(8.dp))
+                }
                 portraitBmp?.let { bmp ->
                     Box(
                         Modifier.fillMaxWidth(0.50f).aspectRatio(9f / 16f)

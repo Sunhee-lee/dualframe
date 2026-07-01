@@ -11,9 +11,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Cameraswitch
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.Icon
@@ -36,9 +40,11 @@ fun BottomActionBar(
     onGallery: () -> Unit,
     onRecord: () -> Unit,
     onSwitchCamera: () -> Unit,
+    onPause: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isRecording = appStatus == AppStatus.RECORDING
+    val isPaused = appStatus == AppStatus.PAUSED
     val isCountdown = appStatus == AppStatus.COUNTDOWN
     val isExporting = appStatus == AppStatus.EXPORTING_NATIVE || appStatus == AppStatus.EXPORTING_CROPPED
     val enabled = cameraReady && !isExporting
@@ -50,8 +56,12 @@ fun BottomActionBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SwitchCameraButton(enabled && !isRecording && !isCountdown, onSwitchCamera)
-        RecordDot(isRecording, isCountdown, isExporting, enabled, onRecord)
+        if (isRecording || isPaused) {
+            PauseResumeButton(paused = isPaused, onClick = onPause)
+        } else {
+            SwitchCameraButton(enabled && !isCountdown, onSwitchCamera)
+        }
+        RecordDot(isRecording, isPaused, isCountdown, isExporting, enabled, onRecord)
         GalleryButton(onGallery)
     }
 }
@@ -70,6 +80,21 @@ private fun SwitchCameraButton(enabled: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
+private fun PauseResumeButton(paused: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+            if (paused) "Resume" else "Pause",
+            tint = Color.White,
+            modifier = Modifier.size(22.dp))
+    }
+}
+
+@Composable
 private fun GalleryButton(onClick: () -> Unit) {
     Box(
         Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
@@ -84,6 +109,7 @@ private fun GalleryButton(onClick: () -> Unit) {
 @Composable
 private fun RecordDot(
     isRecording: Boolean,
+    isPaused: Boolean,
     isCountdown: Boolean,
     isExporting: Boolean,
     enabled: Boolean,
@@ -92,6 +118,7 @@ private fun RecordDot(
     val outerColor by animateColorAsState(
         targetValue = when {
             isRecording -> Color(0xFFFF1744)
+            isPaused -> Color(0xFF888888)
             isCountdown -> Color(0xFFFFA726)
             isExporting -> Color(0xFF555555)
             else -> Color.White
@@ -105,7 +132,7 @@ private fun RecordDot(
         contentAlignment = Alignment.Center,
     ) {
         when {
-            isRecording -> Box(Modifier.size(22.dp).clip(RoundedCornerShape(4.dp)).background(Color.White))
+            isRecording || isPaused -> Box(Modifier.size(22.dp).clip(RoundedCornerShape(4.dp)).background(Color.White))
             isCountdown -> Text("X", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             isExporting -> Box(Modifier.size(22.dp).clip(CircleShape).background(Color(0xFF888888)))
             else -> Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFFFF1744)))

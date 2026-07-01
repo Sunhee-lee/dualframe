@@ -55,6 +55,11 @@
     <string name="toast_export_fallback_fhd">4K export not supported on this device. Saved in FHD.</string>
     <string name="toast_auto_save_complete">✓ Saved</string>
     <string name="toast_auto_save_failed">Auto-save failed. Try saving manually.</string>
+    <string name="recording_paused_prefix">Paused</string>
+    <string name="recording_remaining_min">%1$d min left</string>
+    <string name="recording_remaining_sec">%1$d sec left</string>
+    <string name="recording_ended_early_title">Recording ended early</string>
+    <string name="recording_ended_early_desc">Storage was almost full, so recording stopped automatically. Your video was saved up to that point.</string>
 
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System Default</string>
