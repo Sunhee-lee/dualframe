@@ -23,6 +23,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -779,6 +780,17 @@ private fun ExposureSliderOverlay(
     val sliderTopPx = with(density) { (focusPos.y - sliderHeightDp.toPx() / 2f).coerceAtLeast(0f) }
     val sliderLeftPx = with(density) { focusPos.x + 22.dp.toPx() + gapDp.toPx() }
 
+    val sliderHeightPx = with(density) { sliderHeightDp.toPx() }
+    val dragState = androidx.compose.foundation.gestures.rememberDraggableState { dragY ->
+        lastTouchAtMs = System.currentTimeMillis()
+        val delta = (-dragY / sliderHeightPx) * (maxIdx - minIdx)
+        val newIdx = (index + delta.toInt()).coerceIn(minIdx, maxIdx)
+        if (newIdx != index) {
+            index = newIdx
+            cameraManager.setExposureCompensation(newIdx)
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier
@@ -787,24 +799,12 @@ private fun ExposureSliderOverlay(
                 }
                 .size(sliderWidthDp, sliderHeightDp)
                 .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-                .pointerInput(tapKey) {
-                    androidx.compose.foundation.gestures.detectVerticalDragGestures(
-                        onDragStart = { _: Offset -> lastTouchAtMs = System.currentTimeMillis() },
-                        onDragEnd = { lastTouchAtMs = System.currentTimeMillis() },
-                        onDragCancel = { lastTouchAtMs = System.currentTimeMillis() },
-                        onVerticalDrag = { change, dragY ->
-                            change.consume()
-                            lastTouchAtMs = System.currentTimeMillis()
-                            val heightPx = sliderHeightDp.toPx()
-                            val delta = (-dragY / heightPx) * (maxIdx - minIdx)
-                            val newIdx = (index + delta.toInt()).coerceIn(minIdx, maxIdx)
-                            if (newIdx != index) {
-                                index = newIdx
-                                cameraManager.setExposureCompensation(newIdx)
-                            }
-                        },
-                    )
-                },
+                .draggable(
+                    state = dragState,
+                    orientation = androidx.compose.foundation.gestures.Orientation.Vertical,
+                    onDragStarted = { lastTouchAtMs = System.currentTimeMillis() },
+                    onDragStopped = { lastTouchAtMs = System.currentTimeMillis() },
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Column(
