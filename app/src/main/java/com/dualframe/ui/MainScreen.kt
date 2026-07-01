@@ -789,19 +789,21 @@ private fun ExposureSliderOverlay(
                 .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                 .pointerInput(tapKey) {
                     androidx.compose.foundation.gestures.detectVerticalDragGestures(
-                        onDragStart = { lastTouchAtMs = System.currentTimeMillis() },
+                        onDragStart = { _: Offset -> lastTouchAtMs = System.currentTimeMillis() },
                         onDragEnd = { lastTouchAtMs = System.currentTimeMillis() },
-                    ) { change, dragY ->
-                        change.consume()
-                        lastTouchAtMs = System.currentTimeMillis()
-                        val heightPx = sliderHeightDp.toPx()
-                        val delta = (-dragY / heightPx) * (maxIdx - minIdx)
-                        val newIdx = (index + delta.toInt()).coerceIn(minIdx, maxIdx)
-                        if (newIdx != index) {
-                            index = newIdx
-                            cameraManager.setExposureCompensation(newIdx)
-                        }
-                    }
+                        onDragCancel = { lastTouchAtMs = System.currentTimeMillis() },
+                        onVerticalDrag = { change, dragY ->
+                            change.consume()
+                            lastTouchAtMs = System.currentTimeMillis()
+                            val heightPx = sliderHeightDp.toPx()
+                            val delta = (-dragY / heightPx) * (maxIdx - minIdx)
+                            val newIdx = (index + delta.toInt()).coerceIn(minIdx, maxIdx)
+                            if (newIdx != index) {
+                                index = newIdx
+                                cameraManager.setExposureCompensation(newIdx)
+                            }
+                        },
+                    )
                 },
             contentAlignment = Alignment.Center,
         ) {
