@@ -346,18 +346,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.update { it.copy(recordingDurationSeconds = it.recordingDurationSeconds + 1) }
                 }
 
-                // Compute remaining recording seconds based on live file size
+                // Compute remaining recording seconds for warning badge only.
+                // We do NOT auto-stop — user retains full control. CameraX will
+                // finalize the file if storage runs out during recording.
                 val remaining = computeRemainingSeconds()
                 _uiState.update {
                     it.copy(remainingRecordingSeconds = if (remaining != null && remaining <= 5 * 60) remaining else null)
-                }
-
-                // Auto-stop when 30s buffer reached to allow file finalize
-                if (remaining != null && remaining <= 30 && status == AppStatus.RECORDING) {
-                    Log.w(TAG, "Auto-stopping recording: only ${remaining}s of storage left")
-                    _uiState.update { it.copy(endedEarlyDueToStorage = true) }
-                    stopRecording()
-                    break
                 }
             }
         }
