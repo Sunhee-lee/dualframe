@@ -85,7 +85,7 @@ class CameraManager(private val context: Context) {
         lifecycleOwner: LifecycleOwner,
         quality: Quality,
         onError: (String) -> Unit,
-        allowVideoStabilization: Boolean = true,
+        allowStabilization: Boolean = true,
     ): Boolean {
         try {
             val provider = getCameraProvider()
@@ -124,16 +124,17 @@ class CameraManager(private val context: Context) {
             // - Fallback: 사용자가 선택한 해상도 자체를 기기가 지원하지 않을 때만
             //   차선 화질로 이동. Stabilization으로 인한 downgrade 없음.
             // ==================================================================
-            val allowPreviewStab = (quality != Quality.UHD) && stabSupport.first
-            val allowVideoStab = allowVideoStabilization && stabSupport.second
+            val allowPreviewStab = allowStabilization && (quality != Quality.UHD) && stabSupport.first
+            val allowVideoStab = allowStabilization && stabSupport.second
             val previewStabReason = when {
                 allowPreviewStab -> "ON"
+                !allowStabilization -> "OFF(disabled after downgrade detection)"
                 quality == Quality.UHD -> "OFF(UHD downgrade prevention)"
                 else -> "OFF(unsupported)"
             }
             val videoStabReason = when {
                 allowVideoStab -> "ON"
-                !allowVideoStabilization -> "OFF(disabled after UHD downgrade detection)"
+                !allowStabilization -> "OFF(disabled after downgrade detection)"
                 else -> "OFF(unsupported)"
             }
             Log.i(TAG, "Quality policy: requested=$quality previewStab=$previewStabReason videoStab=$videoStabReason")
@@ -232,8 +233,9 @@ class CameraManager(private val context: Context) {
             Log.i(DIAG_TAG, "VideoCapture resolution: $masterRes")
 
             // Compare requested vs actual — quality-first policy:
-            // If UHD was requested but downgraded AND Video Stabilization was ON,
-            // rebind without stabilization to preserve UHD.
+            // If the selected quality was downgraded AND any stabilization was ON,
+            // rebind without stabilization to preserve the user's chosen resolution.
+            // Applies to UHD, FHD, HD — the user's choice is always priority #1.
             val expectedLongEdge = when (quality) {
                 Quality.UHD -> 2160
                 Quality.FHD -> 1080
@@ -246,13 +248,13 @@ class CameraManager(private val context: Context) {
                     Log.w(DIAG_TAG, "⚠ Resolution downgraded: requested=$quality (${expectedLongEdge}p) " +
                         "actual=${actualLongEdge}p")
 
-                    // Auto-recovery: if UHD downgraded and Video Stab was ON, rebind without it.
-                    // Preview Stab is already OFF for UHD, so only Video Stab could be the cause.
-                    if (quality == Quality.UHD && allowVideoStab) {
-                        Log.w(DIAG_TAG, "→ Auto-recovery: disabling Video Stabilization and rebinding for UHD")
-                        return bindInternal(lifecycleOwner, quality, onError, allowVideoStabilization = false)
+                    // Auto-recovery: any stabilization was on and might be the cause.
+                    // Rebind with all stabilization disabled to force the requested resolution.
+                    if (allowStabilization && (allowPreviewStab || allowVideoStab)) {
+                        Log.w(DIAG_TAG, "→ Auto-recovery: disabling stabilization and rebinding for $quality")
+                        return bindInternal(lifecycleOwner, quality, onError, allowStabilization = false)
                     }
-                    // Otherwise, accept downgrade (device limitation)
+                    // No stabilization to disable — device limitation, accept as-is.
                     Log.w(DIAG_TAG, "→ Device limitation, accepting actual resolution")
                 } else {
                     Log.i(DIAG_TAG, "✓ Resolution matches request: $quality (${actualLongEdge}p)")
