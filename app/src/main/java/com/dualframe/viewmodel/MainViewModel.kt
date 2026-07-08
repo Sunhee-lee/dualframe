@@ -436,16 +436,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val croppedLabel: String
 
             if (isPortrait) {
-                nativeSuffix = "portrait"
+                nativeSuffix = "V"
                 nativeLabel = "9:16"
                 croppedAspect = ExportManager.ASPECT_16x9
-                croppedSuffix = "landscape"
+                croppedSuffix = "H"
                 croppedLabel = "16:9"
             } else {
-                nativeSuffix = "landscape"
+                nativeSuffix = "H"
                 nativeLabel = "16:9"
                 croppedAspect = ExportManager.ASPECT_9x16
-                croppedSuffix = "portrait"
+                croppedSuffix = "V"
                 croppedLabel = "9:16"
             }
 
@@ -594,7 +594,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val needsTransform = beauty || mirror
 
             val sourceNative: File = if (needsTransform) {
-                val processed = FileStorage.createExportFile(app, "tmp_portrait")
+                val processed = FileStorage.createExportFile(app, "tmp_V")
                 WatermarkHelper.applyEffects(
                     app, nativeFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
@@ -602,7 +602,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else nativeFile
 
             val sourceCropped: File = if (needsTransform) {
-                val processed = FileStorage.createExportFile(app, "tmp_landscape")
+                val processed = FileStorage.createExportFile(app, "tmp_H")
                 WatermarkHelper.applyEffects(
                     app, croppedFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
@@ -687,8 +687,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val isFront = cameraManager.useFrontCamera.value
             val beauty = isFront && _uiState.value.settings.frontCameraEffect
             val mirror = isFront
-            val wmNative = FileStorage.createExportFile(app, "wm_portrait")
-            val wmCropped = FileStorage.createExportFile(app, "wm_landscape")
+            val wmNative = FileStorage.createExportFile(app, "wm_V")
+            val wmCropped = FileStorage.createExportFile(app, "wm_H")
 
             val wmNativeResult = WatermarkHelper.applyEffects(
                 app, nativeFile, wmNative,
@@ -753,7 +753,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val needsTransform = beauty || mirror
 
             val sourceNative: File = if (needsTransform) {
-                val processed = FileStorage.createExportFile(app, "tmp_portrait")
+                val processed = FileStorage.createExportFile(app, "tmp_V")
                 WatermarkHelper.applyEffects(
                     app, nativeFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
@@ -761,7 +761,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else nativeFile
 
             val sourceCropped: File = if (needsTransform) {
-                val processed = FileStorage.createExportFile(app, "tmp_landscape")
+                val processed = FileStorage.createExportFile(app, "tmp_H")
                 WatermarkHelper.applyEffects(
                     app, croppedFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
