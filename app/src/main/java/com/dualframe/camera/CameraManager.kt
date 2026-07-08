@@ -86,6 +86,7 @@ class CameraManager(private val context: Context) {
         quality: Quality,
         onError: (String) -> Unit,
         allowStabilization: Boolean = true,
+        isRecoveryBind: Boolean = false,
     ): Boolean {
         try {
             val provider = getCameraProvider()
@@ -233,31 +234,54 @@ class CameraManager(private val context: Context) {
             Log.i(DIAG_TAG, "VideoCapture resolution: $masterRes")
 
             // Compare requested vs actual — quality-first policy:
-            // If the selected quality was downgraded AND any stabilization was ON,
-            // rebind without stabilization to preserve the user's chosen resolution.
-            // Applies to UHD, FHD, HD — the user's choice is always priority #1.
+            // The user's chosen resolution is priority #1. Applies to UHD/FHD/HD.
+            // We distinguish two downgrade causes:
+            //   (a) Stabilization is restricting the quality → disable stab, keep quality
+            //   (b) Device genuinely doesn't support the requested quality → fallback quality,
+            //       but keep stabilization at that lower quality (since stab isn't the cause)
             val expectedLongEdge = when (quality) {
                 Quality.UHD -> 2160
                 Quality.FHD -> 1080
                 Quality.HD -> 720
                 else -> null
             }
-            if (masterRes != null && expectedLongEdge != null) {
+            if (isRecoveryBind) {
+                // Recovery bind: skip the recovery check to avoid loops. Just log and accept.
+                if (masterRes != null) {
+                    val actualLongEdge = maxOf(masterRes.width, masterRes.height)
+                    Log.i(DIAG_TAG, "Recovery bind result: $quality → ${actualLongEdge}p (allowStab=$allowStabilization)")
+                }
+            } else if (masterRes != null && expectedLongEdge != null) {
                 val actualLongEdge = maxOf(masterRes.width, masterRes.height)
-                if (actualLongEdge < expectedLongEdge) {
+                if (actualLongEdge >= expectedLongEdge) {
+                    Log.i(DIAG_TAG, "✓ Resolution matches request: $quality (${actualLongEdge}p)")
+                } else {
                     Log.w(DIAG_TAG, "⚠ Resolution downgraded: requested=$quality (${expectedLongEdge}p) " +
                         "actual=${actualLongEdge}p")
+                    val withStabActual = actualLongEdge
 
-                    // Auto-recovery: any stabilization was on and might be the cause.
-                    // Rebind with all stabilization disabled to force the requested resolution.
                     if (allowStabilization && (allowPreviewStab || allowVideoStab)) {
-                        Log.w(DIAG_TAG, "→ Auto-recovery: disabling stabilization and rebinding for $quality")
-                        return bindInternal(lifecycleOwner, quality, onError, allowStabilization = false)
+                        // Probe without stabilization to determine device's true max
+                        Log.i(DIAG_TAG, "→ Probing without stabilization to check device limit vs stab restriction")
+                        val probeOk = bindInternal(lifecycleOwner, quality, onError,
+                            allowStabilization = false, isRecoveryBind = true)
+                        if (!probeOk) return false
+                        val probeRes = videoCapture?.attachedSurfaceResolution
+                        val probeActual = probeRes?.let { maxOf(it.width, it.height) } ?: withStabActual
+
+                        if (probeActual > withStabActual) {
+                            // Stabilization was blocking higher quality — keep probe (no-stab) result
+                            Log.i(DIAG_TAG, "→ Stab was restricting quality. Kept no-stab bind at ${probeActual}p.")
+                            return true
+                        } else {
+                            // Same result → device limit. Stab wasn't the cause, so re-enable it
+                            // at the achievable quality (probe currently bound with no stab)
+                            Log.i(DIAG_TAG, "→ Device limit at ${probeActual}p. Rebinding with stabilization ON.")
+                            return bindInternal(lifecycleOwner, quality, onError,
+                                allowStabilization = true, isRecoveryBind = true)
+                        }
                     }
-                    // No stabilization to disable — device limitation, accept as-is.
                     Log.w(DIAG_TAG, "→ Device limitation, accepting actual resolution")
-                } else {
-                    Log.i(DIAG_TAG, "✓ Resolution matches request: $quality (${actualLongEdge}p)")
                 }
             }
 
