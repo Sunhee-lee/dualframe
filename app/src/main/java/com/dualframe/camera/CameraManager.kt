@@ -112,14 +112,30 @@ class CameraManager(private val context: Context) {
                 Pair(false, false)
             }
 
+            // ==================================================================
+            // Policy: 화질을 최우선. Stabilization은 선택한 해상도를 downgrade
+            // 하지 않는 경우에만 적용.
+            //
+            // - Video Stabilization: 표준 API, 대부분 해상도(UHD 포함)에서 유지됨.
+            //   지원 시 활성화.
+            // - Preview Stabilization: 강한 안정화이지만 UHD에서 자동 downgrade
+            //   유발. UHD가 아닌 경우에만 활성화.
+            // - Fallback: 사용자가 선택한 해상도 자체를 기기가 지원하지 않을 때만
+            //   차선 화질로 이동. Stabilization으로 인한 downgrade 없음.
+            // ==================================================================
+            val allowPreviewStab = (quality != Quality.UHD) && stabSupport.first
+            val allowVideoStab = stabSupport.second
+            Log.i(TAG, "Quality policy: requested=$quality " +
+                "previewStab=${if (allowPreviewStab) "ON" else if (quality == Quality.UHD) "OFF(UHD downgrade prevention)" else "OFF(unsupported)"} " +
+                "videoStab=${if (allowVideoStab) "ON" else "OFF(unsupported)"}")
+
             // Build Preview — no explicit aspect ratio target. The ViewPort (9:16)
             // drives the crop rect for VideoCapture. Preview gets the raw sensor buffer;
             // the renderer applies the matching crop for WYSIWYG via masterVisualAspect.
             preview = Preview.Builder()
                 .apply {
-                    if (stabSupport.first) {
+                    if (allowPreviewStab) {
                         setPreviewStabilizationEnabled(true)
-                        Log.i(TAG, "Preview stabilization: ON")
                     }
                 }
                 .build().also { previewUseCase ->
@@ -128,11 +144,10 @@ class CameraManager(private val context: Context) {
                 }
             }
 
-            // Build Recorder
-            val qualitySelector = QualitySelector.from(
-                quality,
-                FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
-            )
+            // Build Recorder — fallback only when the selected quality itself is
+            // unsupported by the device. Never downgrade due to stabilization.
+            val qualityOrder = listOf(quality, Quality.UHD, Quality.FHD, Quality.HD, Quality.SD).distinct()
+            val qualitySelector = QualitySelector.fromOrderedList(qualityOrder)
             val targetBitrate = when (quality) {
                 Quality.UHD -> 40_000_000
                 Quality.FHD -> 16_000_000
@@ -144,13 +159,10 @@ class CameraManager(private val context: Context) {
                 .build()
 
             // No setTargetFrameRate — CameraX picks the optimal fps automatically.
-            // This is a stability-first policy: the camera HAL chooses the best
-            // frame rate for the selected quality, typically 30fps.
             videoCapture = VideoCapture.Builder(recorder)
                 .apply {
-                    if (stabSupport.second) {
+                    if (allowVideoStab) {
                         setVideoStabilizationEnabled(true)
-                        Log.i(TAG, "Video stabilization: ON")
                     }
                 }
                 .build()
@@ -209,6 +221,23 @@ class CameraManager(private val context: Context) {
             val masterRes = videoCapture?.attachedSurfaceResolution
             Log.i(DIAG_TAG, "Preview resolution: $previewRes")
             Log.i(DIAG_TAG, "VideoCapture resolution: $masterRes")
+
+            // Compare requested vs actual — flag if resolution was downgraded
+            val expectedLongEdge = when (quality) {
+                Quality.UHD -> 2160
+                Quality.FHD -> 1080
+                Quality.HD -> 720
+                else -> null
+            }
+            if (masterRes != null && expectedLongEdge != null) {
+                val actualLongEdge = maxOf(masterRes.width, masterRes.height)
+                if (actualLongEdge < expectedLongEdge) {
+                    Log.w(DIAG_TAG, "⚠ Resolution downgraded: requested=$quality (${expectedLongEdge}p) " +
+                        "actual=${actualLongEdge}p. Check stabilization or device support.")
+                } else {
+                    Log.i(DIAG_TAG, "✓ Resolution matches request: $quality (${actualLongEdge}p)")
+                }
+            }
 
             // Tell renderer the master aspect so preview visually matches saved output
             // (WYSIWYG). Without this, if Preview buffer aspect ≠ master aspect, the
