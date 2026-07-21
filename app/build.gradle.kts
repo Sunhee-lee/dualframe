@@ -12,8 +12,8 @@ android {
         applicationId = "com.sunnlab.dualframe"
         minSdk = 29  // Android 10 — needed for scoped storage + stable CameraX behavior
         targetSdk = 35
-        versionCode = 17
-        versionName = "1.9.4"
+        versionCode = 18
+        versionName = "1.9.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -90,7 +90,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-ads-lite:23.6.0")
 
     // Google Play Billing
-    implementation("com.android.billingclient:billing-ktx:7.1.1")
+    implementation("com.android.billingclient:billing-ktx:9.0.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
