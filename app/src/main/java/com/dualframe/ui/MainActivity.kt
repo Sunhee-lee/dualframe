@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
         if (lang == "system") {
             super.attachBaseContext(newBase)
         } else {
-            val locale = Locale(lang)
+            val locale = Locale.forLanguageTag(lang)
             val config = Configuration(newBase.resources.configuration)
             config.setLocale(locale)
             super.attachBaseContext(newBase.createConfigurationContext(config))
