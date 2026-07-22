@@ -10,12 +10,14 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Crop
 import androidx.media3.effect.Presentation
 import androidx.media3.transformer.Composition
+import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
+import androidx.media3.transformer.VideoEncoderSettings
 import com.dualframe.util.CropMath
 import com.dualframe.util.FileStorage
 import com.dualframe.util.VideoMetadata
@@ -196,7 +198,29 @@ class ExportManager(private val context: Context) {
             }
         }
 
+        // Media3 default video bitrate is far below the source (e.g. ~5 Mbps for 1080p),
+        // which visibly degrades the horizontal (H) file compared to the vertical (V)
+        // native copy. Request an encoder bitrate scaled to the crop output size so the
+        // re-encoded file preserves quality close to the source.
+        val encoderBitrate = when {
+            outputH >= 2000 -> 45_000_000  // UHD-tier crop
+            outputH >= 1000 -> 20_000_000  // FHD-tier crop (typical H from UHD portrait master)
+            outputH >= 700  -> 12_000_000  // HD-tier crop
+            else            ->  6_000_000  // SD-tier crop
+        }
+        Log.i(TAG, "Requested encoder bitrate: ${encoderBitrate / 1_000_000} Mbps for ${outputW}x${outputH}")
+
         transformer = Transformer.Builder(context)
+            .setEncoderFactory(
+                DefaultEncoderFactory.Builder(context)
+                    .setRequestedVideoEncoderSettings(
+                        VideoEncoderSettings.Builder()
+                            .setBitrate(encoderBitrate)
+                            .build()
+                    )
+                    .setEnableFallback(true)
+                    .build()
+            )
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                     handler.removeCallbacks(pollRunnable)

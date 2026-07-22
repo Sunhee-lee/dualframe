@@ -160,9 +160,9 @@ class CameraManager(private val context: Context) {
             val qualityOrder = listOf(quality, Quality.UHD, Quality.FHD, Quality.HD, Quality.SD).distinct()
             val qualitySelector = QualitySelector.fromOrderedList(qualityOrder)
             val targetBitrate = when (quality) {
-                Quality.UHD -> 40_000_000
-                Quality.FHD -> 16_000_000
-                else -> 8_000_000
+                Quality.UHD -> 45_000_000
+                Quality.FHD -> 20_000_000
+                else -> 10_000_000
             }
             val recorder = Recorder.Builder()
                 .setQualitySelector(qualitySelector)
