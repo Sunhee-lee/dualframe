@@ -90,7 +90,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-ads-lite:23.6.0")
 
     // Google Play Billing
-    implementation("com.android.billingclient:billing-ktx:9.0.0")
+    implementation("com.android.billingclient:billing-ktx:8.0.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
