@@ -120,8 +120,8 @@ class BillingManager private constructor(private val context: Context) {
 
         billingClient?.queryProductDetailsAsync(params) { result, detailsList ->
             Log.i(TAG, "queryProductDetails: code=${result.responseCode} " +
-                "msg=${result.debugMessage} count=${detailsList.size}")
-            productDetails = detailsList.firstOrNull()
+                "msg=${result.debugMessage} count=${detailsList.productDetailsList.size}")
+            productDetails = detailsList.productDetailsList.firstOrNull()
             if (productDetails != null) {
                 Log.i(TAG, "Product loaded: id=${productDetails?.productId} " +
                     "title=${productDetails?.title} " +
