@@ -207,6 +207,7 @@ fun SettingsPage(
             title = stringResource(R.string.settings_language),
             value = when (settings.appLanguage) {
                 "en"    -> stringResource(R.string.settings_language_english)
+                "ko"    -> stringResource(R.string.settings_language_korean)
                 "hi"    -> stringResource(R.string.settings_language_hindi)
                 "in"    -> stringResource(R.string.settings_language_indonesian)
                 "pt-BR" -> stringResource(R.string.settings_language_portuguese_br)
@@ -313,6 +314,11 @@ fun SettingsPage(
                 Spacer(Modifier.height(8.dp))
                 DialogOption(stringResource(R.string.settings_language_english), settings.appLanguage == "en") {
                     applyLanguage(context, settings, "en", onSettingsChange)
+                    showLanguageDialog = false
+                }
+                Spacer(Modifier.height(8.dp))
+                DialogOption(stringResource(R.string.settings_language_korean), settings.appLanguage == "ko") {
+                    applyLanguage(context, settings, "ko", onSettingsChange)
                     showLanguageDialog = false
                 }
                 Spacer(Modifier.height(8.dp))
