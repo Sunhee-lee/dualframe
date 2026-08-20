@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DualFrame</string>
+
+    <!-- Status -->
+    <string name="status_ready">तैयार</string>
+    <string name="status_countdown">काउंटडाउन</string>
+    <string name="status_rec">REC</string>
+    <string name="status_exporting">एक्सपोर्ट हो रहा है</string>
+    <string name="status_done">पूरा हुआ</string>
+    <string name="status_saving">सहेजा जा रहा है</string>
+    <string name="status_error">त्रुटि</string>
+
+    <!-- Save screen -->
+    <string name="btn_save_videos">वीडियो सहेजें</string>
+    <string name="label_saving">सहेजा जा रहा है…</string>
+    <string name="label_saved">सहेजा गया</string>
+    <string name="btn_view_in_gallery">गैलरी में देखें</string>
+    <string name="btn_retake">फिर से लें</string>
+    <!-- Save options popup -->
+    <string name="save_popup_title">वीडियो सहेजें</string>
+    <string name="save_popup_pro_title">DualFrame PRO</string>
+    <string name="save_popup_pro_subtitle">विज्ञापन और वॉटरमार्क के बिना सहेजें</string>
+    <string name="save_popup_ad_title">मुफ्त में सहेजने के लिए विज्ञापन देखें</string>
+    <string name="save_popup_ad_desc">वॉटरमार्क के बिना सहेजें</string>
+    <string name="save_popup_watermark_title">वॉटरमार्क के साथ सहेजें</string>
+    <string name="save_popup_watermark_desc"></string>
+    <string name="btn_cancel">रद्द करें</string>
+
+    <!-- Exit dialog -->
+    <string name="dialog_exit_title">ऐप बंद करें?</string>
+    <string name="dialog_exit_message">क्या आप DualFrame बंद करना चाहते हैं?</string>
+    <string name="btn_exit">बाहर निकलें</string>
+
+    <!-- Errors -->
+    <string name="error_dismiss">बंद करें</string>
+    <string name="error_ad_not_available">विज्ञापन उपलब्ध नहीं है। कृपया बाद में पुनः प्रयास करें।</string>
+    <string name="error_storage_full">वीडियो सहेजने के लिए पर्याप्त स्टोरेज नहीं है।</string>
+    <string name="error_save_failed">वीडियो सहेजने में विफल। स्टोरेज जांचें और पुनः प्रयास करें।</string>
+    <string name="error_pro_verify_failed">खरीदारी सत्यापित नहीं हो सकी। कृपया अपना नेटवर्क जांचें और पुनः प्रयास करें।</string>
+    <string name="error_ad_fail_pro_prompt">विज्ञापन लोड नहीं हो सका। बिना विज्ञापन के सहेजने के लिए PRO आज़माएं।</string>
+    <string name="error_ad_offline_title">इंटरनेट कनेक्शन आवश्यक।</string>
+    <string name="error_ad_offline_desc">विज्ञापन देखने और बिना वॉटरमार्क के सहेजने के लिए पुनः कनेक्ट करें।</string>
+    <string name="error_ad_grace_title">विज्ञापन लोड नहीं हो सका।</string>
+    <string name="error_ad_grace_desc">यह वीडियो बिना वॉटरमार्क के सहेजा जाएगा।</string>
+    <string name="error_ad_repeated_title">विज्ञापन अभी भी अनुपलब्ध हैं।</string>
+    <string name="error_ad_repeated_desc">कृपया बाद में पुनः प्रयास करें या वॉटरमार्क के साथ सहेजें।</string>
+    <string name="pro_purchase_success">PRO अब सक्रिय है। अब आप विज्ञापन और वॉटरमार्क के बिना सहेज सकते हैं।</string>
+    <string name="pro_restore_success">खरीदारी पुनर्स्थापित। PRO सुविधाएं अब उपलब्ध हैं।</string>
+    <string name="pro_purchase_failed">पुनर्स्थापित करने के लिए कोई खरीदारी नहीं मिली।</string>
+    <string name="btn_retry">पुनः प्रयास करें</string>
+    <string name="btn_save_with_watermark">वॉटरमार्क के साथ सहेजें</string>
+    <string name="btn_view_pro">PRO देखें</string>
+    <string name="toast_watermark_removed">दोनों सहेजे गए वीडियो से वॉटरमार्क हटा दिए गए।</string>
+    <string name="toast_export_fallback_fhd">इस डिवाइस पर 4K एक्सपोर्ट समर्थित नहीं। FHD में सहेजा गया।</string>
+    <string name="toast_auto_save_complete">✓ सहेजा गया</string>
+    <string name="toast_auto_save_failed">ऑटो-सेव विफल। मैन्युअली सहेजने का प्रयास करें।</string>
+    <string name="recording_paused_prefix">रुका हुआ</string>
+    <string name="recording_remaining_min">%1$d मिनट शेष</string>
+    <string name="recording_remaining_sec">%1$d सेकंड शेष</string>
+    <string name="recording_ended_early_title">रिकॉर्डिंग जल्दी समाप्त</string>
+    <string name="recording_ended_early_desc">स्टोरेज लगभग भर गया था, इसलिए रिकॉर्डिंग स्वचालित रूप से रुक गई। आपका वीडियो उस बिंदु तक सहेजा गया।</string>
+
+    <string name="settings_language">भाषा</string>
+    <string name="settings_language_system">सिस्टम डिफ़ॉल्ट</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_hindi">हिन्दी</string>
+    <string name="settings_language_indonesian">Bahasa Indonesia</string>
+    <string name="settings_language_portuguese_br">Português (Brasil)</string>
+
+    <!-- Settings page -->
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="settings_more">अधिक</string>
+    <string name="settings_pro_active">सक्रिय</string>
+    <string name="settings_pro_active_msg">PRO सक्रिय है।</string>
+    <string name="settings_pro_subtitle">आजीवन पहुंच</string>
+    <string name="settings_default_camera">डिफ़ॉल्ट कैमरा</string>
+    <string name="settings_camera_rear">पीछे का</string>
+    <string name="settings_camera_front">सामने का</string>
+    <string name="settings_auto_save">ऑटो सेव</string>
+    <string name="settings_auto_save_desc">रिकॉर्डिंग के बाद स्वचालित रूप से वीडियो सहेजें।</string>
+    <string name="settings_auto_save_enabled">ऑटो सेव सक्षम है।\nवीडियो आपकी गैलरी में स्वचालित रूप से सहेजे जाएंगे।</string>
+    <string name="settings_auto_save_pro_only">ऑटो सेव एक PRO सुविधा है।\nआजीवन पहुंच के साथ वॉटरमार्क हटाना, विज्ञापन-मुक्त सेविंग और ऑटो सेव अनलॉक करें।</string>
+    <string name="settings_view_pro">PRO लाभ देखें</string>
+    <string name="settings_review">DualFrame को रेट करें</string>
+    <string name="settings_contact">प्रतिक्रिया भेजें</string>
+    <string name="pro_sheet_title_full">DualFrame PRO</string>
+    <string name="pro_sheet_subtitle">एक बार की खरीदारी। आजीवन पहुंच।</string>
+    <string name="pro_sheet_get">PRO अनलॉक करें</string>
+    <string name="pro_sheet_thanks">DualFrame का समर्थन करने के लिए धन्यवाद!</string>
+    <string name="pro_sheet_restore">खरीदारी पुनर्स्थापित करें</string>
+    <string name="pro_sheet_restore_prompt">पहले से PRO है? खरीदारी पुनर्स्थापित करें</string>
+    <string name="pro_sheet_close">बंद करें</string>
+    <string name="pro_sheet_benefit1_title">वॉटरमार्क के बिना सहेजें</string>
+    <string name="pro_sheet_benefit2_title">विज्ञापनों के बिना सहेजें</string>
+    <string name="pro_sheet_benefit3_title">रिकॉर्डिंग के बाद ऑटो-सेव</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">कैमरा और माइक्रोफ़ोन अनुमति आवश्यक</string>
+    <string name="permission_desc">वीडियो रिकॉर्ड करने के लिए कैमरा और माइक्रोफ़ोन अनुमतियां आवश्यक हैं।</string>
+    <string name="permission_grant">पुनः अनुरोध करें</string>
+    <string name="permission_denied_title">अनुमतियां बंद हैं</string>
+    <string name="permission_denied_desc">कृपया सेटिंग्स में कैमरा और माइक्रोफ़ोन एक्सेस की अनुमति दें।</string>
+    <string name="permission_open_settings">सेटिंग्स खोलें</string>
+
+    <!-- Settings tiles -->
+    <string name="label_on">ON</string>
+    <string name="label_off">OFF</string>
+    <string name="label_beauty_on">Beauty\nON</string>
+    <string name="label_beauty_off">Beauty\nOFF</string>
+</resources>
