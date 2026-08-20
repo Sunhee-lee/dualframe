@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DualFrame</string>
+
+    <!-- Status -->
+    <string name="status_ready">Siap</string>
+    <string name="status_countdown">Hitung Mundur</string>
+    <string name="status_rec">REC</string>
+    <string name="status_exporting">Mengekspor</string>
+    <string name="status_done">Selesai</string>
+    <string name="status_saving">Menyimpan</string>
+    <string name="status_error">Error</string>
+
+    <!-- Save screen -->
+    <string name="btn_save_videos">Simpan Video</string>
+    <string name="label_saving">Menyimpan…</string>
+    <string name="label_saved">Tersimpan</string>
+    <string name="btn_view_in_gallery">Lihat di Galeri</string>
+    <string name="btn_retake">Ulangi</string>
+    <!-- Save options popup -->
+    <string name="save_popup_title">Simpan Video</string>
+    <string name="save_popup_pro_title">DualFrame PRO</string>
+    <string name="save_popup_pro_subtitle">Simpan tanpa iklan atau watermark</string>
+    <string name="save_popup_ad_title">Tonton iklan untuk menyimpan gratis</string>
+    <string name="save_popup_ad_desc">Simpan tanpa watermark</string>
+    <string name="save_popup_watermark_title">Simpan dengan watermark</string>
+    <string name="save_popup_watermark_desc"></string>
+    <string name="btn_cancel">Batal</string>
+
+    <!-- Exit dialog -->
+    <string name="dialog_exit_title">Keluar dari aplikasi?</string>
+    <string name="dialog_exit_message">Apakah Anda ingin menutup DualFrame?</string>
+    <string name="btn_exit">Keluar</string>
+
+    <!-- Errors -->
+    <string name="error_dismiss">Tutup</string>
+    <string name="error_ad_not_available">Iklan tidak tersedia. Silakan coba lagi nanti.</string>
+    <string name="error_storage_full">Ruang penyimpanan tidak cukup untuk menyimpan video.</string>
+    <string name="error_save_failed">Gagal menyimpan video. Periksa penyimpanan dan coba lagi.</string>
+    <string name="error_pro_verify_failed">Tidak dapat memverifikasi pembelian. Periksa koneksi Anda dan coba lagi.</string>
+    <string name="error_ad_fail_pro_prompt">Iklan gagal dimuat. Coba PRO untuk menyimpan tanpa iklan.</string>
+    <string name="error_ad_offline_title">Koneksi internet diperlukan.</string>
+    <string name="error_ad_offline_desc">Silakan hubungkan kembali untuk menonton iklan dan menyimpan tanpa watermark.</string>
+    <string name="error_ad_grace_title">Tidak dapat memuat iklan.</string>
+    <string name="error_ad_grace_desc">Video ini akan disimpan tanpa watermark.</string>
+    <string name="error_ad_repeated_title">Iklan masih tidak tersedia.</string>
+    <string name="error_ad_repeated_desc">Silakan coba lagi nanti atau simpan dengan watermark.</string>
+    <string name="pro_purchase_success">PRO kini aktif. Anda sekarang dapat menyimpan tanpa iklan atau watermark.</string>
+    <string name="pro_restore_success">Pembelian dipulihkan. Fitur PRO kini tersedia.</string>
+    <string name="pro_purchase_failed">Tidak ditemukan pembelian untuk dipulihkan.</string>
+    <string name="btn_retry">Coba lagi</string>
+    <string name="btn_save_with_watermark">Simpan dengan watermark</string>
+    <string name="btn_view_pro">Lihat PRO</string>
+    <string name="toast_watermark_removed">Watermark dihapus dari kedua video yang disimpan.</string>
+    <string name="toast_export_fallback_fhd">Ekspor 4K tidak didukung di perangkat ini. Disimpan dalam FHD.</string>
+    <string name="toast_auto_save_complete">✓ Tersimpan</string>
+    <string name="toast_auto_save_failed">Simpan otomatis gagal. Coba simpan secara manual.</string>
+    <string name="recording_paused_prefix">Dijeda</string>
+    <string name="recording_remaining_min">%1$d menit tersisa</string>
+    <string name="recording_remaining_sec">%1$d detik tersisa</string>
+    <string name="recording_ended_early_title">Rekaman berakhir lebih awal</string>
+    <string name="recording_ended_early_desc">Penyimpanan hampir penuh, jadi rekaman berhenti otomatis. Video Anda disimpan hingga titik itu.</string>
+
+    <string name="settings_language">Bahasa</string>
+    <string name="settings_language_system">Default Sistem</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_hindi">हिन्दी</string>
+    <string name="settings_language_indonesian">Bahasa Indonesia</string>
+    <string name="settings_language_portuguese_br">Português (Brasil)</string>
+
+    <!-- Settings page -->
+    <string name="settings_title">Pengaturan</string>
+    <string name="settings_more">Lainnya</string>
+    <string name="settings_pro_active">Aktif</string>
+    <string name="settings_pro_active_msg">PRO aktif.</string>
+    <string name="settings_pro_subtitle">Akses seumur hidup</string>
+    <string name="settings_default_camera">Kamera Default</string>
+    <string name="settings_camera_rear">Belakang</string>
+    <string name="settings_camera_front">Depan</string>
+    <string name="settings_auto_save">Simpan Otomatis</string>
+    <string name="settings_auto_save_desc">Simpan video otomatis setelah merekam.</string>
+    <string name="settings_auto_save_enabled">Simpan otomatis diaktifkan.\nVideo akan disimpan ke galeri Anda secara otomatis.</string>
+    <string name="settings_auto_save_pro_only">Simpan Otomatis adalah fitur PRO.\nBuka penghapusan watermark, menyimpan tanpa iklan, dan simpan otomatis dengan akses seumur hidup.</string>
+    <string name="settings_view_pro">Lihat Manfaat PRO</string>
+    <string name="settings_review">Beri Rating DualFrame</string>
+    <string name="settings_contact">Kirim Umpan Balik</string>
+    <string name="pro_sheet_title_full">DualFrame PRO</string>
+    <string name="pro_sheet_subtitle">Pembelian sekali. Akses seumur hidup.</string>
+    <string name="pro_sheet_get">Buka PRO</string>
+    <string name="pro_sheet_thanks">Terima kasih telah mendukung DualFrame!</string>
+    <string name="pro_sheet_restore">Pulihkan Pembelian</string>
+    <string name="pro_sheet_restore_prompt">Sudah punya PRO? Pulihkan pembelian</string>
+    <string name="pro_sheet_close">Tutup</string>
+    <string name="pro_sheet_benefit1_title">Simpan tanpa watermark</string>
+    <string name="pro_sheet_benefit2_title">Simpan tanpa iklan</string>
+    <string name="pro_sheet_benefit3_title">Simpan otomatis setelah merekam</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">Izin Kamera dan Mikrofon Diperlukan</string>
+    <string name="permission_desc">Izin kamera dan mikrofon diperlukan untuk merekam video.</string>
+    <string name="permission_grant">Minta lagi</string>
+    <string name="permission_denied_title">Izin dinonaktifkan</string>
+    <string name="permission_denied_desc">Silakan izinkan akses kamera dan mikrofon di Pengaturan.</string>
+    <string name="permission_open_settings">Buka Pengaturan</string>
+
+    <!-- Settings tiles -->
+    <string name="label_on">ON</string>
+    <string name="label_off">OFF</string>
+    <string name="label_beauty_on">Beauty\nON</string>
+    <string name="label_beauty_off">Beauty\nOFF</string>
+</resources>
