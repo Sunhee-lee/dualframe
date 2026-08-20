@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DualFrame</string>
+
+    <!-- Status -->
+    <string name="status_ready">Pronto</string>
+    <string name="status_countdown">Contagem</string>
+    <string name="status_rec">REC</string>
+    <string name="status_exporting">Exportando</string>
+    <string name="status_done">Concluído</string>
+    <string name="status_saving">Salvando</string>
+    <string name="status_error">Erro</string>
+
+    <!-- Save screen -->
+    <string name="btn_save_videos">Salvar Vídeos</string>
+    <string name="label_saving">Salvando…</string>
+    <string name="label_saved">Salvo</string>
+    <string name="btn_view_in_gallery">Ver na Galeria</string>
+    <string name="btn_retake">Refazer</string>
+    <!-- Save options popup -->
+    <string name="save_popup_title">Salvar Vídeos</string>
+    <string name="save_popup_pro_title">DualFrame PRO</string>
+    <string name="save_popup_pro_subtitle">Salve sem anúncios ou marca d\'água</string>
+    <string name="save_popup_ad_title">Assista a um anúncio para salvar grátis</string>
+    <string name="save_popup_ad_desc">Salve sem marca d\'água</string>
+    <string name="save_popup_watermark_title">Salvar com marca d\'água</string>
+    <string name="save_popup_watermark_desc"></string>
+    <string name="btn_cancel">Cancelar</string>
+
+    <!-- Exit dialog -->
+    <string name="dialog_exit_title">Sair do app?</string>
+    <string name="dialog_exit_message">Deseja fechar o DualFrame?</string>
+    <string name="btn_exit">Sair</string>
+
+    <!-- Errors -->
+    <string name="error_dismiss">Fechar</string>
+    <string name="error_ad_not_available">Anúncio indisponível. Tente novamente mais tarde.</string>
+    <string name="error_storage_full">Espaço insuficiente para salvar os vídeos.</string>
+    <string name="error_save_failed">Falha ao salvar os vídeos. Verifique o armazenamento e tente novamente.</string>
+    <string name="error_pro_verify_failed">Não foi possível verificar a compra. Verifique sua conexão e tente novamente.</string>
+    <string name="error_ad_fail_pro_prompt">Falha ao carregar o anúncio. Experimente o PRO para salvar sem anúncios.</string>
+    <string name="error_ad_offline_title">Conexão com a internet necessária.</string>
+    <string name="error_ad_offline_desc">Reconecte-se para assistir a um anúncio e salvar sem marca d\'água.</string>
+    <string name="error_ad_grace_title">Não foi possível carregar o anúncio.</string>
+    <string name="error_ad_grace_desc">Este vídeo será salvo sem marca d\'água.</string>
+    <string name="error_ad_repeated_title">Os anúncios ainda estão indisponíveis.</string>
+    <string name="error_ad_repeated_desc">Tente novamente mais tarde ou salve com marca d\'água.</string>
+    <string name="pro_purchase_success">PRO ativado. Agora você pode salvar sem anúncios ou marca d\'água.</string>
+    <string name="pro_restore_success">Compra restaurada. Recursos PRO disponíveis.</string>
+    <string name="pro_purchase_failed">Nenhuma compra encontrada para restaurar.</string>
+    <string name="btn_retry">Tentar novamente</string>
+    <string name="btn_save_with_watermark">Salvar com marca d\'água</string>
+    <string name="btn_view_pro">Ver PRO</string>
+    <string name="toast_watermark_removed">Marcas d\'água removidas dos dois vídeos salvos.</string>
+    <string name="toast_export_fallback_fhd">Exportação em 4K não é suportada neste dispositivo. Salvo em FHD.</string>
+    <string name="toast_auto_save_complete">✓ Salvo</string>
+    <string name="toast_auto_save_failed">Falha ao salvar automaticamente. Tente salvar manualmente.</string>
+    <string name="recording_paused_prefix">Pausado</string>
+    <string name="recording_remaining_min">%1$d min restantes</string>
+    <string name="recording_remaining_sec">%1$d s restantes</string>
+    <string name="recording_ended_early_title">Gravação encerrada antecipadamente</string>
+    <string name="recording_ended_early_desc">O armazenamento estava quase cheio, então a gravação parou automaticamente. Seu vídeo foi salvo até esse ponto.</string>
+
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_system">Padrão do Sistema</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_hindi">हिन्दी</string>
+    <string name="settings_language_indonesian">Bahasa Indonesia</string>
+    <string name="settings_language_portuguese_br">Português (Brasil)</string>
+
+    <!-- Settings page -->
+    <string name="settings_title">Configurações</string>
+    <string name="settings_more">Mais</string>
+    <string name="settings_pro_active">Ativo</string>
+    <string name="settings_pro_active_msg">PRO está ativo.</string>
+    <string name="settings_pro_subtitle">Acesso vitalício</string>
+    <string name="settings_default_camera">Câmera Padrão</string>
+    <string name="settings_camera_rear">Traseira</string>
+    <string name="settings_camera_front">Frontal</string>
+    <string name="settings_auto_save">Salvar Auto.</string>
+    <string name="settings_auto_save_desc">Salvar vídeos automaticamente após a gravação.</string>
+    <string name="settings_auto_save_enabled">Salvamento automático ativado.\nOs vídeos serão salvos na galeria automaticamente.</string>
+    <string name="settings_auto_save_pro_only">Salvamento Automático é um recurso PRO.\nDesbloqueie remoção de marca d\'água, salvamento sem anúncios e salvamento automático com acesso vitalício.</string>
+    <string name="settings_view_pro">Ver Benefícios PRO</string>
+    <string name="settings_review">Avaliar DualFrame</string>
+    <string name="settings_contact">Enviar Feedback</string>
+    <string name="pro_sheet_title_full">DualFrame PRO</string>
+    <string name="pro_sheet_subtitle">Compra única. Acesso vitalício.</string>
+    <string name="pro_sheet_get">Desbloquear PRO</string>
+    <string name="pro_sheet_thanks">Obrigado por apoiar o DualFrame!</string>
+    <string name="pro_sheet_restore">Restaurar Compra</string>
+    <string name="pro_sheet_restore_prompt">Já tem PRO? Restaurar compra</string>
+    <string name="pro_sheet_close">Fechar</string>
+    <string name="pro_sheet_benefit1_title">Salvar sem marca d\'água</string>
+    <string name="pro_sheet_benefit2_title">Salvar sem anúncios</string>
+    <string name="pro_sheet_benefit3_title">Salvar automaticamente após a gravação</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">Permissão de Câmera e Microfone Necessária</string>
+    <string name="permission_desc">Permissões de câmera e microfone são necessárias para gravar vídeos.</string>
+    <string name="permission_grant">Solicitar novamente</string>
+    <string name="permission_denied_title">Permissões desativadas</string>
+    <string name="permission_denied_desc">Permita acesso à câmera e ao microfone nas Configurações.</string>
+    <string name="permission_open_settings">Abrir Configurações</string>
+
+    <!-- Settings tiles -->
+    <string name="label_on">ON</string>
+    <string name="label_off">OFF</string>
+    <string name="label_beauty_on">Beauty\nON</string>
+    <string name="label_beauty_off">Beauty\nOFF</string>
+</resources>
