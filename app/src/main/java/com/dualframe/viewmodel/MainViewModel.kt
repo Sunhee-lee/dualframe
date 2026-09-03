@@ -284,7 +284,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         masterFile = file
-        com.dualframe.data.MasterRecoveryStore.markRecording(getApplication(), file)
         startTimer()
     }
 
@@ -499,25 +498,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             Log.i("DualFrameCameraDiag", "  targetRot: $targetRot isFront: $isFront isPortrait: $isPortrait")
             Log.i("DualFrameCameraDiag", "  exportOffset: ${"%.4f".format(exportOffset)}")
             Log.i("DualFrameCameraDiag", "========================")
-
-            // Phase 1 (v2.1.2): Persist recovery snapshot so a crash during export/save
-            // can be resumed via [다시 저장]. State transitions (markSaveStarted / markFailed /
-            // markCompletedAndDeleteMaster) are wired in later phases.
-            com.dualframe.data.MasterRecoveryStore.updateSnapshot(
-                getApplication(), file,
-                com.dualframe.data.MasterRecoveryStore.Snapshot(
-                    isPortrait = isPortrait,
-                    landscapeCropOffsetY = cropOffset,
-                    targetRotation = targetRot,
-                    isFront = isFront,
-                    beauty = _uiState.value.settings.frontCameraEffect,
-                    mirror = isFront,
-                    masterRotation = masterMeta?.rotation ?: 0,
-                    croppedAspect = croppedAspect,
-                    durationSeconds = _uiState.value.recordingDurationSeconds.toLong(),
-                )
-            )
-
             val croppedFile = exportManager.exportCropped(
                 file, croppedAspect, croppedSuffix,
                 verticalOffset = exportOffset,
