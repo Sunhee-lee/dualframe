@@ -21,11 +21,18 @@ object FileStorage {
     private const val STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000L
     private val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
 
-    // Master lives in filesDir (survives Android's cache auto-cleanup under low storage).
-    // Only removed when a) both V/H MediaStore saves verified, b) user explicit delete,
-    // or c) user explicit [다시 촬영]/BackHandler at EXPORT_COMPLETE (discardMaster).
+    // v2.1.2 Phase 1-A (diagnostic): temporarily back in cacheDir to isolate whether
+    // the earlier filesDir move caused the reported export/watermark save slowdown.
+    // If perf returns with this revert, filesDir I/O was the culprit; the master
+    // storage strategy will be redesigned before Phase 2. Otherwise, the slowdown
+    // is unrelated to Phase 1 and we can either fully revert Phase 1 or keep going.
+    //
+    // Everything else from Phase 1 (MasterRecoveryStore + markRecording / updateSnapshot
+    // hooks, makeDisplayName, availableInternalStorageBytes, MASTER_DIR constant) is
+    // kept in place — those are inert without further wiring, and reusing them later
+    // avoids re-doing the plumbing.
     fun createMasterFile(context: Context): File {
-        val dir = File(context.filesDir, MASTER_DIR).apply { mkdirs() }
+        val dir = File(context.cacheDir, TEMP_DIR).apply { mkdirs() }
         val stamp = dateFormat.format(Date())
         return File(dir, "DF_${stamp}_master.mp4")
     }
