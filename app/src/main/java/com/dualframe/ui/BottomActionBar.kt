@@ -2,6 +2,7 @@ package com.dualframe.ui
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -139,6 +140,29 @@ private fun RecordDot(
             else -> Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFFFF1744)))
         }
     }
+}
+
+/**
+ * Opens [savedUri] in the system viewer. Falls back to the gallery app itself
+ * when nothing has been saved yet — the bottom-bar button is tappable on first
+ * launch and before the user taps Save.
+ */
+fun openInGallery(context: Context, savedUri: Uri?) {
+    if (savedUri != null) {
+        val view = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(savedUri, "video/mp4")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            context.startActivity(view)
+            return
+        } catch (_: Exception) {
+            // No viewer took the item — fall through to the gallery app.
+        }
+    }
+    try { context.startActivity(buildGalleryIntent(context)) }
+    catch (_: Exception) {}
 }
 
 fun buildGalleryIntent(context: Context): Intent {

@@ -284,10 +284,7 @@ fun MainScreen(
         BottomActionBar(
             appStatus = state.appStatus,
             cameraReady = state.cameraReady,
-            onGallery = {
-                try { context.startActivity(buildGalleryIntent(context)) }
-                catch (_: Exception) {}
-            },
+            onGallery = { openInGallery(context, state.savedNativeUri ?: state.savedCroppedUri) },
             onRecord = { viewModel.toggleRecording(hasAudioPermission) },
             onSwitchCamera = { viewModel.switchCamera() },
             onPause = { viewModel.togglePause() },
@@ -981,8 +978,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                         else viewModel.showRemoveWatermarkDialog()
                     }
                     IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery)) {
-                        try { context.startActivity(buildGalleryIntent(context)) }
-                        catch (_: Exception) {}
+                        openInGallery(context, state.savedNativeUri ?: state.savedCroppedUri)
                     }
                     IconResultButton(Icons.Outlined.CameraAlt, stringResource(R.string.btn_retake)) {
                         viewModel.resetToIdle()
@@ -1038,8 +1034,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                         else viewModel.showRemoveWatermarkDialog()
                     }
                     IconResultButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.btn_view_in_gallery)) {
-                        try { context.startActivity(buildGalleryIntent(context)) }
-                        catch (_: Exception) {}
+                        openInGallery(context, state.savedNativeUri ?: state.savedCroppedUri)
                     }
                     IconResultButton(Icons.Outlined.CameraAlt, stringResource(R.string.btn_retake)) {
                         viewModel.resetToIdle()
