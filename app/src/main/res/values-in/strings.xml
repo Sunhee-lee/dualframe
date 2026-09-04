@@ -14,6 +14,7 @@
     <!-- Save screen -->
     <string name="btn_save_videos">Simpan Video</string>
     <string name="label_saving">Menyimpan…</string>
+    <string name="label_saving_progress">Menyimpan… %1$d%%</string>
     <string name="label_saved">Tersimpan</string>
     <string name="btn_view_in_gallery">Lihat di Galeri</string>
     <string name="btn_retake">Ulangi</string>

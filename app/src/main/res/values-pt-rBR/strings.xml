@@ -14,6 +14,7 @@
     <!-- Save screen -->
     <string name="btn_save_videos">Salvar Vídeos</string>
     <string name="label_saving">Salvando…</string>
+    <string name="label_saving_progress">Salvando… %1$d%%</string>
     <string name="label_saved">Salvo</string>
     <string name="btn_view_in_gallery">Ver na Galeria</string>
     <string name="btn_retake">Refazer</string>

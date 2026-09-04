@@ -14,6 +14,7 @@
     <!-- Save screen -->
     <string name="btn_save_videos">영상 저장</string>
     <string name="label_saving">저장 중…</string>
+    <string name="label_saving_progress">저장 중… %1$d%%</string>
     <string name="label_saved">저장 완료</string>
     <string name="btn_view_in_gallery">갤러리에서 보기</string>
     <string name="btn_retake">다시 촬영</string>

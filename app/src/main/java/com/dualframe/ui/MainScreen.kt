@@ -13,6 +13,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -893,7 +894,12 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
     val isSaved = state.saveMessage != null
     val isSavedClean = state.saveMessage == "Saved"
     val isAutoSave = state.settings.autoSave && isPro
+    // Watermarking re-encodes both files, which takes tens of seconds on long or
+    // high-res clips — show the real progress instead of a static "Saving…".
+    val saveProgress = if (state.appStatus == AppStatus.SAVING) state.saveProgress else null
     val saveLabel = when {
+        state.appStatus == AppStatus.SAVING && state.saveProgress > 0f ->
+            stringResource(R.string.label_saving_progress, (state.saveProgress * 100).toInt())
         state.appStatus == AppStatus.SAVING -> stringResource(R.string.label_saving)
         isSaved -> stringResource(R.string.label_saved)
         else -> stringResource(R.string.btn_save_videos)
@@ -966,6 +972,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     SaveResultButton(saveIcon, saveLabel,
                         enabled = if (isAutoSave) false else saveEnabled,
                         forceGreen = isSavedClean,
+                        progress = saveProgress,
                     ) {
                         if (isPro) viewModel.saveBothWithWatermark()
                         else viewModel.showRemoveWatermarkDialog()
@@ -1022,6 +1029,7 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
                     SaveResultButton(saveIcon, saveLabel,
                         enabled = if (isAutoSave) false else saveEnabled,
                         forceGreen = isSavedClean,
+                        progress = saveProgress,
                     ) {
                         if (isPro) viewModel.saveBothWithWatermark()
                         else viewModel.showRemoveWatermarkDialog()
@@ -1091,6 +1099,7 @@ private fun SaveResultButton(
     label: String,
     enabled: Boolean,
     forceGreen: Boolean = false,
+    progress: Float? = null,
     onClick: () -> Unit,
 ) {
     Box(
@@ -1101,6 +1110,22 @@ private fun SaveResultButton(
             .then(if (enabled) Modifier.clickable { onClick() } else Modifier),
         contentAlignment = Alignment.Center,
     ) {
+        // Determinate fill across the disabled (grey) button while saving.
+        if (progress != null) {
+            val animated by animateFloatAsState(
+                targetValue = progress.coerceIn(0f, 1f),
+                animationSpec = tween(200),
+                label = "saveProgress",
+            )
+            if (animated > 0f) {
+                Box(
+                    Modifier.align(Alignment.CenterStart)
+                        .fillMaxHeight()
+                        .fillMaxWidth(animated)
+                        .background(SaveGreenBrush),
+                )
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(6.dp))

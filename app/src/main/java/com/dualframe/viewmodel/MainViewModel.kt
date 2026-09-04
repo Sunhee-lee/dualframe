@@ -50,6 +50,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val TAG = "MainViewModel"
+
+        // Save-phase progress budget. The two effect passes run sequentially and
+        // dominate the wait; the tail covers the two MediaStore writes.
+        private const val SAVE_PASS_1_START = 0f
+        private const val SAVE_PASS_1_END = 0.45f
+        private const val SAVE_PASS_2_START = 0.45f
+        private const val SAVE_PASS_2_END = 0.90f
+        private const val SAVE_MEDIASTORE_MID = 0.95f
     }
 
     private val _uiState = MutableStateFlow(UiState())
@@ -638,6 +646,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Map a single effect pass's 0..1 progress into its slice of the save bar. */
+    private fun publishSaveProgress(start: Float, end: Float, passProgress: Float) {
+        val mapped = start + (end - start) * passProgress.coerceIn(0f, 1f)
+        _uiState.update { it.copy(saveProgress = mapped) }
+    }
+
     // ── Explicit save actions ────────────────────────────────────────
 
     /**
@@ -677,7 +691,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val nativePath = state.nativeTempPath ?: return
         val croppedPath = state.croppedTempPath ?: return
 
-        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = null) }
+        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = null, saveProgress = 0f) }
 
         viewModelScope.launch {
             val app: android.app.Application = getApplication()
@@ -690,26 +704,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val wmNative = FileStorage.createExportFile(app, "wm_V")
             val wmCropped = FileStorage.createExportFile(app, "wm_H")
 
+            // Two sequential full transcodes mapped onto one 0..1 bar, leaving the
+            // tail for the MediaStore writes. See SAVE_PASS_* in the companion.
             val wmNativeResult = WatermarkHelper.applyEffects(
                 app, nativeFile, wmNative,
                 applyWatermark = true, applyBeauty = beauty, mirrorHorizontally = mirror,
+                onProgress = { p -> publishSaveProgress(SAVE_PASS_1_START, SAVE_PASS_1_END, p) },
             )
             val wmCroppedResult = WatermarkHelper.applyEffects(
                 app, croppedFile, wmCropped,
                 applyWatermark = true, applyBeauty = beauty, mirrorHorizontally = mirror,
+                onProgress = { p -> publishSaveProgress(SAVE_PASS_2_START, SAVE_PASS_2_END, p) },
             )
 
             val sourceNative = wmNativeResult ?: nativeFile
             val sourceCropped = wmCroppedResult ?: croppedFile
 
-            _uiState.update { it.copy(saveMessage = null) }
+            _uiState.update { it.copy(saveMessage = null, saveProgress = SAVE_PASS_2_END) }
 
             val uriN = withContext(Dispatchers.IO) {
                 FileStorage.saveToMediaStore(app, sourceNative, nativeFile.name)
             }
+            _uiState.update { it.copy(saveProgress = SAVE_MEDIASTORE_MID) }
             val uriC = withContext(Dispatchers.IO) {
                 FileStorage.saveToMediaStore(app, sourceCropped, croppedFile.name)
             }
+            _uiState.update { it.copy(saveProgress = 1f) }
 
             // Clean watermarked temp files only — keep originals for potential re-save
             if (uriN != null && uriC != null) {
@@ -740,7 +760,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val nativePath = state.nativeTempPath ?: return
         val croppedPath = state.croppedTempPath ?: return
 
-        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = null) }
+        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = null, saveProgress = 0f) }
 
         viewModelScope.launch {
             val app: android.app.Application = getApplication()
@@ -752,11 +772,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val mirror = isFront
             val needsTransform = beauty || mirror
 
+            // Rear-camera clean saves are a plain copy — no transcode, so the bar
+            // simply jumps to the MediaStore tail below.
             val sourceNative: File = if (needsTransform) {
                 val processed = FileStorage.createExportFile(app, "tmp_V")
                 WatermarkHelper.applyEffects(
                     app, nativeFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                    onProgress = { p -> publishSaveProgress(SAVE_PASS_1_START, SAVE_PASS_1_END, p) },
                 ) ?: nativeFile
             } else nativeFile
 
@@ -765,15 +788,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 WatermarkHelper.applyEffects(
                     app, croppedFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                    onProgress = { p -> publishSaveProgress(SAVE_PASS_2_START, SAVE_PASS_2_END, p) },
                 ) ?: croppedFile
             } else croppedFile
+
+            _uiState.update { it.copy(saveProgress = SAVE_PASS_2_END) }
 
             val uriN = withContext(Dispatchers.IO) {
                 FileStorage.saveToMediaStore(app, sourceNative, nativeFile.name)
             }
+            _uiState.update { it.copy(saveProgress = SAVE_MEDIASTORE_MID) }
             val uriC = withContext(Dispatchers.IO) {
                 FileStorage.saveToMediaStore(app, sourceCropped, croppedFile.name)
             }
+            _uiState.update { it.copy(saveProgress = 1f) }
 
             if (uriN != null && uriC != null) {
                 withContext(Dispatchers.IO) {

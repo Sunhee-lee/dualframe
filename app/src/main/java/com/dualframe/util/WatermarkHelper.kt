@@ -25,6 +25,7 @@ import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
 import com.google.common.collect.ImmutableList
 import com.sunnlab.dualframe.R
@@ -47,10 +48,15 @@ import kotlinx.coroutines.withContext
 object WatermarkHelper {
 
     private const val TAG = "WatermarkHelper"
+    private const val PROGRESS_POLL_MS = 200L
 
     /**
      * Re-encode sourceFile applying optional watermark and/or beauty.
      * Returns the output file, or null on failure.
+     *
+     * [onProgress] receives 0f..1f while the transcode runs. Applying any effect
+     * forces a full decode -> GL -> re-encode pass, which is slow on long or
+     * high-resolution clips, so callers should surface this to the user.
      */
     suspend fun applyEffects(
         context: Context,
@@ -59,6 +65,7 @@ object WatermarkHelper {
         applyWatermark: Boolean,
         applyBeauty: Boolean,
         mirrorHorizontally: Boolean = false,
+        onProgress: (Float) -> Unit = {},
     ): File? = withContext(Dispatchers.Main) {
         try {
             val mediaItem = MediaItem.fromUri(sourceFile.toURI().toString())
@@ -155,7 +162,7 @@ object WatermarkHelper {
                 .setEffects(Effects(listOf(), videoEffects.toList()))
                 .build()
 
-            runTransformer(context, editedMediaItem, outputFile)
+            runTransformer(context, editedMediaItem, outputFile, onProgress)
             Log.i(TAG, "Effects applied (watermark=$applyWatermark, beauty=$applyBeauty): " +
                 "${outputFile.absolutePath}")
             outputFile
@@ -171,18 +178,42 @@ object WatermarkHelper {
         context: Context,
         editedMediaItem: EditedMediaItem,
         outputFile: File,
+        onProgress: (Float) -> Unit,
     ) = suspendCancellableCoroutine { cont ->
-        val transformer = Transformer.Builder(context)
+        lateinit var transformer: Transformer
+        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        val progressHolder = ProgressHolder()
+        val pollRunnable = object : Runnable {
+            override fun run() {
+                if (!cont.isActive) return
+                val state = transformer.getProgress(progressHolder)
+                if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
+                    onProgress(progressHolder.progress / 100f)
+                }
+                handler.postDelayed(this, PROGRESS_POLL_MS)
+            }
+        }
+
+        transformer = Transformer.Builder(context)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, result: ExportResult) {
+                    handler.removeCallbacks(pollRunnable)
+                    onProgress(1f)
                     if (cont.isActive) cont.resume(Unit)
                 }
                 override fun onError(composition: Composition, result: ExportResult, e: ExportException) {
+                    handler.removeCallbacks(pollRunnable)
                     if (cont.isActive) cont.resumeWithException(e)
                 }
             })
             .build()
         transformer.start(editedMediaItem, outputFile.absolutePath)
-        cont.invokeOnCancellation { transformer.cancel(); outputFile.delete() }
+        handler.postDelayed(pollRunnable, PROGRESS_POLL_MS)
+
+        cont.invokeOnCancellation {
+            transformer.cancel()
+            handler.removeCallbacks(pollRunnable)
+            outputFile.delete()
+        }
     }
 }

@@ -9,6 +9,8 @@ data class UiState(
     val countdownRemaining: Int = 0,
     val errorMessage: String? = null,
     val exportProgress: Float = 0f,
+    // 0f..1f while AppStatus.SAVING — watermark/beauty transcode + MediaStore write
+    val saveProgress: Float = 0f,
     val cameraReady: Boolean = false,
     val flashOn: Boolean = false,
     val masterIsPortrait: Boolean = true,
