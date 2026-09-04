@@ -71,6 +71,18 @@ class CameraManager(private val context: Context) {
     private var boundQuality: Quality = Quality.FHD
     // ── Camera binding (always 2 use cases) ───────────────────────────
 
+    /**
+     * Obtains the CameraX provider without binding anything, so supported
+     * qualities can be queried before the first bind picks a resolution.
+     */
+    suspend fun prepareCameraProvider(): Boolean = try {
+        cameraProvider = getCameraProvider()
+        true
+    } catch (e: Exception) {
+        Log.w(TAG, "Camera provider unavailable", e)
+        false
+    }
+
     suspend fun bindCamera(
         lifecycleOwner: LifecycleOwner,
         quality: Quality = Quality.FHD,

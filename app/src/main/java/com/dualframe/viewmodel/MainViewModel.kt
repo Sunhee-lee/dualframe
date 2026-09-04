@@ -84,15 +84,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * provides its own SurfaceTexture to CameraX. Always 2 use cases.
      */
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
-        val settings = _uiState.value.settings
         viewModelScope.launch {
+            // Supported qualities aren't knowable until a CameraX provider exists,
+            // and binding used to be what created it — so the first bind ran with
+            // the stored default (FHD on a fresh install) and the first-launch
+            // promotion to UHD arrived after the Recorder was already built.
+            // Prime the provider first, resolve the quality, then bind once.
+            //
+            // Skipping the refresh when the provider is unavailable matters: it
+            // would otherwise mark settings initialized off getSupportedQualities'
+            // [FHD, HD] fallback, pinning a 4K device to FHD for good.
+            if (cameraManager.prepareCameraProvider()) {
+                refreshSupportedCapabilities()
+            }
+            val settings = _uiState.value.settings
             val success = cameraManager.bindCamera(
                 lifecycleOwner = lifecycleOwner,
                 quality = settings.videoQuality.toCameraXQuality(),
                 onError = { msg -> setError(msg) },
             )
             _uiState.update { it.copy(cameraReady = success) }
-            refreshSupportedCapabilities()
         }
     }
 
@@ -104,7 +115,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 onError = { msg -> setError(msg) },
             )
             _uiState.update { it.copy(cameraReady = success) }
+            // The new camera may not support the current quality, in which case
+            // refreshSupportedCapabilities clamps the setting — push that back to
+            // CameraX so the bound quality and the displayed one stay in step.
             refreshSupportedCapabilities()
+            if (success) syncCameraQuality()
         }
     }
 
@@ -144,6 +159,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         SettingsStore.save(getApplication(), settings)
     }
 
+    /** Re-apply the effective quality to CameraX. No-ops when already bound at it. */
+    private suspend fun syncCameraQuality() {
+        val quality = _uiState.value.settings.videoQuality.toCameraXQuality()
+        val ok = cameraManager.rebindWithQuality(
+            newQuality = quality,
+            onError = { msg -> setError(msg) },
+        )
+        _uiState.update { it.copy(cameraReady = ok) }
+    }
+
     // ── Settings ──────────────────────────────────────────────────────
 
     fun updateSettings(newSettings: AppSettings) {
@@ -169,14 +194,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // If quality changed, refresh supported options and rebind camera
         if (newSettings.videoQuality != oldSettings.videoQuality) {
             refreshSupportedCapabilities()
-            val currentSettings = _uiState.value.settings
-            viewModelScope.launch {
-                val success = cameraManager.rebindWithQuality(
-                    newQuality = currentSettings.videoQuality.toCameraXQuality(),
-                    onError = { msg -> setError(msg) },
-                )
-                _uiState.update { it.copy(cameraReady = success) }
-            }
+            viewModelScope.launch { syncCameraQuality() }
         }
     }
 
