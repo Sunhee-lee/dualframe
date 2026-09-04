@@ -9,6 +9,25 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="com.android.vending.BILLING" />
 
+    <!--
+      Package visibility for BottomActionBar.buildGalleryIntent, which is the
+      fallback used when nothing has been saved yet. Under targetSdk 30+ the
+      queries it makes are filtered without these declarations:
+      getLaunchIntentForPackage returns null for the Samsung packages, and
+      resolveActivity returns null for the APP_GALLERY intent — collapsing the
+      fallback to the video collection URI, i.e. a plain list instead of the
+      gallery app. Starting an activity is never filtered, so the ACTION_VIEW
+      that opens a saved item needs no entry here.
+    -->
+    <queries>
+        <package android:name="com.sec.android.gallery3d" />
+        <package android:name="com.samsung.android.gallery" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_GALLERY" />
+        </intent>
+    </queries>
+
     <application
         android:name="com.dualframe.DualFrameApp"
         android:allowBackup="false"
