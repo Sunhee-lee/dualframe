@@ -1,16 +1,17 @@
 package com.dualframe.util
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.graphics.Typeface
-import android.text.Spannable
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
-import android.text.style.RelativeSizeSpan
-import android.text.style.TypefaceSpan
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.util.Log
 import androidx.core.content.res.ResourcesCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.BitmapOverlay
 import androidx.media3.effect.Brightness
 import androidx.media3.effect.Contrast
 import androidx.media3.effect.HslAdjustment
@@ -35,6 +36,7 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.math.ceil
 
 /**
  * Applies watermark and/or beauty effects to a video file using Media3 Transformer.
@@ -125,31 +127,23 @@ object WatermarkHelper {
                 val baseSize = if (isPortrait) 1.0f else 0.9f
                 val textSize = baseSize * scale
 
-                val pretendard = ResourcesCompat.getFont(context, R.font.pretendard_semibold)
-                    ?: Typeface.DEFAULT_BOLD
-                val textOverlay = TextOverlay.createStaticTextOverlay(
-                    SpannableString("DualFrame").apply {
-                        setSpan(
-                            ForegroundColorSpan(0x66FFFFFF.toInt()),
-                            0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                        setSpan(
-                            RelativeSizeSpan(textSize),
-                            0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                        setSpan(
-                            TypefaceSpan(pretendard),
-                            0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    },
-                    OverlaySettings.Builder()
-                        .setOverlayFrameAnchor(overlayAnchorX, overlayAnchorY)
-                        .setBackgroundFrameAnchor(overlayAnchorX, overlayAnchorY)
-                        .build(),
-                )
+                val watermark = buildWatermarkBitmap(context, textSize)
 
-                val overlays: ImmutableList<TextureOverlay> =
-                    ImmutableList.of<TextureOverlay>(textOverlay)
+                // The stroke padding grows the overlay bitmap, and the overlay anchor
+                // is normalised against that bitmap — so shrinking the anchor by the
+                // same ratio puts every text pixel exactly where it sat before.
+                // See buildWatermarkBitmap for why the padding is needed at all.
+                val settings = OverlaySettings.Builder()
+                    .setOverlayFrameAnchor(
+                        overlayAnchorX * watermark.contentWidth / watermark.bitmap.width.toFloat(),
+                        overlayAnchorY * watermark.contentHeight / watermark.bitmap.height.toFloat(),
+                    )
+                    .setBackgroundFrameAnchor(overlayAnchorX, overlayAnchorY)
+                    .build()
+
+                val overlays: ImmutableList<TextureOverlay> = ImmutableList.of<TextureOverlay>(
+                    BitmapOverlay.createStaticBitmapOverlay(watermark.bitmap, settings),
+                )
                 videoEffects.add(OverlayEffect(overlays))
             }
 
@@ -173,6 +167,77 @@ object WatermarkHelper {
         }
     }
 
+
+    /** A rendered watermark plus the text box inside it, excluding stroke padding. */
+    private class WatermarkBitmap(
+        val bitmap: Bitmap,
+        val contentWidth: Int,
+        val contentHeight: Int,
+    )
+
+    /**
+     * Renders the watermark to a bitmap: a thin dark stroke first, then the white
+     * fill on top of it at the same position.
+     *
+     * We build the bitmap ourselves rather than using TextOverlay because
+     * TextOverlay sizes its bitmap to the StaticLayout bounds exactly, with no
+     * slack — half of the stroke falls outside the glyph outline and would be
+     * clipped at the bitmap edge.
+     *
+     * Geometry is otherwise identical to what TextOverlay produced: the same
+     * TextOverlay.TEXT_SIZE_PIXELS base scaled by [textScale], measured with the
+     * same StaticLayout, so the mark keeps its previous size. Position is
+     * preserved by the anchor correction at the call site.
+     */
+    private fun buildWatermarkBitmap(context: Context, textScale: Float): WatermarkBitmap {
+        val pretendard = ResourcesCompat.getFont(context, R.font.pretendard_semibold)
+            ?: Typeface.DEFAULT_BOLD
+        val textSizePx = TextOverlay.TEXT_SIZE_PIXELS * textScale
+        val strokeWidthPx = textSizePx * WatermarkStyle.STROKE_WIDTH_RATIO
+
+        val fillPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = pretendard
+            textSize = textSizePx
+            style = Paint.Style.FILL
+            color = WatermarkStyle.FILL_COLOR
+        }
+        val strokePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = pretendard
+            textSize = textSizePx
+            style = Paint.Style.STROKE
+            strokeWidth = strokeWidthPx
+            strokeJoin = Paint.Join.ROUND
+            color = WatermarkStyle.STROKE_COLOR
+        }
+
+        // Stroke style doesn't affect glyph advances, so both layouts measure alike.
+        val contentWidth = ceil(fillPaint.measureText(WatermarkStyle.TEXT)).toInt().coerceAtLeast(1)
+        val fillLayout = singleLineLayout(fillPaint, contentWidth)
+        val strokeLayout = singleLineLayout(strokePaint, contentWidth)
+        val contentHeight = fillLayout.height.coerceAtLeast(1)
+
+        // Half the stroke sits outside the outline; +1 covers antialiasing.
+        val pad = ceil(strokeWidthPx / 2f).toInt() + 1
+
+        val bitmap = Bitmap.createBitmap(
+            contentWidth + 2 * pad, contentHeight + 2 * pad, Bitmap.Config.ARGB_8888,
+        )
+        val canvas = Canvas(bitmap)
+        canvas.translate(pad.toFloat(), pad.toFloat())
+        strokeLayout.draw(canvas)
+        fillLayout.draw(canvas)
+
+        Log.i(TAG, "Watermark bitmap: ${bitmap.width}x${bitmap.height} " +
+            "(text ${contentWidth}x$contentHeight, textSize ${"%.1f".format(textSizePx)}px, " +
+            "stroke ${"%.2f".format(strokeWidthPx)}px, pad ${pad}px)")
+
+        return WatermarkBitmap(bitmap, contentWidth, contentHeight)
+    }
+
+    private fun singleLineLayout(paint: TextPaint, width: Int): StaticLayout =
+        StaticLayout.Builder
+            .obtain(WatermarkStyle.TEXT, 0, WatermarkStyle.TEXT.length, paint, width)
+            .build()
 
     private suspend fun runTransformer(
         context: Context,

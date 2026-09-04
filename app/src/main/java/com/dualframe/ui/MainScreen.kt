@@ -83,6 +83,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -100,6 +102,7 @@ import com.dualframe.data.AppStatus
 import com.sunnlab.dualframe.R
 import com.dualframe.data.UiState
 import com.dualframe.ui.theme.PretendardFont
+import com.dualframe.util.WatermarkStyle
 import com.dualframe.util.formatDuration
 import com.dualframe.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
@@ -1050,15 +1053,30 @@ private fun ResultActions(state: UiState, viewModel: MainViewModel, context: and
 
 @Composable
 private fun ThumbnailWatermark(anchor: Alignment) {
+    // Mirrors the burned-in mark: thin dark stroke first, white fill on top.
+    // Both share WatermarkStyle with WatermarkHelper, and the stroke width is a
+    // ratio of the text size, so the preview scales the same way the video does.
+    val fontSize = 11.sp
+    val strokeWidthPx = with(LocalDensity.current) {
+        fontSize.toPx() * WatermarkStyle.STROKE_WIDTH_RATIO
+    }
     Box(Modifier.fillMaxSize()) {
         Text(
-            "DualFrame",
-            color = Color.White.copy(alpha = 0.40f),
-            fontSize = 11.sp,
+            WatermarkStyle.TEXT,
+            color = Color(WatermarkStyle.STROKE_COLOR),
+            fontSize = fontSize,
             fontWeight = FontWeight.SemiBold,
             fontFamily = PretendardFont,
-            modifier = Modifier.align(anchor)
-                .padding(horizontal = 6.dp, vertical = 4.dp),
+            style = TextStyle(drawStyle = Stroke(width = strokeWidthPx)),
+            modifier = Modifier.align(anchor).padding(horizontal = 6.dp, vertical = 4.dp),
+        )
+        Text(
+            WatermarkStyle.TEXT,
+            color = Color(WatermarkStyle.FILL_COLOR),
+            fontSize = fontSize,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = PretendardFont,
+            modifier = Modifier.align(anchor).padding(horizontal = 6.dp, vertical = 4.dp),
         )
     }
 }
