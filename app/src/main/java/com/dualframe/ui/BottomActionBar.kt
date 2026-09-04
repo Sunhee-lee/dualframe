@@ -2,6 +2,7 @@ package com.dualframe.ui
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -142,18 +143,53 @@ private fun RecordDot(
     }
 }
 
+private val SAMSUNG_GALLERY_PACKAGES =
+    listOf("com.sec.android.gallery3d", "com.samsung.android.gallery")
+
 /**
- * Opens [savedUri] in the system viewer. Falls back to the gallery app itself
+ * The gallery app to hand media to, or null when none can be identified.
+ *
+ * resolveActivity returns the system chooser when several apps match and the
+ * user has set no default, so a result of "android" is not an app we can name.
+ */
+private fun galleryPackage(pm: PackageManager): String? {
+    for (pkg in SAMSUNG_GALLERY_PACKAGES) {
+        if (pm.getLaunchIntentForPackage(pkg) != null) return pkg
+    }
+    val main = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_GALLERY)
+    return main.resolveActivity(pm)?.packageName?.takeUnless { it == "android" }
+}
+
+/**
+ * Opens [savedUri] in the gallery. Falls back to the gallery app's own screen
  * when nothing has been saved yet — the bottom-bar button is tappable on first
  * launch and before the user taps Save.
  */
 fun openInGallery(context: Context, savedUri: Uri?) {
+    val pm = context.packageManager
     if (savedUri != null) {
         val view = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(savedUri, "video/mp4")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+
+        // Name the gallery explicitly. Left implicit, ACTION_VIEW on video/mp4
+        // matches every video player installed and the system puts up a chooser
+        // instead of just showing the clip.
+        val pkg = galleryPackage(pm)
+        if (pkg != null) {
+            val targeted = Intent(view).setPackage(pkg)
+            if (targeted.resolveActivity(pm) != null) {
+                try {
+                    context.startActivity(targeted)
+                    return
+                } catch (_: Exception) {
+                    // Gallery refused the item — try without naming it.
+                }
+            }
+        }
+
         try {
             context.startActivity(view)
             return
@@ -166,9 +202,8 @@ fun openInGallery(context: Context, savedUri: Uri?) {
 }
 
 fun buildGalleryIntent(context: Context): Intent {
-    val samsungPackages = listOf("com.sec.android.gallery3d", "com.samsung.android.gallery")
     val pm = context.packageManager
-    for (pkg in samsungPackages) {
+    for (pkg in SAMSUNG_GALLERY_PACKAGES) {
         val launchIntent = pm.getLaunchIntentForPackage(pkg)
         if (launchIntent != null) return launchIntent
     }
