@@ -651,13 +651,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val success = uriN != null && uriC != null
             Log.i(TAG, "Auto-save completed: success=$success")
-            // Keep the saved URIs: this path returns straight to IDLE, so the
-            // bottom-bar gallery button is the only way back to what was just
-            // saved. Held even on a partial failure, for whichever side landed.
             _uiState.update {
-                val withUris = it.copy(savedNativeUri = uriN, savedCroppedUri = uriC)
-                if (success) withUris.copy(showAutoSaveCompleteToast = true)
-                else withUris.copy(showAutoSaveFailToast = true)
+                if (success) it.copy(showAutoSaveCompleteToast = true)
+                else it.copy(showAutoSaveFailToast = true)
             }
         }
     }

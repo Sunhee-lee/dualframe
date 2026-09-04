@@ -10,18 +10,13 @@
     <uses-permission android:name="com.android.vending.BILLING" />
 
     <!--
-      Package visibility for BottomActionBar. Identifying the gallery app needs
-      three lookups, and every one of them is a query, so all three are filtered
-      without these declarations: getLaunchIntentForPackage on the Samsung
-      packages, resolveActivity on the APP_GALLERY intent, and resolveActivity
-      on the ACTION_VIEW intent once it has been aimed at that package.
+      Package visibility for BottomActionBar.buildGalleryIntent, which finds the
+      gallery by two lookups and both are queries: getLaunchIntentForPackage on
+      the Samsung packages and resolveActivity on the APP_GALLERY intent.
+      Without these they are filtered and return null, leaving the button on the
+      video collection URI — a plain list rather than the gallery app.
 
-      Naming the package is what stops the system offering every installed video
-      player; leaving the view intent implicit puts up a chooser instead of the
-      clip. Starting the activity is not itself filtered — only finding out who
-      to start is.
-
-      Observed on Samsung the gallery already resolves without this block, OEM
+      Observed on Samsung the gallery resolves even without this block, OEM
       system apps commonly being exempt; these entries cover the devices where
       they are not.
     -->
@@ -31,10 +26,6 @@
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.APP_GALLERY" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:mimeType="video/*" />
         </intent>
     </queries>
 
