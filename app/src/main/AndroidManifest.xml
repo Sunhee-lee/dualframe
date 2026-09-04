@@ -10,14 +10,17 @@
     <uses-permission android:name="com.android.vending.BILLING" />
 
     <!--
-      Package visibility for BottomActionBar.buildGalleryIntent, which is the
-      fallback used when nothing has been saved yet. Under targetSdk 30+ the
-      queries it makes are filtered without these declarations:
-      getLaunchIntentForPackage returns null for the Samsung packages, and
-      resolveActivity returns null for the APP_GALLERY intent — collapsing the
-      fallback to the video collection URI, i.e. a plain list instead of the
-      gallery app. Starting an activity is never filtered, so the ACTION_VIEW
-      that opens a saved item needs no entry here.
+      Package visibility for BottomActionBar.buildGalleryIntent, the fallback
+      used when nothing has been saved yet.
+
+      Observed on Samsung: getLaunchIntentForPackage already resolves the
+      gallery without this block, OEM system apps commonly being exempt from
+      filtering. These declarations are for the devices where it is not exempt,
+      so the fallback still reaches a gallery app instead of collapsing to the
+      video collection URI — a plain list rather than the gallery.
+
+      Starting an activity is never subject to visibility filtering, so the
+      ACTION_VIEW that opens a saved item needs no entry here.
     -->
     <queries>
         <package android:name="com.sec.android.gallery3d" />
