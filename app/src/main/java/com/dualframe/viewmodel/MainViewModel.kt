@@ -593,6 +593,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Save runs in background, toast fires on completion.
      */
     private fun autoSaveInBackground(nativePath: String, croppedPath: String) {
+        // Storage check — same guard as saveBothWithWatermark()
+        val ctx: android.app.Application = getApplication()
+        val requiredBytes = File(nativePath).length() + File(croppedPath).length() + 50_000_000L
+        if (!FileStorage.hasEnoughStorage(ctx, requiredBytes)) {
+            setError(ctx.getString(com.sunnlab.dualframe.R.string.error_storage_full))
+            return
+        }
+
         // Reset UI to IDLE right away so the camera screen is usable
         _uiState.update {
             it.copy(
@@ -778,7 +786,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val nativePath = state.nativeTempPath ?: return
         val croppedPath = state.croppedTempPath ?: return
 
-        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveMessage = null, saveProgress = 0f) }
+        // Storage check — same guard as saveBothWithWatermark()
+        val ctx: android.app.Application = getApplication()
+        val requiredBytes = File(nativePath).length() + File(croppedPath).length() + 50_000_000L
+        if (!FileStorage.hasEnoughStorage(ctx, requiredBytes)) {
+            setError(ctx.getString(com.sunnlab.dualframe.R.string.error_storage_full))
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                appStatus = AppStatus.SAVING,
+                saveMessage = null,
+                saveProgress = 0f
+            )
+        }
 
         viewModelScope.launch {
             val app: android.app.Application = getApplication()
