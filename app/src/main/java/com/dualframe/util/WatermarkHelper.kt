@@ -68,23 +68,40 @@ object WatermarkHelper {
         applyBeauty: Boolean,
         mirrorHorizontally: Boolean = false,
         onProgress: (Float) -> Unit = {},
+        onSkinSmoothUnavailable: () -> Unit = {},
     ): File? {
+        val skinShaderUsed = applyBeauty && BeautyParams.SKIN_SMOOTH_ENABLED
         val first = attemptEffects(
             context, sourceFile, outputFile, applyWatermark, applyBeauty,
-            mirrorHorizontally, skipSkinEffect = false, onProgress = onProgress,
+            mirrorHorizontally, skipSkinEffect = !skinShaderUsed, onProgress = onProgress,
         )
-        if (first != null || !applyBeauty) return first
+        if (first != null || !skinShaderUsed) return first
 
         // The skin shader is the one piece here that runs code of ours on the
         // device's GPU, so it is the one piece that can fail in ways the rest
         // cannot. A selfie that saves without smoothing beats a selfie that
         // does not save, so the clip gets one more pass without it; the mirror
         // and the watermark, which the user would notice missing, survive.
-        Log.w(TAG, "Export failed with the skin effect — retrying without it")
-        return attemptEffects(
+        //
+        // The first attempt already deleted its half-written output, so the
+        // retry writes to a clean path; this is belt and braces for a delete
+        // that did not take.
+        outputFile.delete()
+        Log.w(TAG, "Export failed with the skin effect — retrying with tone correction only. " +
+            "The saved file will be less smooth than the preview was.")
+        val second = attemptEffects(
             context, sourceFile, outputFile, applyWatermark, applyBeauty,
             mirrorHorizontally, skipSkinEffect = true, onProgress = onProgress,
         )
+        // Only once the fallback actually produced a file is there a saved clip
+        // that differs from the preview. If it failed too, the caller's own
+        // failure handling covers it and a "less smooth than you saw" notice
+        // would be beside the point.
+        if (second != null) {
+            Log.w(TAG, "Saved without skin smoothing: ${second.absolutePath}")
+            onSkinSmoothUnavailable()
+        }
+        return second
     }
 
     private suspend fun attemptEffects(
@@ -196,6 +213,13 @@ object WatermarkHelper {
             Log.i(TAG, "Effects applied (watermark=$applyWatermark, beauty=$applyBeauty, " +
                 "skinEffect=${applyBeauty && !skipSkinEffect}): ${outputFile.absolutePath}")
             outputFile
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // The user backed out, or the scope died. runTransformer already
+            // cancelled the Transformer and removed the partial file; swallowing
+            // this would turn a cancelled save into a "failed" one and send the
+            // caller into a pointless fallback pass.
+            outputFile.delete()
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "applyEffects failed", e)
             outputFile.delete()

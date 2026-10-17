@@ -71,7 +71,12 @@ object BeautyShader {
      * master then blur across the same share of a face, which is what makes the
      * two look alike.
      */
-    val SMOOTH_GLSL = """
+    val SMOOTH_GLSL = if (!BeautyParams.SKIN_SMOOTH_ENABLED) """
+        vec3 dfSmoothSkin(vec3 centre, vec3 n0, vec3 n1, vec3 n2, vec3 n3,
+                          vec3 n4, vec3 n5, vec3 n6, vec3 n7) {
+            return centre;
+        }
+    """ else """
         vec3 dfSmoothSkin(vec3 centre, vec3 n0, vec3 n1, vec3 n2, vec3 n3,
                           vec3 n4, vec3 n5, vec3 n6, vec3 n7) {
             float cy = dfLuma(centre);
@@ -94,7 +99,14 @@ object BeautyShader {
         }
     """
 
-    /** Everything a fragment shader needs, in the order it needs it. */
+    /**
+     * Everything a fragment shader needs, in the order it needs it.
+     *
+     * With [BeautyParams.SKIN_SMOOTH_ENABLED] off, `dfSmoothSkin` is emitted as
+     * a pass-through, so both pipelines keep compiling and keep their tone
+     * correction while the smoothing — and, once the driver inlines it, the
+     * eight neighbour fetches that feed it — drops out.
+     */
     val COMMON_GLSL = SKIN_MASK_GLSL + TONE_GLSL + SMOOTH_GLSL
 
     /** GLSL rejects "1" where it expects a float, so every literal gets a point. */

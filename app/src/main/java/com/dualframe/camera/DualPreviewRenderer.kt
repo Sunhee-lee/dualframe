@@ -263,15 +263,18 @@ class DualPreviewRenderer {
             GLES20.glUniformMatrix4fv(uSTMatrixHandle, 1, false, stMatrix, 0)
             GLES20.glUniformMatrix4fv(uMVPMatrixHandle, 1, false, mvp, 0)
             GLES20.glUniform1f(uBeautyHandle, if (beautyEnabled) 1.0f else 0.0f)
-            // One pixel of the camera buffer, and a radius that is a fraction of
-            // its height — the exporter computes the same way from the master's
-            // own size, so both smooth across the same share of a face.
+            // One texel of the camera buffer, and a ring radius keyed off the
+            // buffer's short edge. The exporter runs the same helper on the
+            // master's own dimensions; because the camera buffer is landscape
+            // and the master is the upright portrait crop of it, the short edge
+            // is the one measurement the two share, so both end up smoothing
+            // across the same share of a face.
             val texW = if (previewWidth > 0) previewWidth else 1
             val texH = if (previewHeight > 0) previewHeight else 1
             GLES20.glUniform2f(uTexelSizeHandle, 1f / texW, 1f / texH)
             GLES20.glUniform1f(
                 uRadiusHandle,
-                (texH * com.dualframe.util.BeautyParams.SMOOTH_RADIUS_RATIO).coerceAtLeast(1f),
+                com.dualframe.util.BeautyParams.smoothRadiusPx(texW, texH),
             )
 
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0)

@@ -632,6 +632,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 WatermarkHelper.applyEffects(
                     app, nativeFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                    onSkinSmoothUnavailable = ::reportBeautyFallback,
                 ) ?: nativeFile
             } else nativeFile
 
@@ -640,6 +641,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 WatermarkHelper.applyEffects(
                     app, croppedFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                    onSkinSmoothUnavailable = ::reportBeautyFallback,
                 ) ?: croppedFile
             } else croppedFile
 
@@ -670,6 +672,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(showAutoSaveCompleteToast = false, showAutoSaveFailToast = false)
         }
+    }
+
+    /**
+     * The skin shader would not run on this device, so the clip was re-exported
+     * with tone correction only. The save succeeded, but it is not the result
+     * the preview promised, and the user is told so rather than left to notice.
+     */
+    private fun reportBeautyFallback() {
+        Log.w(TAG, "Skin smoothing unavailable on this device — saved with tone correction only")
+        _uiState.update { it.copy(showBeautyFallbackToast = true) }
+    }
+
+    fun dismissBeautyFallbackToast() {
+        _uiState.update { it.copy(showBeautyFallbackToast = false) }
     }
 
     /** Map a single effect pass's 0..1 progress into its slice of the save bar. */
@@ -735,11 +751,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val wmNativeResult = WatermarkHelper.applyEffects(
                 app, nativeFile, wmNative,
                 applyWatermark = true, applyBeauty = beauty, mirrorHorizontally = mirror,
+                onSkinSmoothUnavailable = ::reportBeautyFallback,
                 onProgress = { p -> publishSaveProgress(SAVE_PASS_1_START, SAVE_PASS_1_END, p) },
             )
             val wmCroppedResult = WatermarkHelper.applyEffects(
                 app, croppedFile, wmCropped,
                 applyWatermark = true, applyBeauty = beauty, mirrorHorizontally = mirror,
+                onSkinSmoothUnavailable = ::reportBeautyFallback,
                 onProgress = { p -> publishSaveProgress(SAVE_PASS_2_START, SAVE_PASS_2_END, p) },
             )
 
@@ -819,6 +837,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 WatermarkHelper.applyEffects(
                     app, nativeFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                    onSkinSmoothUnavailable = ::reportBeautyFallback,
                     onProgress = { p -> publishSaveProgress(SAVE_PASS_1_START, SAVE_PASS_1_END, p) },
                 ) ?: nativeFile
             } else nativeFile
@@ -828,6 +847,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 WatermarkHelper.applyEffects(
                     app, croppedFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                    onSkinSmoothUnavailable = ::reportBeautyFallback,
                     onProgress = { p -> publishSaveProgress(SAVE_PASS_2_START, SAVE_PASS_2_END, p) },
                 ) ?: croppedFile
             } else croppedFile

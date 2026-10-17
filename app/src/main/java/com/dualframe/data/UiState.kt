@@ -38,6 +38,10 @@ data class UiState(
     val showFhdFallbackToast: Boolean = false,
     val showAutoSaveCompleteToast: Boolean = false,
     val showAutoSaveFailToast: Boolean = false,
+    // The skin shader failed on this device and the clip was re-exported with
+    // tone correction only, so the saved file is less smooth than the preview
+    // was. Told to the user rather than passed off as a normal save.
+    val showBeautyFallbackToast: Boolean = false,
     // Storage-based recording limit
     val remainingRecordingSeconds: Int? = null,  // null when > 5 min or not recording
     val endedEarlyDueToStorage: Boolean = false,

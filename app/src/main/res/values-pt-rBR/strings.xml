@@ -54,6 +54,7 @@
     <string name="btn_view_pro">Ver PRO</string>
     <string name="toast_watermark_removed">Marcas d\'água removidas dos dois vídeos salvos.</string>
     <string name="toast_export_fallback_fhd">Exportação em 4K não é suportada neste dispositivo. Salvo em FHD.</string>
+    <string name="toast_beauty_fallback">Suavização de pele não é suportada neste dispositivo. Salvo apenas com correção de cor.</string>
     <string name="toast_auto_save_complete">✓ Salvo</string>
     <string name="toast_auto_save_failed">Falha ao salvar automaticamente. Tente salvar manualmente.</string>
     <string name="recording_paused_prefix">Pausado</string>

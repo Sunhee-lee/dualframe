@@ -54,6 +54,7 @@
     <string name="btn_view_pro">PRO देखें</string>
     <string name="toast_watermark_removed">दोनों सहेजे गए वीडियो से वॉटरमार्क हटा दिए गए।</string>
     <string name="toast_export_fallback_fhd">इस डिवाइस पर 4K एक्सपोर्ट समर्थित नहीं। FHD में सहेजा गया।</string>
+    <string name="toast_beauty_fallback">इस डिवाइस पर स्किन स्मूदिंग समर्थित नहीं। केवल रंग सुधार के साथ सहेजा गया।</string>
     <string name="toast_auto_save_complete">✓ सहेजा गया</string>
     <string name="toast_auto_save_failed">ऑटो-सेव विफल। मैन्युअली सहेजने का प्रयास करें।</string>
     <string name="recording_paused_prefix">रुका हुआ</string>

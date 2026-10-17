@@ -2,10 +2,10 @@ package com.dualframe.util
 
 import android.content.Context
 import android.opengl.GLES20
-import android.util.Size
 import androidx.media3.common.VideoFrameProcessingException
 import androidx.media3.common.util.GlProgram
 import androidx.media3.common.util.GlUtil
+import androidx.media3.common.util.Size
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BaseGlShaderProgram
 import androidx.media3.effect.GlEffect
@@ -19,23 +19,35 @@ import androidx.media3.effect.GlEffect
  * splitting the look across two implementations is what let the preview and the
  * file drift apart in the first place. The GLSL comes from [BeautyShader],
  * verbatim and identically parameterised.
+ *
+ * Media3 hands SDR frames to an effect as ordinary electrical RGB, untouched by
+ * any transfer function — `Contrast` and friends multiply the sampled value
+ * directly (see `fragment_shader_transformation_es2.glsl` in media3-effect) —
+ * which is the same space the preview's external camera texture samples in. So
+ * the shared GLSL means the same arithmetic on the same numbers, not merely the
+ * same source text.
  */
 @UnstableApi
 class SkinSmoothEffect : GlEffect {
 
     override fun toGlShaderProgram(context: Context, useHdr: Boolean) =
-        SkinSmoothShaderProgram(context, useHdr)
+        SkinSmoothShaderProgram(useHdr)
 
     override fun isNoOp(inputWidth: Int, inputHeight: Int) = false
 }
 
 @UnstableApi
 class SkinSmoothShaderProgram(
-    context: Context,
     useHdr: Boolean,
 ) : BaseGlShaderProgram(useHdr, /* texturePoolCapacity= */ 1) {
 
     private companion object {
+        /**
+         * The texture-coordinate convention Media3's own effects use — see
+         * `vertex_shader_transformation_es2.glsl`, which computes exactly this
+         * with an identity texture matrix. No Y flip: the intermediate textures
+         * an effect reads are already the right way up.
+         */
         const val VERTEX_SHADER = """
             attribute vec4 aFramePosition;
             varying vec2 vTexSamplingCoord;
@@ -93,10 +105,7 @@ class SkinSmoothShaderProgram(
     override fun configure(inputWidth: Int, inputHeight: Int): Size {
         texelWidth = 1f / inputWidth
         texelHeight = 1f / inputHeight
-        // A fraction of frame height, matching the preview, so the master and
-        // the preview smooth across the same share of a face whatever their
-        // resolutions are.
-        radiusPx = (inputHeight * BeautyParams.SMOOTH_RADIUS_RATIO).coerceAtLeast(1f)
+        radiusPx = BeautyParams.smoothRadiusPx(inputWidth, inputHeight)
         return Size(inputWidth, inputHeight)
     }
 

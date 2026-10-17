@@ -363,6 +363,17 @@ fun MainScreen(
         }
     }
 
+    // The saved clip came out less smooth than the preview, because the skin
+    // shader would not run here. Said plainly rather than passed off as normal.
+    if (state.showBeautyFallbackToast) {
+        LaunchedEffect(Unit) {
+            android.widget.Toast.makeText(context,
+                context.getString(R.string.toast_beauty_fallback),
+                android.widget.Toast.LENGTH_LONG).show()
+            viewModel.dismissBeautyFallbackToast()
+        }
+    }
+
     // Auto-save completion toasts
     if (state.showAutoSaveCompleteToast) {
         LaunchedEffect(Unit) {
