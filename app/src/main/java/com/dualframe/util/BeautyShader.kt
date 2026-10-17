@@ -6,8 +6,10 @@ package com.dualframe.util
  * The preview and the saved file used to drift: the preview ran a box blur the
  * exporter had no way to reproduce, so what the user framed was not what they
  * got. Everything that decides a pixel now lives here as GLSL, and both sides
- * include it verbatim — only the sampling loop differs, because the preview
- * reads an external camera texture and the exporter reads an ordinary one.
+ * include it verbatim — including the sampling, which used to be duplicated.
+ * The one difference between the two pipelines is which sampler the taps read,
+ * and that is handed in as a `DF_SAMPLE(uv)` macro, so no arithmetic can
+ * diverge even by accident.
  *
  * Numbers come from [BeautyParams] and are interpolated in, so there is one
  * place to tune and no literals to fall out of step.
@@ -22,6 +24,12 @@ object BeautyShader {
      *
      * Luminance gates both ends: near-black carries no detail worth smoothing,
      * and a blown highlight is already flat.
+     *
+     * These bands are left exactly as they were. Measured against real skin
+     * values they already return 1.0 on every genuine cheek sample — bright,
+     * standard, shadowed and cool-lit alike — so a weak result was never the
+     * mask's doing. Widening the Cr band would admit the whites of the eyes,
+     * which the lower bound at 0.485 is what keeps out.
      */
     const val SKIN_MASK_GLSL = """
         float dfLuma(vec3 c) {
@@ -42,6 +50,8 @@ object BeautyShader {
     /**
      * Brightness, contrast, white balance and saturation — unchanged from what
      * the app has always applied, just moved somewhere both pipelines can read.
+     * This is frame-wide; anything meant for skin alone happens in [BEAUTY_GLSL]
+     * where the mask is in hand.
      */
     val TONE_GLSL = """
         vec3 dfTone(vec3 c) {
@@ -57,57 +67,122 @@ object BeautyShader {
     """
 
     /**
-     * Edge-preserving smoothing over a 3x3 ring, then applied only where skin
-     * was found.
+     * Two concentric rings of taps, on the unit circle.
      *
-     * Each neighbour is weighted by how close its brightness is to the centre's,
-     * so a sample that falls on an eyelash, a lip edge or the line of a jaw
-     * contributes almost nothing and that detail survives. A plain average —
-     * which is what the old preview did — has no such defence, which is why it
-     * softened hair and eyes along with everything else.
+     * A single 3x3 ring — what this used to be — is a poor low-pass: widen it
+     * and it stops being a blur and starts being eight arbitrary point samples,
+     * so detail between them survives untouched and edges ring. Two rings, the
+     * outer one rotated half a step to fill the angular gaps, cover the disc
+     * well enough to widen the radius to something that can actually reach a
+     * blemish.
      *
-     * [uTexelSize] is one source pixel, and the radius is a fraction of frame
-     * height rather than a fixed count of pixels: a 1080p preview and a 2160p
-     * master then blur across the same share of a face, which is what makes the
-     * two look alike.
+     * Both pipelines sample bilinearly — the preview sets GL_LINEAR on the
+     * camera texture, and Media3 always sets it on an effect's input (see
+     * `GlProgram.Uniform.bind`) — so every tap that lands between texels
+     * averages a 2x2 neighbourhood for free, on both sides identically. The
+     * offsets are chosen off-texel for exactly that reason.
      */
-    val SMOOTH_GLSL = if (!BeautyParams.SKIN_SMOOTH_ENABLED) """
-        vec3 dfSmoothSkin(vec3 centre, vec3 n0, vec3 n1, vec3 n2, vec3 n3,
-                          vec3 n4, vec3 n5, vec3 n6, vec3 n7) {
-            return centre;
-        }
-    """ else """
-        vec3 dfSmoothSkin(vec3 centre, vec3 n0, vec3 n1, vec3 n2, vec3 n3,
-                          vec3 n4, vec3 n5, vec3 n6, vec3 n7) {
-            float cy = dfLuma(centre);
-            vec3 sum = centre;
-            float wsum = 1.0;
+    private const val TAP_DIRS_INNER =
+        "( 1.000,  0.000)( 0.707,  0.707)( 0.000,  1.000)(-0.707,  0.707)" +
+        "(-1.000,  0.000)(-0.707, -0.707)( 0.000, -1.000)( 0.707, -0.707)"
 
-            float w;
-            w = 1.0 - smoothstep(0.0, ${glsl(BeautyParams.EDGE_THRESHOLD)}, abs(dfLuma(n0) - cy)); sum += n0 * w; wsum += w;
-            w = 1.0 - smoothstep(0.0, ${glsl(BeautyParams.EDGE_THRESHOLD)}, abs(dfLuma(n1) - cy)); sum += n1 * w; wsum += w;
-            w = 1.0 - smoothstep(0.0, ${glsl(BeautyParams.EDGE_THRESHOLD)}, abs(dfLuma(n2) - cy)); sum += n2 * w; wsum += w;
-            w = 1.0 - smoothstep(0.0, ${glsl(BeautyParams.EDGE_THRESHOLD)}, abs(dfLuma(n3) - cy)); sum += n3 * w; wsum += w;
-            w = 1.0 - smoothstep(0.0, ${glsl(BeautyParams.EDGE_THRESHOLD)}, abs(dfLuma(n4) - cy)); sum += n4 * w; wsum += w;
-            w = 1.0 - smoothstep(0.0, ${glsl(BeautyParams.EDGE_THRESHOLD)}, abs(dfLuma(n5) - cy)); sum += n5 * w; wsum += w;
-            w = 1.0 - smoothstep(0.0, ${glsl(BeautyParams.EDGE_THRESHOLD)}, abs(dfLuma(n6) - cy)); sum += n6 * w; wsum += w;
-            w = 1.0 - smoothstep(0.0, ${glsl(BeautyParams.EDGE_THRESHOLD)}, abs(dfLuma(n7) - cy)); sum += n7 * w; wsum += w;
-
-            vec3 smoothed = sum / wsum;
-            float mask = dfSkinMask(centre);
-            return mix(centre, smoothed, mask * ${glsl(BeautyParams.SMOOTH_STRENGTH)});
-        }
-    """
+    private const val TAP_DIRS_OUTER =
+        "( 0.924,  0.383)( 0.383,  0.924)(-0.383,  0.924)(-0.924,  0.383)" +
+        "(-0.924, -0.383)(-0.383, -0.924)( 0.383, -0.924)( 0.924, -0.383)"
 
     /**
-     * Everything a fragment shader needs, in the order it needs it.
+     * The whole selfie look, from taps to final colour.
      *
-     * With [BeautyParams.SKIN_SMOOTH_ENABLED] off, `dfSmoothSkin` is emitted as
-     * a pass-through, so both pipelines keep compiling and keep their tone
-     * correction while the smoothing — and, once the driver inlines it, the
-     * eight neighbour fetches that feed it — drops out.
+     * `DF_SAMPLE(uv)` is supplied by whichever pipeline includes this, because
+     * the preview reads an external camera texture and the exporter an ordinary
+     * one. Everything else — the geometry of the taps, the edge weights, the
+     * mask, how far luma and chroma are each allowed to move, the skin lift and
+     * the tone pass — is this text, the same text, on both sides.
+     *
+     * Why luma and chroma move at different speeds: skin *texture* lives in
+     * luminance, and flattening it is what makes a face look like plastic, so
+     * luma is only part-smoothed. Blotchiness, redness and healing spots live
+     * mostly in *chroma*, which carries no detail anyone wants to keep, so it is
+     * smoothed hard. Evening out colour while leaving some texture is what
+     * reads as clear skin rather than as a filter.
      */
-    val COMMON_GLSL = SKIN_MASK_GLSL + TONE_GLSL + SMOOTH_GLSL
+    val BEAUTY_GLSL: String = buildString {
+        append("""
+        vec3 dfBeauty(vec2 uv, vec2 texel, float radius) {
+            vec2 rOut = texel * radius;
+            vec2 rIn  = rOut * ${glsl(BeautyParams.INNER_RING_RATIO)};
+
+            vec3 centre = DF_SAMPLE(uv).rgb;
+            float cy = dfLuma(centre);
+
+            vec3  sum  = centre;
+            float wsum = 1.0;
+            vec3  t;
+            float w;
+        """)
+        for (d in Regex("""\(([^)]*)\)""").findAll(TAP_DIRS_INNER).map { it.groupValues[1] }) {
+            append(tap(d, "rIn", 1f))
+        }
+        for (d in Regex("""\(([^)]*)\)""").findAll(TAP_DIRS_OUTER).map { it.groupValues[1] }) {
+            append(tap(d, "rOut", BeautyParams.OUTER_RING_WEIGHT))
+        }
+        append("""
+            vec3 smoothed = sum / wsum;
+            float mask = dfSkinMask(centre);
+
+            float sy = dfLuma(smoothed);
+            float y  = mix(cy, sy, mask * ${glsl(BeautyParams.SMOOTH_LUMA_STRENGTH)});
+            vec3  ch = mix(centre - vec3(cy), smoothed - vec3(sy),
+                           mask * ${glsl(BeautyParams.SMOOTH_CHROMA_STRENGTH)});
+            vec3 result = vec3(y) + ch;
+
+            // Skin only, strongest in shadow and gone before the highlights, so
+            // a face brightens without the frame going pale or a forehead
+            // blowing out. The mask keeps it off the background entirely.
+            result += mask * ${glsl(BeautyParams.SKIN_BRIGHTEN)}
+                      * (1.0 - smoothstep(0.55, 0.95, cy));
+
+            return dfTone(clamp(result, 0.0, 1.0));
+        }
+        """)
+    }
+
+    /**
+     * One tap: read it, weigh it by how close its brightness is to the centre's,
+     * accumulate.
+     *
+     * A sample that falls on an eyelash, a lip edge or the line of a jaw differs
+     * in luminance far more than [BeautyParams.EDGE_THRESHOLD] allows, so it
+     * contributes nothing and that detail survives untouched. The threshold is
+     * what decides whether a blemish counts as detail to protect or as
+     * something to even out, which is why it is the second of the two numbers
+     * that governs how strong this looks at all.
+     */
+    private fun tap(dir: String, step: String, weight: Float): String {
+        val w = if (weight == 1f) "" else " * ${glsl(weight)}"
+        return """
+            t = DF_SAMPLE(uv + vec2($dir) * $step).rgb;
+            w = (1.0 - smoothstep(0.0, ${glsl(BeautyParams.EDGE_THRESHOLD)},
+                                  abs(dfLuma(t) - cy)))$w;
+            sum += t * w; wsum += w;
+        """
+    }
+
+    /**
+     * Everything a fragment shader needs, in the order it needs it. The
+     * including shader must `#define DF_SAMPLE(uv)` before this.
+     *
+     * With [BeautyParams.SKIN_SMOOTH_ENABLED] off, `dfBeauty` reads one texel
+     * and applies tone correction only — no rings, no mask, no extra fetches —
+     * so both pipelines keep compiling and keep their colour while the
+     * smoothing drops out entirely.
+     */
+    val COMMON_GLSL: String = SKIN_MASK_GLSL + TONE_GLSL +
+        if (BeautyParams.SKIN_SMOOTH_ENABLED) BEAUTY_GLSL else """
+        vec3 dfBeauty(vec2 uv, vec2 texel, float radius) {
+            return dfTone(DF_SAMPLE(uv).rgb);
+        }
+        """
 
     /** GLSL rejects "1" where it expects a float, so every literal gets a point. */
     private fun glsl(v: Float): String {

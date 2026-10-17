@@ -41,6 +41,7 @@ class DualPreviewRenderer {
         // external texture, the exporter reads an ordinary one.
         private val FRAGMENT_SHADER = """
             #extension GL_OES_EGL_image_external : require
+            #define DF_SAMPLE(uv) texture2D(sTexture, uv)
             precision mediump float;
             uniform samplerExternalOES sTexture;
             uniform float uBeauty;
@@ -53,17 +54,7 @@ class DualPreviewRenderer {
             void main() {
                 vec4 color = texture2D(sTexture, vTexCoord);
                 if (uBeauty > 0.0) {
-                    vec2 o = uTexelSize * uRadius;
-                    vec3 c  = color.rgb;
-                    vec3 n0 = texture2D(sTexture, vTexCoord + vec2(-o.x, -o.y)).rgb;
-                    vec3 n1 = texture2D(sTexture, vTexCoord + vec2( 0.0, -o.y)).rgb;
-                    vec3 n2 = texture2D(sTexture, vTexCoord + vec2( o.x, -o.y)).rgb;
-                    vec3 n3 = texture2D(sTexture, vTexCoord + vec2(-o.x,  0.0)).rgb;
-                    vec3 n4 = texture2D(sTexture, vTexCoord + vec2( o.x,  0.0)).rgb;
-                    vec3 n5 = texture2D(sTexture, vTexCoord + vec2(-o.x,  o.y)).rgb;
-                    vec3 n6 = texture2D(sTexture, vTexCoord + vec2( 0.0,  o.y)).rgb;
-                    vec3 n7 = texture2D(sTexture, vTexCoord + vec2( o.x,  o.y)).rgb;
-                    color.rgb = dfTone(dfSmoothSkin(c, n0, n1, n2, n3, n4, n5, n6, n7));
+                    color.rgb = dfBeauty(vTexCoord, uTexelSize, uRadius);
                 }
                 gl_FragColor = color;
             }

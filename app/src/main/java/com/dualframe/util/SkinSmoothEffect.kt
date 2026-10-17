@@ -58,6 +58,7 @@ class SkinSmoothShaderProgram(
         """
 
         val FRAGMENT_SHADER = """
+            #define DF_SAMPLE(uv) texture2D(uTexSampler, uv)
             precision mediump float;
             uniform sampler2D uTexSampler;
             uniform vec2 uTexelSize;
@@ -67,19 +68,7 @@ class SkinSmoothShaderProgram(
             ${BeautyShader.COMMON_GLSL}
 
             void main() {
-                vec2 o = uTexelSize * uRadius;
-                vec3 c  = texture2D(uTexSampler, vTexSamplingCoord).rgb;
-                vec3 n0 = texture2D(uTexSampler, vTexSamplingCoord + vec2(-o.x, -o.y)).rgb;
-                vec3 n1 = texture2D(uTexSampler, vTexSamplingCoord + vec2( 0.0, -o.y)).rgb;
-                vec3 n2 = texture2D(uTexSampler, vTexSamplingCoord + vec2( o.x, -o.y)).rgb;
-                vec3 n3 = texture2D(uTexSampler, vTexSamplingCoord + vec2(-o.x,  0.0)).rgb;
-                vec3 n4 = texture2D(uTexSampler, vTexSamplingCoord + vec2( o.x,  0.0)).rgb;
-                vec3 n5 = texture2D(uTexSampler, vTexSamplingCoord + vec2(-o.x,  o.y)).rgb;
-                vec3 n6 = texture2D(uTexSampler, vTexSamplingCoord + vec2( 0.0,  o.y)).rgb;
-                vec3 n7 = texture2D(uTexSampler, vTexSamplingCoord + vec2( o.x,  o.y)).rgb;
-
-                vec3 result = dfSmoothSkin(c, n0, n1, n2, n3, n4, n5, n6, n7);
-                gl_FragColor = vec4(dfTone(result), 1.0);
+                gl_FragColor = vec4(dfBeauty(vTexSamplingCoord, uTexelSize, uRadius), 1.0);
             }
         """
     }
