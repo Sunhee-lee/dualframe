@@ -9,7 +9,12 @@ data class AppSettings(
     val countdownSeconds: Int = 0,
     val videoQuality: VideoQuality = VideoQuality.FHD,
     val saveSelfieUnmirrored: Boolean = true,
-    val frontCameraEffect: Boolean = true,
+    /**
+     * Off unless the user asks for it. A beauty filter is a look, not a
+     * correction, and one nobody chose is one that silently changes every
+     * selfie they shoot.
+     */
+    val frontCameraEffect: Boolean = false,
     val keepScreenAwake: Boolean = true,
     val showGuides: Boolean = true,
     val autoSave: Boolean = false,
@@ -49,7 +54,7 @@ object SettingsStore {
                 VideoQuality.FHD
             },
             saveSelfieUnmirrored = prefs.getBoolean(KEY_MIRROR_FRONT, true),
-            frontCameraEffect = prefs.getBoolean(KEY_FRONT_EFFECT, true),
+            frontCameraEffect = prefs.getBoolean(KEY_FRONT_EFFECT, false),
             keepScreenAwake = prefs.getBoolean(KEY_SCREEN_AWAKE, true),
             showGuides = prefs.getBoolean(KEY_GUIDES, true),
             autoSave = prefs.getBoolean(KEY_AUTO_SAVE, false),

@@ -105,6 +105,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 onError = { msg -> setError(msg) },
             )
             _uiState.update { it.copy(cameraReady = success) }
+            syncBeautyToRenderer()
         }
     }
 
@@ -121,6 +122,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // CameraX so the bound quality and the displayed one stay in step.
             refreshSupportedCapabilities()
             if (success) syncCameraQuality()
+            syncBeautyToRenderer()
         }
     }
 
@@ -172,17 +174,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── Settings ──────────────────────────────────────────────────────
 
+    /**
+     * Push the beauty setting to the preview renderer.
+     *
+     * This used to happen only when the setting changed, which meant it never
+     * happened at all for someone who simply left it as it came: the renderer
+     * started at false and nothing told it otherwise, so the preview showed no
+     * effect while the exporter — which reads the setting directly — applied
+     * one to the saved file. Switching cameras had the mirror of that problem,
+     * leaving a stale true behind and putting the effect on a rear preview
+     * that the save would not reproduce.
+     *
+     * So it is derived from current state instead, and called from everywhere
+     * that state can move: a bind, a camera switch, a settings change.
+     */
+    private fun syncBeautyToRenderer() {
+        cameraManager.renderer.beautyEnabled =
+            cameraManager.useFrontCamera.value && _uiState.value.settings.frontCameraEffect
+    }
+
     fun updateSettings(newSettings: AppSettings) {
         val oldSettings = _uiState.value.settings
         _uiState.update { it.copy(settings = newSettings) }
         SettingsStore.save(getApplication(), newSettings)
         Log.i(TAG, "Settings updated: $newSettings")
 
-        // Front camera beauty effect — only when front camera is active
-        if (newSettings.frontCameraEffect != oldSettings.frontCameraEffect) {
-            cameraManager.renderer.beautyEnabled =
-                cameraManager.useFrontCamera.value && newSettings.frontCameraEffect
-        }
+        syncBeautyToRenderer()
 
         // If default camera changed, switch to match
         if (newSettings.defaultFrontCamera != oldSettings.defaultFrontCamera) {
