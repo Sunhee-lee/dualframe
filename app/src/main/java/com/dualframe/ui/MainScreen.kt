@@ -176,6 +176,7 @@ fun MainScreen(
         SettingsPage(
             settings = state.settings,
             onSettingsChange = { viewModel.updateSettings(it) },
+            onCaptureModeChange = { viewModel.setCaptureMode(it) },
             onBack = { showSettingsPage = false },
         )
         return
@@ -289,7 +290,15 @@ fun MainScreen(
                 try { context.startActivity(buildGalleryIntent(context)) }
                 catch (_: Exception) {}
             },
-            onRecord = { viewModel.toggleRecording(hasAudioPermission) },
+            onRecord = {
+                // Stage 1 reuses the shutter as it is; a button that looks like
+                // a photo button comes with the rest of the photo UI.
+                if (state.settings.captureMode == com.dualframe.data.CaptureMode.PHOTO) {
+                    viewModel.takePhoto()
+                } else {
+                    viewModel.toggleRecording(hasAudioPermission)
+                }
+            },
             onSwitchCamera = { viewModel.switchCamera() },
             onPause = { viewModel.togglePause() },
         )
@@ -364,6 +373,14 @@ fun MainScreen(
     }
 
     // Auto-save completion toasts
+    if (state.showPhotoSavedToast) {
+        LaunchedEffect(Unit) {
+            android.widget.Toast.makeText(context,
+                context.getString(R.string.toast_photo_saved),
+                android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.dismissPhotoSavedToast()
+        }
+    }
     if (state.showAutoSaveCompleteToast) {
         LaunchedEffect(Unit) {
             android.widget.Toast.makeText(context,

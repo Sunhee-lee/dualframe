@@ -98,11 +98,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 refreshSupportedCapabilities()
             }
             val settings = _uiState.value.settings
-            val success = cameraManager.bindCamera(
-                lifecycleOwner = lifecycleOwner,
-                quality = settings.videoQuality.toCameraXQuality(),
-                onError = { msg -> setError(msg) },
-            )
+            val success = if (settings.captureMode == com.dualframe.data.CaptureMode.PHOTO) {
+                cameraManager.bindPhoto(lifecycleOwner) { msg -> setError(msg) }
+            } else {
+                cameraManager.bindCamera(
+                    lifecycleOwner = lifecycleOwner,
+                    quality = settings.videoQuality.toCameraXQuality(),
+                    onError = { msg -> setError(msg) },
+                )
+            }
             _uiState.update { it.copy(cameraReady = success) }
         }
     }
@@ -862,6 +866,105 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
+    }
+
+    // ── Capture mode ──────────────────────────────────────────────────
+    // Photo and video never share a camera session. Switching rebinds, which
+    // is the same machinery switchCamera and rebindWithQuality already use.
+
+    fun setCaptureMode(mode: com.dualframe.data.CaptureMode) {
+        val current = _uiState.value
+        if (current.settings.captureMode == mode) return
+        if (current.appStatus == AppStatus.RECORDING ||
+            current.appStatus == AppStatus.COUNTDOWN ||
+            current.appStatus == AppStatus.SAVING
+        ) {
+            Log.w(TAG, "Mode switch refused while ${current.appStatus}")
+            return
+        }
+
+        val settings = current.settings.copy(captureMode = mode)
+        _uiState.update { it.copy(settings = settings, cameraReady = false) }
+        SettingsStore.save(getApplication(), settings)
+
+        viewModelScope.launch {
+            val ok = cameraManager.switchMode(mode) { msg -> setError(msg) }
+            _uiState.update { it.copy(cameraReady = ok) }
+            Log.i(TAG, "Capture mode is now $mode (bound=$ok)")
+        }
+    }
+
+    /**
+     * One shutter press: capture once, cut the portrait and landscape frames
+     * from that single still, and put both in the gallery.
+     *
+     * Deliberately bare for this stage — no watermark, no ad gate, no result
+     * screen. Those are the video flow's and are brought over once the capture
+     * path itself is proven on devices.
+     */
+    fun takePhoto() {
+        if (_uiState.value.appStatus == AppStatus.SAVING) return
+        if (!cameraManager.isPhotoReady) {
+            setError("Camera is not ready")
+            return
+        }
+        val app: android.app.Application = getApplication()
+        _uiState.update { it.copy(appStatus = AppStatus.SAVING, saveProgress = 0f, saveMessage = null) }
+
+        viewModelScope.launch {
+            val shot = cameraManager.takePhoto()
+            if (shot == null) {
+                _uiState.update { it.copy(appStatus = AppStatus.IDLE) }
+                setError(app.getString(com.sunnlab.dualframe.R.string.error_photo_failed))
+                return@launch
+            }
+            _uiState.update { it.copy(saveProgress = 0.4f) }
+
+            // The same framing offset the preview is showing. Photo mode is rear
+            // camera and upright for this stage, so it maps across unchanged —
+            // the rotation and mirror corrections the video export applies have
+            // nothing to correct here.
+            val offset = cameraManager.renderer.landscapeCropOffsetY
+            val split = com.dualframe.util.PhotoSplitter.splitAndSave(
+                context = app,
+                jpegBytes = shot.jpegBytes,
+                cropRect = shot.cropRect,
+                rotationDegrees = shot.rotationDegrees,
+                verticalOffset = offset,
+            )
+            if (split == null) {
+                _uiState.update { it.copy(appStatus = AppStatus.IDLE) }
+                setError(app.getString(com.sunnlab.dualframe.R.string.error_photo_failed))
+                return@launch
+            }
+            _uiState.update { it.copy(saveProgress = 0.7f) }
+
+            val uriV = withContext(Dispatchers.IO) {
+                FileStorage.saveImageToMediaStore(app, split.portrait, split.portrait.name)
+            }
+            val uriH = withContext(Dispatchers.IO) {
+                FileStorage.saveImageToMediaStore(app, split.landscape, split.landscape.name)
+            }
+            withContext(Dispatchers.IO) {
+                FileStorage.deleteTempFile(split.portrait)
+                FileStorage.deleteTempFile(split.landscape)
+            }
+
+            val saved = uriV != null && uriH != null
+            Log.i(TAG, "Photo save: portrait=${split.portraitSize} landscape=${split.landscapeSize} ok=$saved")
+            _uiState.update {
+                it.copy(
+                    appStatus = AppStatus.IDLE,
+                    saveProgress = 1f,
+                    showPhotoSavedToast = saved,
+                )
+            }
+            if (!saved) setError(app.getString(com.sunnlab.dualframe.R.string.error_save_failed))
+        }
+    }
+
+    fun dismissPhotoSavedToast() {
+        _uiState.update { it.copy(showPhotoSavedToast = false) }
     }
 
     // ── Ad gate ───────────────────────────────────────────────────────

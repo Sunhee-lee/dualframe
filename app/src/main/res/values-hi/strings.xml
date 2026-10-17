@@ -144,4 +144,11 @@
     <string name="tile_flash_desc">कैमरा लाइट चालू/बंद</string>
     <string name="tile_settings_name">सेटिंग</string>
     <string name="tile_settings_desc">और कैमरा सेटिंग</string>
+
+    <!-- Photo capture mode (stage 1) -->
+    <string name="settings_capture_mode">कैप्चर मोड</string>
+    <string name="mode_video">वीडियो</string>
+    <string name="mode_photo">फ़ोटो</string>
+    <string name="toast_photo_saved">फ़ोटो सहेजी गई</string>
+    <string name="error_photo_failed">फ़ोटो नहीं ली जा सकी। फिर से कोशिश करें।</string>
 </resources>

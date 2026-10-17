@@ -15,7 +15,12 @@ data class AppSettings(
     val autoSave: Boolean = false,
     val defaultFrontCamera: Boolean = false,
     val appLanguage: String = "system",
+    /** Video until the user says otherwise; the choice is remembered. */
+    val captureMode: CaptureMode = CaptureMode.VIDEO,
 )
+
+/** Which pipeline the shutter drives. Each binds its own CameraX use cases. */
+enum class CaptureMode { VIDEO, PHOTO }
 
 enum class VideoQuality(val label: String) {
     UHD("4K UHD"),
@@ -37,6 +42,7 @@ object SettingsStore {
     private const val KEY_AUTO_SAVE = "auto_save"
     private const val KEY_DEFAULT_FRONT = "default_front_camera"
     private const val KEY_LANGUAGE = "app_language"
+    private const val KEY_CAPTURE_MODE = "capture_mode"
 
     fun load(context: Context): AppSettings {
         val prefs = prefs(context)
@@ -55,6 +61,11 @@ object SettingsStore {
             autoSave = prefs.getBoolean(KEY_AUTO_SAVE, false),
             defaultFrontCamera = prefs.getBoolean(KEY_DEFAULT_FRONT, false),
             appLanguage = prefs.getString(KEY_LANGUAGE, "system") ?: "system",
+            captureMode = try {
+                CaptureMode.valueOf(prefs.getString(KEY_CAPTURE_MODE, "VIDEO") ?: "VIDEO")
+            } catch (_: Exception) {
+                CaptureMode.VIDEO
+            },
         )
     }
 
@@ -70,6 +81,7 @@ object SettingsStore {
             putBoolean(KEY_AUTO_SAVE, settings.autoSave)
             putBoolean(KEY_DEFAULT_FRONT, settings.defaultFrontCamera)
             putString(KEY_LANGUAGE, settings.appLanguage)
+            putString(KEY_CAPTURE_MODE, settings.captureMode.name)
         }
     }
 

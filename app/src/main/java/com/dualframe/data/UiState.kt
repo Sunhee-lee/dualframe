@@ -38,6 +38,7 @@ data class UiState(
     val showFhdFallbackToast: Boolean = false,
     val showAutoSaveCompleteToast: Boolean = false,
     val showAutoSaveFailToast: Boolean = false,
+    val showPhotoSavedToast: Boolean = false,
     // Storage-based recording limit
     val remainingRecordingSeconds: Int? = null,  // null when > 5 min or not recording
     val endedEarlyDueToStorage: Boolean = false,

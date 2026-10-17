@@ -144,4 +144,11 @@
     <string name="tile_flash_desc">Nyalakan/matikan lampu</string>
     <string name="tile_settings_name">Pengaturan</string>
     <string name="tile_settings_desc">Pengaturan kamera lainnya</string>
+
+    <!-- Photo capture mode (stage 1) -->
+    <string name="settings_capture_mode">Mode pengambilan</string>
+    <string name="mode_video">Video</string>
+    <string name="mode_photo">Foto</string>
+    <string name="toast_photo_saved">Foto tersimpan</string>
+    <string name="error_photo_failed">Gagal mengambil foto. Coba lagi.</string>
 </resources>
