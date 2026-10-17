@@ -902,10 +902,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         val online = com.dualframe.monetize.AdGraceManager.isOnline(app)
-        Log.i(TAG, "Ad failed — online=$online")
+        // Why the attempt failed was settled when it failed. Reading only the
+        // connection as it is now would let a user who reconnects between the
+        // failure and this point collect grace for a stretch of airplane mode,
+        // which is how the offline save was turning up without an ad.
+        val failedOffline = com.dualframe.monetize.AdRewardManager.recoveryStalled.value
+        Log.i(TAG, "Ad failed — online=$online failedOffline=$failedOffline")
 
-        if (!online) {
-            Log.i(TAG, "Offline — showing offline dialog")
+        if (!online || failedOffline) {
+            Log.i(TAG, "Offline failure — showing offline dialog")
             _uiState.update { it.copy(adFailDialog = com.dualframe.data.AdFailType.OFFLINE) }
             return
         }
