@@ -83,7 +83,20 @@ object AdRewardManager {
     private var appContext: Context? = null
     private var rewardedAd: RewardedAd? = null
     private var loadedAtMs = 0L
-    private var isForeground = false
+    private val _isForeground = MutableStateFlow(false)
+    val isForeground: StateFlow<Boolean> = _isForeground.asStateFlow()
+
+    /**
+     * Set when an automatic attempt was abandoned without being made, because
+     * the device was offline when its turn came. Nothing reschedules the chain,
+     * so a caller waiting on it needs to know it has stopped.
+     *
+     * Deliberately separate from [consecutiveLoadFailures]: no request went out,
+     * so nothing failed. Cleared the moment a load starts, and when the app
+     * comes back with a connection.
+     */
+    private val _recoveryStalled = MutableStateFlow(false)
+    val recoveryStalled: StateFlow<Boolean> = _recoveryStalled.asStateFlow()
     private var initialized = false
 
     private var generation = 0
@@ -106,6 +119,10 @@ object AdRewardManager {
      * emission, leaving [state] unchanged from FAILED and nothing to wake an
      * observer with.
      */
+    // Always written before [state] flips to FAILED, so an observer reading the
+    // two separately can see a stale count next to a fresh FAILED (harmless, it
+    // re-evaluates when the count arrives) but never a fresh count beside a
+    // state belonging to a later request.
     private val _consecutiveLoadFailures = MutableStateFlow(0)
     val consecutiveLoadFailures: StateFlow<Int> = _consecutiveLoadFailures.asStateFlow()
 
@@ -174,11 +191,14 @@ object AdRewardManager {
 
     /** Called from the Application's activity-lifecycle tracker. */
     fun notifyForeground(foreground: Boolean) {
-        if (isForeground == foreground) return
-        isForeground = foreground
+        if (_isForeground.value == foreground) return
+        _isForeground.value = foreground
         if (!foreground) return
         val ctx = appContext ?: return
         if (!AdGraceManager.isOnline(ctx)) return
+        // Whatever stalled the chain is over; the throttle below may still hold
+        // off the load, and the gate's retry button covers that.
+        _recoveryStalled.value = false
         // Coming back to the app is the natural moment to recover from an
         // exhausted retry run, but only at a bounded rate.
         if (validAdOrNull() != null || _state.value == AdState.LOADING) return
@@ -241,6 +261,7 @@ object AdRewardManager {
 
     private fun startLoad(ctx: Context) {
         retryJob?.cancel()
+        _recoveryStalled.value = false
         generation++
         val gen = generation
         inFlightGeneration = gen
@@ -335,17 +356,19 @@ object AdRewardManager {
         retryJob = scope.launch {
             delay(delayMs)
             val ctx = appContext ?: return@launch
-            if (!isForeground) {
-                // The chain stops here; nothing reschedules it. Count the
-                // attempt so a caller waiting on it is not left hanging.
-                _consecutiveLoadFailures.value++
+            if (!_isForeground.value) {
+                // No request went out, so nothing failed and nothing is
+                // reported. The user is not here to see a result anyway;
+                // returning to the app restarts the search.
                 log("retry_skipped_background n=$retryIndex")
                 return@launch
             }
             if (!AdGraceManager.isOnline(ctx)) {
-                // Same, and onAdFailed() will recognise the offline case and
-                // show the offline dialog rather than spending grace.
-                _consecutiveLoadFailures.value++
+                // Also not a failed request, but the chain does end here, and
+                // the user is watching. Say so without inventing a failure:
+                // onAdFailed() recognises the offline case and shows the
+                // offline dialog rather than spending grace.
+                _recoveryStalled.value = true
                 log("retry_skipped_offline n=$retryIndex")
                 return@launch
             }

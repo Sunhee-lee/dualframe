@@ -1393,6 +1393,8 @@ private fun AdGateDialog(
 ) {
     val adState by com.dualframe.monetize.AdRewardManager.state.collectAsState()
     val loadFailures by com.dualframe.monetize.AdRewardManager.consecutiveLoadFailures.collectAsState()
+    val recoveryStalled by com.dualframe.monetize.AdRewardManager.recoveryStalled.collectAsState()
+    val appForeground by com.dualframe.monetize.AdRewardManager.isForeground.collectAsState()
     var waitedTooLong by remember { mutableStateOf(false) }
     var waitRound by remember { mutableStateOf(0) }
     var failureHandled by remember { mutableStateOf(false) }
@@ -1412,15 +1414,21 @@ private fun AdGateDialog(
         waitedTooLong = true
     }
 
-    // Keyed on the failure count as well as the state: a load that fails inside
-    // one frame never leaves FAILED as far as this sees, so adState alone would
-    // not restart the effect.
-    LaunchedEffect(adState, loadFailures) {
+    // Keyed on every input it reads. The failure count matters on its own
+    // because a load that fails inside one frame never leaves FAILED as far as
+    // this sees, so adState alone would not restart the effect; the foreground
+    // flag matters because returning to the app is when a verdict withheld
+    // while the user was away gets reconsidered.
+    LaunchedEffect(adState, loadFailures, recoveryStalled, appForeground) {
+        // Nothing decides the user's save while they are not in the app. A
+        // result that lands in the background waits for them to come back.
+        if (!appForeground) return@LaunchedEffect
         // A single failure with a retry already queued is a stumble, not an ad
         // the app cannot deliver; waiting for that retry to come back costs the
-        // user nothing and keeps their one grace save for a real failure.
+        // user nothing and keeps their one grace save for a real failure. A
+        // stalled chain is different — nothing further is coming.
         val confirmed = adState == com.dualframe.monetize.AdRewardManager.AdState.FAILED &&
-            loadFailures >= AD_GATE_FAILURES_BEFORE_POLICY
+            (loadFailures >= AD_GATE_FAILURES_BEFORE_POLICY || recoveryStalled)
         if (confirmed && !failureHandled) {
             failureHandled = true
             onDismiss()
