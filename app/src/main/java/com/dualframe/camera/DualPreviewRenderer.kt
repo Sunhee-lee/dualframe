@@ -8,6 +8,7 @@ import android.opengl.EGLDisplay
 import android.opengl.EGLSurface
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
+import com.dualframe.util.BeautyShader
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
@@ -34,30 +35,35 @@ class DualPreviewRenderer {
             }
         """
 
-        private const val FRAGMENT_SHADER = """
+        // The selfie effect itself lives in BeautyShader and is shared with the
+        // exporter, so the preview can no longer show a softness the saved file
+        // will not have. Only the sampling differs: this side reads the camera's
+        // external texture, the exporter reads an ordinary one.
+        private val FRAGMENT_SHADER = """
             #extension GL_OES_EGL_image_external : require
             precision mediump float;
             uniform samplerExternalOES sTexture;
             uniform float uBeauty;
+            uniform vec2 uTexelSize;
+            uniform float uRadius;
             varying vec2 vTexCoord;
+
+            ${BeautyShader.COMMON_GLSL}
+
             void main() {
                 vec4 color = texture2D(sTexture, vTexCoord);
                 if (uBeauty > 0.0) {
-                    float off = 0.0018;
-                    vec4 s1 = texture2D(sTexture, vTexCoord + vec2(off, 0.0));
-                    vec4 s2 = texture2D(sTexture, vTexCoord + vec2(-off, 0.0));
-                    vec4 s3 = texture2D(sTexture, vTexCoord + vec2(0.0, off));
-                    vec4 s4 = texture2D(sTexture, vTexCoord + vec2(0.0, -off));
-                    vec4 blurred = (color + s1 + s2 + s3 + s4) / 5.0;
-                    color.rgb = mix(color.rgb, blurred.rgb, 0.20);
-                    color.rgb = color.rgb + 0.08;
-                    color.rgb = (color.rgb - 0.5) * (1.0 + 0.08) + 0.5;
-                    color.r = color.r * 1.0;
-                    color.g = color.g * 0.995;
-                    color.b = color.b * 1.005;
-                    float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                    color.rgb = mix(vec3(gray), color.rgb, 1.03);
-                    color.rgb = clamp(color.rgb, 0.0, 1.0);
+                    vec2 o = uTexelSize * uRadius;
+                    vec3 c  = color.rgb;
+                    vec3 n0 = texture2D(sTexture, vTexCoord + vec2(-o.x, -o.y)).rgb;
+                    vec3 n1 = texture2D(sTexture, vTexCoord + vec2( 0.0, -o.y)).rgb;
+                    vec3 n2 = texture2D(sTexture, vTexCoord + vec2( o.x, -o.y)).rgb;
+                    vec3 n3 = texture2D(sTexture, vTexCoord + vec2(-o.x,  0.0)).rgb;
+                    vec3 n4 = texture2D(sTexture, vTexCoord + vec2( o.x,  0.0)).rgb;
+                    vec3 n5 = texture2D(sTexture, vTexCoord + vec2(-o.x,  o.y)).rgb;
+                    vec3 n6 = texture2D(sTexture, vTexCoord + vec2( 0.0,  o.y)).rgb;
+                    vec3 n7 = texture2D(sTexture, vTexCoord + vec2( o.x,  o.y)).rgb;
+                    color.rgb = dfTone(dfSmoothSkin(c, n0, n1, n2, n3, n4, n5, n6, n7));
                 }
                 gl_FragColor = color;
             }
@@ -101,6 +107,8 @@ class DualPreviewRenderer {
     private var uSTMatrixHandle = 0
     private var uMVPMatrixHandle = 0
     private var uBeautyHandle = 0
+    private var uTexelSizeHandle = 0
+    private var uRadiusHandle = 0
     private var aPositionHandle = 0
     private var aTexCoordHandle = 0
 
@@ -255,6 +263,16 @@ class DualPreviewRenderer {
             GLES20.glUniformMatrix4fv(uSTMatrixHandle, 1, false, stMatrix, 0)
             GLES20.glUniformMatrix4fv(uMVPMatrixHandle, 1, false, mvp, 0)
             GLES20.glUniform1f(uBeautyHandle, if (beautyEnabled) 1.0f else 0.0f)
+            // One pixel of the camera buffer, and a radius that is a fraction of
+            // its height — the exporter computes the same way from the master's
+            // own size, so both smooth across the same share of a face.
+            val texW = if (previewWidth > 0) previewWidth else 1
+            val texH = if (previewHeight > 0) previewHeight else 1
+            GLES20.glUniform2f(uTexelSizeHandle, 1f / texW, 1f / texH)
+            GLES20.glUniform1f(
+                uRadiusHandle,
+                (texH * com.dualframe.util.BeautyParams.SMOOTH_RADIUS_RATIO).coerceAtLeast(1f),
+            )
 
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
             GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId)
@@ -328,6 +346,8 @@ class DualPreviewRenderer {
         uSTMatrixHandle = GLES20.glGetUniformLocation(program, "uSTMatrix")
         uMVPMatrixHandle = GLES20.glGetUniformLocation(program, "uMVPMatrix")
         uBeautyHandle = GLES20.glGetUniformLocation(program, "uBeauty")
+        uTexelSizeHandle = GLES20.glGetUniformLocation(program, "uTexelSize")
+        uRadiusHandle = GLES20.glGetUniformLocation(program, "uRadius")
         aPositionHandle = GLES20.glGetAttribLocation(program, "aPosition")
         aTexCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
 

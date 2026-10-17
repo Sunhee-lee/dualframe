@@ -4,15 +4,9 @@ package com.dualframe.util
  * Selfie effect parameters — shared between preview GL shader and saved-file Media3 effects.
  *
  * HOW TO TUNE:
- * Change these numbers, rebuild, and both preview and saved output will update.
- * Preview also has a subtle blur (BLUR_*) that saved files can't replicate
- * because Media3 1.5.x has no built-in blur effect.
- *
- * Media3 built-in effects used for saved files:
- *   Brightness(BRIGHTNESS)
- *   Contrast(CONTRAST)
- *   RgbAdjustment(red=RED_SCALE, green=GREEN_SCALE, blue=BLUE_SCALE)
- *   HslAdjustment(saturation=SATURATION_BOOST)
+ * Change these numbers, rebuild, and both preview and saved output will update
+ * — genuinely, now. Both read them through BeautyShader, which writes the GLSL
+ * once; neither carries a literal of its own to fall out of step with.
  */
 object BeautyParams {
 
@@ -31,9 +25,26 @@ object BeautyParams {
     // Percentage-point boost for HslAdjustment. 0 = off, 5 = vivid.
     const val SATURATION_BOOST = 3f         // ← 올리면 색이 진해짐
 
-    // ── Blur (preview only — Media3 has no blur) ──
-    // Texel offset for 4-sample box blur. 0 = off.
-    const val BLUR_OFFSET = 0.0018f         // ← 올리면 블러 범위 커짐
-    // Blend ratio of blurred vs original. 0 = no blur, 1 = full blur.
-    const val BLUR_MIX = 0.20f              // ← 올리면 더 부드러워짐
+    // ── Skin smoothing (preview and saved file alike) ──
+    // Shared by the preview shader and the exporter through BeautyShader, so a
+    // change here moves both. The old BLUR_* pair is gone: it was a flat box
+    // blur the exporter could not reproduce, so it softened hair and eyes in a
+    // preview whose softness never reached the file.
+
+    /**
+     * Sampling ring radius as a fraction of frame height, not a pixel count —
+     * a 1080p preview and a 2160p master then smooth across the same share of
+     * a face, which is what makes the two look alike.
+     */
+    const val SMOOTH_RADIUS_RATIO = 0.0016f // ← 올리면 보정 범위 넓어짐
+
+    /** How far towards the smoothed value skin is allowed to go. */
+    const val SMOOTH_STRENGTH = 0.55f       // ← 올리면 더 부드러워짐
+
+    /**
+     * Brightness difference at which a neighbour stops counting. Lower keeps
+     * more edges — lashes, lips, the line of a jaw — crisp; higher smooths
+     * harder and starts to flatten them.
+     */
+    const val EDGE_THRESHOLD = 0.085f       // ← 내리면 윤곽이 더 선명
 }

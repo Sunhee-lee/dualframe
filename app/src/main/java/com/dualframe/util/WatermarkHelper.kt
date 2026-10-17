@@ -41,10 +41,10 @@ import kotlin.math.ceil
 /**
  * Applies watermark and/or beauty effects to a video file using Media3 Transformer.
  *
- * Beauty parameters (saved video, approximated via Media3 built-in effects):
- *   brightness=0.02, warmth=0.01 (red lift), saturation=1.01
- * Note: smooth/mix (blur) and gamma are preview-only — Media3 1.5.x has no
- * built-in blur/gamma effect and implementing a custom GlShaderProgram is out of scope.
+ * Beauty runs through [SkinSmoothEffect], which carries the same GLSL the
+ * preview shader does, so the saved file matches what was on screen. If that
+ * custom shader fails on a device, the clip is re-exported with Media3's own
+ * tone effects instead — the look is poorer, but the save still happens.
  */
 @UnstableApi
 object WatermarkHelper {
@@ -68,6 +68,34 @@ object WatermarkHelper {
         applyBeauty: Boolean,
         mirrorHorizontally: Boolean = false,
         onProgress: (Float) -> Unit = {},
+    ): File? {
+        val first = attemptEffects(
+            context, sourceFile, outputFile, applyWatermark, applyBeauty,
+            mirrorHorizontally, skipSkinEffect = false, onProgress = onProgress,
+        )
+        if (first != null || !applyBeauty) return first
+
+        // The skin shader is the one piece here that runs code of ours on the
+        // device's GPU, so it is the one piece that can fail in ways the rest
+        // cannot. A selfie that saves without smoothing beats a selfie that
+        // does not save, so the clip gets one more pass without it; the mirror
+        // and the watermark, which the user would notice missing, survive.
+        Log.w(TAG, "Export failed with the skin effect — retrying without it")
+        return attemptEffects(
+            context, sourceFile, outputFile, applyWatermark, applyBeauty,
+            mirrorHorizontally, skipSkinEffect = true, onProgress = onProgress,
+        )
+    }
+
+    private suspend fun attemptEffects(
+        context: Context,
+        sourceFile: File,
+        outputFile: File,
+        applyWatermark: Boolean,
+        applyBeauty: Boolean,
+        mirrorHorizontally: Boolean,
+        skipSkinEffect: Boolean,
+        onProgress: (Float) -> Unit,
     ): File? = withContext(Dispatchers.Main) {
         try {
             val mediaItem = MediaItem.fromUri(sourceFile.toURI().toString())
@@ -86,9 +114,17 @@ object WatermarkHelper {
                 )
             }
 
-            // Beauty effects — values from BeautyParams.kt
-            // Same parameters as the preview GL shader (minus blur which Media3 can't do).
-            if (applyBeauty) {
+            // Beauty — one effect carrying the same GLSL the preview runs, so
+            // the file no longer lacks the smoothing the preview showed. It
+            // replaces the four built-ins that used to approximate the tone
+            // part, because those could not smooth skin and maintaining the
+            // look in two places is what let the two drift apart.
+            if (applyBeauty && !skipSkinEffect) {
+                videoEffects.add(SkinSmoothEffect())
+            } else if (applyBeauty) {
+                // Fallback pass: the custom shader failed once for this clip, so
+                // apply what Media3 can do on its own rather than lose the look
+                // entirely. Tone only — no smoothing.
                 videoEffects.add(Brightness(BeautyParams.BRIGHTNESS))
                 videoEffects.add(Contrast(BeautyParams.CONTRAST))
                 videoEffects.add(
@@ -157,8 +193,8 @@ object WatermarkHelper {
                 .build()
 
             runTransformer(context, editedMediaItem, outputFile, onProgress)
-            Log.i(TAG, "Effects applied (watermark=$applyWatermark, beauty=$applyBeauty): " +
-                "${outputFile.absolutePath}")
+            Log.i(TAG, "Effects applied (watermark=$applyWatermark, beauty=$applyBeauty, " +
+                "skinEffect=${applyBeauty && !skipSkinEffect}): ${outputFile.absolutePath}")
             outputFile
         } catch (e: Exception) {
             Log.e(TAG, "applyEffects failed", e)
