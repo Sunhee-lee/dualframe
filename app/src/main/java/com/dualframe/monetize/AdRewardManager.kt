@@ -223,6 +223,8 @@ object AdRewardManager {
             return
         }
         if (validAdOrNull() != null) {
+            // Holding an ad settles whatever stalled an earlier attempt.
+            _recoveryStalled.value = false
             _state.value = AdState.READY
             return
         }

@@ -1399,8 +1399,14 @@ private fun AdGateDialog(
     var waitRound by remember { mutableStateOf(0) }
     var failureHandled by remember { mutableStateOf(false) }
     var launching by remember { mutableStateOf(false) }
+    var leftTheApp by remember { mutableStateOf(false) }
 
     val ready = adState == com.dualframe.monetize.AdRewardManager.AdState.READY
+    // Once the user has been away, this visit stops deciding for them: whatever
+    // the attempts did meanwhile is reported as choices, not acted on.
+    val showChoices = waitedTooLong || leftTheApp
+
+    LaunchedEffect(appForeground) { if (!appForeground) leftTheApp = true }
 
     LaunchedEffect(Unit) { com.dualframe.monetize.AdRewardManager.ensureLoaded() }
 
@@ -1423,6 +1429,10 @@ private fun AdGateDialog(
         // Nothing decides the user's save while they are not in the app. A
         // result that lands in the background waits for them to come back.
         if (!appForeground) return@LaunchedEffect
+        // Deferring the verdict is not the same as handing it over on return.
+        // A failure that happened while the user was elsewhere must not start a
+        // save the moment they come back; the panel below offers it instead.
+        if (leftTheApp) return@LaunchedEffect
         // A single failure with a retry already queued is a stumble, not an ad
         // the app cannot deliver; waiting for that retry to come back costs the
         // user nothing and keeps their one grace save for a real failure. A
@@ -1438,12 +1448,12 @@ private fun AdGateDialog(
 
     val title = when {
         ready -> stringResource(R.string.ad_gate_ready_title)
-        waitedTooLong -> stringResource(R.string.ad_gate_slow_title)
+        showChoices -> stringResource(R.string.ad_gate_slow_title)
         else -> stringResource(R.string.ad_gate_loading_title)
     }
     val desc = when {
         ready -> stringResource(R.string.ad_gate_ready_desc)
-        waitedTooLong -> stringResource(R.string.ad_gate_slow_desc)
+        showChoices -> stringResource(R.string.ad_gate_slow_desc)
         else -> stringResource(R.string.ad_gate_loading_desc)
     }
 
@@ -1467,7 +1477,7 @@ private fun AdGateDialog(
                 fontFamily = PretendardFont,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
 
-            if (!ready && !waitedTooLong) {
+            if (!ready && !showChoices) {
                 Spacer(Modifier.height(18.dp))
                 CircularProgressIndicator(
                     modifier = Modifier.size(28.dp),
@@ -1509,7 +1519,7 @@ private fun AdGateDialog(
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.height(8.dp))
-            } else if (waitedTooLong) {
+            } else if (showChoices) {
                 Box(
                     modifier = Modifier.fillMaxWidth().height(44.dp)
                         .clip(RoundedCornerShape(10.dp))
@@ -1518,6 +1528,8 @@ private fun AdGateDialog(
                             // No-op when a load is already in flight, a fresh
                             // request otherwise — so this is never a dead tap.
                             com.dualframe.monetize.AdRewardManager.retryNow()
+                            // An explicit ask puts this visit back in charge.
+                            leftTheApp = false
                             waitRound++
                         },
                     contentAlignment = Alignment.Center,
