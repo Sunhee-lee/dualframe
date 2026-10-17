@@ -2,6 +2,7 @@ package com.dualframe.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -177,6 +178,11 @@ fun SettingsPanel(
  * say over how long it stays. Here it goes to the left of the tile, clear of
  * the rail and of the preview behind it.
  */
+// combinedClickable is still ExperimentalFoundationApi in Foundation 1.7.x.
+// The stable alternative, pointerInput + detectTapGestures, would mean giving
+// up clickable's ripple and its button semantics, so the opt-in is the smaller
+// change — scoped to this one function.
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RailTile(
     name: String,
