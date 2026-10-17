@@ -124,4 +124,24 @@
     <!-- Keep-screen-awake tile (control rail) -->
     <string name="rail_keep_screen_on">ON</string>
     <string name="rail_keep_screen_auto">AUTO</string>
+
+    <!-- Control-rail tiles: name + long-press description -->
+    <string name="tile_mic_name">Microphone</string>
+    <string name="tile_mic_desc">Record audio with video</string>
+    <string name="tile_grid_name">Grid</string>
+    <string name="tile_grid_desc">Show composition guides</string>
+    <string name="tile_keep_screen_name">Keep Screen On</string>
+    <string name="tile_keep_screen_desc">Prevent screen timeout</string>
+    <string name="tile_zoom_name">Zoom</string>
+    <string name="tile_zoom_desc">Switch wide 0.6x / 1.0x</string>
+    <string name="tile_resolution_name">Resolution</string>
+    <string name="tile_resolution_desc">Choose video quality</string>
+    <string name="tile_timer_name">Timer</string>
+    <string name="tile_timer_desc">Countdown before recording</string>
+    <string name="tile_beauty_name">Beauty</string>
+    <string name="tile_beauty_desc">Smooth selfie look</string>
+    <string name="tile_flash_name">Flash</string>
+    <string name="tile_flash_desc">Turn the camera light on</string>
+    <string name="tile_settings_name">Settings</string>
+    <string name="tile_settings_desc">More camera settings</string>
 </resources>

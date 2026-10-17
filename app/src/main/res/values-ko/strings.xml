@@ -124,4 +124,24 @@
     <!-- Keep-screen-awake tile (control rail) -->
     <string name="rail_keep_screen_on">유지</string>
     <string name="rail_keep_screen_auto">자동</string>
+
+    <!-- Control-rail tiles: name + long-press description -->
+    <string name="tile_mic_name">마이크</string>
+    <string name="tile_mic_desc">영상 소리 녹음</string>
+    <string name="tile_grid_name">격자</string>
+    <string name="tile_grid_desc">촬영 구도선 표시</string>
+    <string name="tile_keep_screen_name">화면 유지</string>
+    <string name="tile_keep_screen_desc">화면 자동 꺼짐 방지</string>
+    <string name="tile_zoom_name">배율</string>
+    <string name="tile_zoom_desc">광각 0.6x·기본 1.0x 전환</string>
+    <string name="tile_resolution_name">해상도</string>
+    <string name="tile_resolution_desc">영상 화질 선택</string>
+    <string name="tile_timer_name">타이머</string>
+    <string name="tile_timer_desc">촬영 시작 카운트다운</string>
+    <string name="tile_beauty_name">뷰티</string>
+    <string name="tile_beauty_desc">셀피 피부 보정</string>
+    <string name="tile_flash_name">플래시</string>
+    <string name="tile_flash_desc">촬영 조명 켜기·끄기</string>
+    <string name="tile_settings_name">설정</string>
+    <string name="tile_settings_desc">추가 촬영 설정</string>
 </resources>
