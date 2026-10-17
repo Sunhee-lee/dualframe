@@ -16,6 +16,7 @@ import com.dualframe.data.AppStatus
 import com.dualframe.data.SettingsStore
 import com.dualframe.data.UiState
 import com.dualframe.data.VideoQuality
+import com.dualframe.util.BeautyBitmapFilter
 import com.dualframe.util.VideoMetadata
 import com.dualframe.export.ExportManager
 import com.dualframe.util.FileStorage
@@ -550,8 +551,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             Log.i("DualFrameCameraDiag", "  fps: $croppedFps")
             Log.i("DualFrameCameraDiag", "==============================")
 
-            val thumbnail = generateThumbnail(nativeFile)
-            val landscapeThumbnail = generateThumbnail(croppedFile)
+            // Same condition the save paths use for `beauty`, so the picture
+            // on the result screen is the picture the save will produce.
+            val thumbBeauty = cameraManager.useFrontCamera.value &&
+                _uiState.value.settings.frontCameraEffect
+            val thumbnail = generateThumbnail(nativeFile, thumbBeauty)
+            val landscapeThumbnail = generateThumbnail(croppedFile, thumbBeauty)
 
             // Files ready in temp — NOT saved to gallery yet.
             // User must press Save Both or Remove Watermark to trigger gallery save.
@@ -964,9 +969,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── Thumbnail ─────────────────────────────────────────────────────
 
-    private suspend fun generateThumbnail(videoFile: File): Bitmap? = withContext(Dispatchers.IO) {
+    /**
+     * A frame from the master, for the result screen.
+     *
+     * The master is what the recorder wrote, so it carries none of the selfie
+     * effect — that is the exporter's doing, and the exporter has not run when
+     * this screen appears. With [applyBeauty] the frame goes through the same
+     * shared GLSL the preview and the exporter run, so the thumbnail shows what
+     * saving will actually produce rather than the untouched original. The
+     * mirror is left to the UI, which already applies it.
+     */
+    private suspend fun generateThumbnail(
+        videoFile: File,
+        applyBeauty: Boolean,
+    ): Bitmap? = withContext(Dispatchers.IO) {
         val retriever = MediaMetadataRetriever()
-        try {
+        val frame = try {
             retriever.setDataSource(videoFile.absolutePath)
             // Get a frame from 1 second in (or start if shorter)
             retriever.getFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
@@ -976,6 +994,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } finally {
             try { retriever.release() } catch (_: Exception) { }
         }
+
+        if (frame == null || !applyBeauty) return@withContext frame
+        val filtered = BeautyBitmapFilter.apply(frame)
+        // apply() hands back the original when it could not run, so only
+        // recycle what it actually replaced.
+        if (filtered !== frame) frame.recycle()
+        filtered
     }
 
     // ── Post-export actions (removed auto-save intents) ─────────────
