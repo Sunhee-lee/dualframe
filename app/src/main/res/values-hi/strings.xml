@@ -127,21 +127,21 @@
 
     <!-- Control-rail tiles: name + long-press description -->
     <string name="tile_mic_name">माइक</string>
-    <string name="tile_mic_desc">वीडियो के साथ ऑडियो रिकॉर्ड करें</string>
+    <string name="tile_mic_desc">ऑडियो रिकॉर्ड करें</string>
     <string name="tile_grid_name">ग्रिड</string>
-    <string name="tile_grid_desc">फ़्रेमिंग गाइड दिखाएँ</string>
+    <string name="tile_grid_desc">ग्रिड लाइन दिखाएँ</string>
     <string name="tile_keep_screen_name">स्क्रीन चालू</string>
-    <string name="tile_keep_screen_desc">स्क्रीन बंद होने से रोकें</string>
+    <string name="tile_keep_screen_desc">स्क्रीन चालू रखें</string>
     <string name="tile_zoom_name">ज़ूम</string>
     <string name="tile_zoom_desc">ज़ूम सेट करें</string>
     <string name="tile_resolution_name">रिज़ॉल्यूशन</string>
-    <string name="tile_resolution_desc">वीडियो क्वालिटी चुनें</string>
+    <string name="tile_resolution_desc">वीडियो क्वालिटी</string>
     <string name="tile_timer_name">टाइमर</string>
-    <string name="tile_timer_desc">रिकॉर्डिंग से पहले काउंटडाउन</string>
+    <string name="tile_timer_desc">रिकॉर्डिंग काउंटडाउन</string>
     <string name="tile_beauty_name">ब्यूटी</string>
-    <string name="tile_beauty_desc">सेल्फ़ी स्किन स्मूथिंग</string>
+    <string name="tile_beauty_desc">स्किन स्मूथिंग</string>
     <string name="tile_flash_name">फ़्लैश</string>
-    <string name="tile_flash_desc">कैमरा लाइट चालू/बंद करें</string>
+    <string name="tile_flash_desc">कैमरा लाइट चालू/बंद</string>
     <string name="tile_settings_name">सेटिंग</string>
     <string name="tile_settings_desc">और कैमरा सेटिंग</string>
 </resources>

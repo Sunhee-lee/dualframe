@@ -195,6 +195,14 @@ private fun RailTile(
     var tooltipShown by remember { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
 
+    // Held sideways there is no room to the left of the rail for a tooltip, so
+    // the tile simply behaves as it did before tooltips existed: a null
+    // onLongClick leaves combinedClickable acting like a plain clickable, and a
+    // long press that ends in a release still fires the tile's action.
+    val upright = rotation == 0f
+
+    LaunchedEffect(upright) { if (!upright) tooltipShown = false }
+
     if (tooltipShown) {
         LaunchedEffect(name) {
             delay(TOOLTIP_DURATION_MS)
@@ -209,9 +217,13 @@ private fun RailTile(
             .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(RailTheme.tileRadius))
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    tooltipShown = true
+                onLongClick = if (upright) {
+                    {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        tooltipShown = true
+                    }
+                } else {
+                    null
                 },
             )
             // The visible label is a bare word like "ON"; a screen reader needs
@@ -223,7 +235,9 @@ private fun RailTile(
         contentAlignment = Alignment.Center,
     ) {
         content()
-        if (tooltipShown) {
+        // Guarded here as well as in the effect above, so turning the phone
+        // cannot leave a tooltip drawn for the frame before the effect runs.
+        if (tooltipShown && upright) {
             RailTooltip(name, description, rotation) { tooltipShown = false }
         }
     }
