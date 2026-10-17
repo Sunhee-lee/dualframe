@@ -64,6 +64,16 @@ object AdRewardManager {
     /** Background recovery after a *confirmed* load failure. */
     private val RETRY_DELAYS_MS = longArrayOf(5_000L, 15_000L, 60_000L)
 
+    /**
+     * Floor between loads started by returning to the app.
+     *
+     * That path deliberately sits outside the retry cap so an exhausted run can
+     * recover, which means app-switching would otherwise issue one request per
+     * return — unbounded, and fastest exactly when loads are failing quickly.
+     * An explicit retry from the user is not throttled.
+     */
+    private const val FOREGROUND_LOAD_MIN_INTERVAL_MS = 60_000L
+
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
 
     private val _state = MutableStateFlow(AdState.IDLE)
@@ -82,6 +92,7 @@ object AdRewardManager {
     private var retryJob: Job? = null
     private var timeoutJob: Job? = null
     private var retryIndex = 0
+    private var lastForegroundLoadAtMs = 0L
 
     // ── Diagnostics ───────────────────────────────────────────────────
     // This project has no analytics SDK, and adding one is out of scope for a
@@ -153,8 +164,15 @@ object AdRewardManager {
         if (!foreground) return
         val ctx = appContext ?: return
         if (!AdGraceManager.isOnline(ctx)) return
-        // Idempotent: no-op while LOADING or holding a fresh ad. Coming back to
-        // the app is the natural moment to recover from an exhausted retry run.
+        // Coming back to the app is the natural moment to recover from an
+        // exhausted retry run, but only at a bounded rate.
+        if (validAdOrNull() != null || _state.value == AdState.LOADING) return
+        val now = System.currentTimeMillis()
+        if (now - lastForegroundLoadAtMs < FOREGROUND_LOAD_MIN_INTERVAL_MS) {
+            log("foreground_load_throttled")
+            return
+        }
+        lastForegroundLoadAtMs = now
         ensureLoaded()
     }
 
