@@ -1468,7 +1468,10 @@ private fun AdGateDialog(
                                     activity = activity,
                                     onRewarded = {
                                         viewModel.onAdRewarded()
-                                        android.widget.Toast.makeText(context,
+                                        // Reward can land after this Activity is
+                                        // gone; the app context outlives it.
+                                        android.widget.Toast.makeText(
+                                            context.applicationContext,
                                             context.getString(R.string.toast_watermark_removed),
                                             android.widget.Toast.LENGTH_SHORT).show()
                                     },

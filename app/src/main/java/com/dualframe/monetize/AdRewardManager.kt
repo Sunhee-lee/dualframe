@@ -162,7 +162,13 @@ object AdRewardManager {
 
     /** Starts a load only if there is nothing usable and nothing in flight. */
     fun ensureLoaded() {
-        val ctx = appContext ?: return
+        val ctx = appContext ?: run {
+            // init() is skipped for PRO owners, so this is reachable only by a
+            // caller that should not have asked. Fail rather than stall.
+            _state.value = AdState.FAILED
+            log("no_context")
+            return
+        }
         if (validAdOrNull() != null) {
             _state.value = AdState.READY
             return
@@ -179,7 +185,11 @@ object AdRewardManager {
      */
     fun retryNow() {
         Diag.userRetryTaps++
-        val ctx = appContext ?: return
+        val ctx = appContext ?: run {
+            _state.value = AdState.FAILED
+            log("no_context")
+            return
+        }
         if (_state.value == AdState.LOADING) {
             Diag.retryTapsWhileLoading++
             log("user_retry_reused_inflight")
@@ -189,13 +199,15 @@ object AdRewardManager {
             _state.value = AdState.READY
             return
         }
-        retryJob?.cancel()
+        // startLoad cancels any queued retry; the counter resets because an
+        // explicit ask deserves a fresh recovery run.
         retryIndex = 0
         log("user_retry_load")
         startLoad(ctx)
     }
 
     private fun startLoad(ctx: Context) {
+        retryJob?.cancel()
         generation++
         val gen = generation
         inFlightGeneration = gen
@@ -208,8 +220,12 @@ object AdRewardManager {
         timeoutJob = scope.launch {
             delay(LOAD_TIMEOUT_MS)
             if (inFlightGeneration == gen && _state.value == AdState.LOADING) {
-                // The request may still be alive inside the SDK; we only stop
-                // waiting on it so the UI and the state machine are not pinned.
+                // Half a minute with no callback is a failure to deliver an ad,
+                // so this reports FAILED like any other. The request may still
+                // be alive inside the SDK and we cannot cancel it — but bumping
+                // the generation means its callback, whenever it lands, is
+                // ignored rather than racing whatever ran in the meantime.
+                generation++
                 inFlightGeneration = -1
                 Diag.loadTimedOut++
                 _state.value = AdState.FAILED
@@ -224,18 +240,12 @@ object AdRewardManager {
             AdRequest.Builder().build(),
             object : RewardedAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedAd) {
+                    // A callback from a superseded attempt touches nothing.
+                    // Salvaging it would mean a second path into READY that can
+                    // land while a newer load is running or a retry is queued,
+                    // and the saved request is not worth that ambiguity.
                     if (gen != inFlightGeneration) {
-                        // Late winner from a timed-out attempt. Adopt it only
-                        // when we are empty and nothing newer is in flight, so
-                        // a stale callback can never replace a fresher ad.
-                        if (rewardedAd == null && inFlightGeneration == -1) {
-                            rewardedAd = ad
-                            loadedAtMs = System.currentTimeMillis()
-                            _state.value = AdState.READY
-                            log("late_load_adopted gen=$gen")
-                        } else {
-                            log("stale_load_dropped gen=$gen")
-                        }
+                        log("stale_load_ignored gen=$gen")
                         return
                     }
                     inFlightGeneration = -1
@@ -341,27 +351,28 @@ object AdRewardManager {
             return false
         }
 
+        // Consume the reference the moment we commit to showing it. A
+        // RewardedAd may be shown once, and clearing it from a callback would
+        // make that invariant depend on which callback arrives first.
+        rewardedAd = null
+        loadedAtMs = 0L
+        _state.value = AdState.IDLE
+
         var rewardDelivered = false
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdShowedFullScreenContent() {
-                // A RewardedAd may be shown once. Drop it here rather than in
-                // onAdDismissed, so a reference that never gets a dismiss
-                // callback cannot be handed to show() again.
-                rewardedAd = null
-                loadedAtMs = 0L
-                _state.value = AdState.IDLE
                 log("ad_shown")
             }
 
+            // Reward and dismiss arrive in either order; neither depends on the
+            // other. Reward is delivered once (rewardDelivered), and reloading
+            // is idempotent, so both orderings end in the same place.
             override fun onAdDismissedFullScreenContent() {
                 log("ad_dismissed rewarded=$rewardDelivered")
                 ensureLoaded()
             }
 
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
-                rewardedAd = null
-                loadedAtMs = 0L
-                _state.value = AdState.IDLE
                 Diag.showFailed++
                 Diag.lastErrorCode = error.code
                 Diag.lastErrorDomain = error.domain
