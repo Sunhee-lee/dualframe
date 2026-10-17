@@ -133,7 +133,7 @@
     <string name="tile_keep_screen_name">Layar Tetap Menyala</string>
     <string name="tile_keep_screen_desc">Cegah layar mati otomatis</string>
     <string name="tile_zoom_name">Zoom</string>
-    <string name="tile_zoom_desc">Beralih lebar 0,6x / 1,0x</string>
+    <string name="tile_zoom_desc">Atur zoom</string>
     <string name="tile_resolution_name">Resolusi</string>
     <string name="tile_resolution_desc">Pilih kualitas video</string>
     <string name="tile_timer_name">Timer</string>
@@ -141,7 +141,7 @@
     <string name="tile_beauty_name">Beauty</string>
     <string name="tile_beauty_desc">Perhalus tampilan selfie</string>
     <string name="tile_flash_name">Lampu</string>
-    <string name="tile_flash_desc">Nyalakan lampu kamera</string>
+    <string name="tile_flash_desc">Nyalakan/matikan lampu kamera</string>
     <string name="tile_settings_name">Pengaturan</string>
     <string name="tile_settings_desc">Pengaturan kamera lainnya</string>
 </resources>

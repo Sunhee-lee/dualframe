@@ -133,7 +133,7 @@
     <string name="tile_keep_screen_name">Manter Tela Ligada</string>
     <string name="tile_keep_screen_desc">Evitar desligamento da tela</string>
     <string name="tile_zoom_name">Zoom</string>
-    <string name="tile_zoom_desc">Alternar grande-angular 0,6x / 1,0x</string>
+    <string name="tile_zoom_desc">Ajustar zoom</string>
     <string name="tile_resolution_name">Resolução</string>
     <string name="tile_resolution_desc">Escolher a qualidade do vídeo</string>
     <string name="tile_timer_name">Timer</string>
@@ -141,7 +141,7 @@
     <string name="tile_beauty_name">Beauty</string>
     <string name="tile_beauty_desc">Suavizar a selfie</string>
     <string name="tile_flash_name">Flash</string>
-    <string name="tile_flash_desc">Ligar a luz da câmera</string>
+    <string name="tile_flash_desc">Ligar/desligar a luz da câmera</string>
     <string name="tile_settings_name">Config.</string>
     <string name="tile_settings_desc">Mais ajustes de câmera</string>
 </resources>
