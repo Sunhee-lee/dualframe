@@ -269,8 +269,12 @@ object AdRewardManager {
         inFlightGeneration = gen
         _state.value = AdState.LOADING
         val startedAt = System.currentTimeMillis()
+        // Whether the request went out with a connection at all. Checked again
+        // when it comes back, because a failure explained by the device's own
+        // connectivity is not the ad system failing to supply one.
+        val startedOnline = AdGraceManager.isOnline(ctx)
         Diag.loadStarted++
-        log("load_start gen=$gen attempt=$retryIndex")
+        log("load_start gen=$gen attempt=$retryIndex online=$startedOnline")
 
         timeoutJob?.cancel()
         timeoutJob = scope.launch {
@@ -284,7 +288,7 @@ object AdRewardManager {
                 generation++
                 inFlightGeneration = -1
                 Diag.loadTimedOut++
-                _consecutiveLoadFailures.value++
+                recordFailedAttempt(ctx, networkError = false, startedOnline = startedOnline)
                 _state.value = AdState.FAILED
                 log("load_timeout gen=$gen")
                 scheduleRetry()
@@ -330,13 +334,51 @@ object AdRewardManager {
                     Diag.lastErrorCode = error.code
                     Diag.lastErrorDomain = error.domain
                     Diag.lastLoadMs = System.currentTimeMillis() - startedAt
-                    _consecutiveLoadFailures.value++
+                    recordFailedAttempt(
+                        ctx,
+                        networkError = error.code == AdRequest.ERROR_CODE_NETWORK_ERROR,
+                        startedOnline = startedOnline,
+                    )
                     _state.value = AdState.FAILED
                     log("load_failed gen=$gen code=${error.code} domain=${error.domain}")
                     scheduleRetry()
                 }
             },
         )
+    }
+
+    /**
+     * Files a load attempt that produced no ad.
+     *
+     * Only a request that went out with a connection, came back with one, and
+     * did not come back blaming the network counts toward
+     * [consecutiveLoadFailures]: that counter is the evidence the save policy
+     * acts on, and it should mean "the ad system had nothing for us", not "this
+     * phone was in a tunnel". An attempt the device's own connectivity explains
+     * is never added — and nothing is ever subtracted either, so a genuine
+     * online failure recorded earlier still stands after a trip offline.
+     */
+    private fun recordFailedAttempt(ctx: Context, networkError: Boolean, startedOnline: Boolean) {
+        val onlineNow = AdGraceManager.isOnline(ctx)
+        when {
+            startedOnline && onlineNow && !networkError -> {
+                _consecutiveLoadFailures.value++
+                log("failure_counted total=${_consecutiveLoadFailures.value}")
+            }
+            !onlineNow -> {
+                // Offline: nothing further is coming until a connection does,
+                // and the user should be told rather than left waiting. The
+                // offline dialog is reached without spending grace.
+                _recoveryStalled.value = true
+                log("failure_offline_not_counted")
+            }
+            else -> {
+                // The connection returned while the request was out, or the SDK
+                // blamed the network while ours looked up. Evidence of nothing;
+                // the retry already scheduled will settle it.
+                log("failure_unattributable_not_counted")
+            }
+        }
     }
 
     /**
