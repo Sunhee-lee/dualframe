@@ -119,6 +119,5 @@
     <string name="ad_gate_ready_title">विज्ञापन तैयार है</string>
     <string name="ad_gate_ready_desc">वॉटरमार्क के बिना सहेजने के लिए विज्ञापन देखें।</string>
     <string name="btn_watch_ad">विज्ञापन देखें</string>
-    <string name="btn_keep_waiting">प्रतीक्षा करें</string>
     <string name="btn_close">बंद करें</string>
 </resources>

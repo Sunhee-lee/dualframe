@@ -1392,6 +1392,7 @@ private fun AdGateDialog(
     onDismiss: () -> Unit,
 ) {
     val adState by com.dualframe.monetize.AdRewardManager.state.collectAsState()
+    val loadFailures by com.dualframe.monetize.AdRewardManager.consecutiveLoadFailures.collectAsState()
     var waitedTooLong by remember { mutableStateOf(false) }
     var waitRound by remember { mutableStateOf(0) }
     var failureHandled by remember { mutableStateOf(false) }
@@ -1411,13 +1412,15 @@ private fun AdGateDialog(
         waitedTooLong = true
     }
 
-    LaunchedEffect(adState) {
+    // Keyed on the failure count as well as the state: a load that fails inside
+    // one frame never leaves FAILED as far as this sees, so adState alone would
+    // not restart the effect.
+    LaunchedEffect(adState, loadFailures) {
         // A single failure with a retry already queued is a stumble, not an ad
         // the app cannot deliver; waiting for that retry to come back costs the
         // user nothing and keeps their one grace save for a real failure.
         val confirmed = adState == com.dualframe.monetize.AdRewardManager.AdState.FAILED &&
-            com.dualframe.monetize.AdRewardManager.consecutiveLoadFailures >=
-            AD_GATE_FAILURES_BEFORE_POLICY
+            loadFailures >= AD_GATE_FAILURES_BEFORE_POLICY
         if (confirmed && !failureHandled) {
             failureHandled = true
             onDismiss()
@@ -1503,10 +1506,15 @@ private fun AdGateDialog(
                     modifier = Modifier.fillMaxWidth().height(44.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp))
-                        .clickable { waitRound++ },
+                        .clickable {
+                            // No-op when a load is already in flight, a fresh
+                            // request otherwise — so this is never a dead tap.
+                            com.dualframe.monetize.AdRewardManager.retryNow()
+                            waitRound++
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(stringResource(R.string.btn_keep_waiting), color = Color.White, fontSize = 15.sp,
+                    Text(stringResource(R.string.btn_retry), color = Color.White, fontSize = 15.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.height(8.dp))

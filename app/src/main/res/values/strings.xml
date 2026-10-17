@@ -119,6 +119,5 @@
     <string name="ad_gate_ready_title">Ad ready</string>
     <string name="ad_gate_ready_desc">Watch it to save without the watermark.</string>
     <string name="btn_watch_ad">Watch ad</string>
-    <string name="btn_keep_waiting">Keep waiting</string>
     <string name="btn_close">Close</string>
 </resources>

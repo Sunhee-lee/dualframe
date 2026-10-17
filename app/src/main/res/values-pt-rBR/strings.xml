@@ -119,6 +119,5 @@
     <string name="ad_gate_ready_title">Anúncio pronto</string>
     <string name="ad_gate_ready_desc">Assista para salvar sem a marca d\'água.</string>
     <string name="btn_watch_ad">Assistir anúncio</string>
-    <string name="btn_keep_waiting">Continuar esperando</string>
     <string name="btn_close">Fechar</string>
 </resources>

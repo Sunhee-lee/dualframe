@@ -95,14 +95,19 @@ object AdRewardManager {
     private var lastForegroundLoadAtMs = 0L
 
     /**
-     * Load attempts that have come back failed since the last success.
+     * Automatic attempts that have come and gone without producing an ad since
+     * the last success — a failed load, a timeout, or a scheduled retry that
+     * could not run.
      *
-     * One failure with a retry already queued is not the same thing as an ad
-     * the app cannot deliver — the retry may still produce one. Callers use
-     * this to decide when a FAILED state is worth acting on.
+     * One failure with a retry still queued is not the same thing as an ad the
+     * app cannot deliver, so callers wait for this to pass the first retry
+     * before acting. It is a flow rather than a plain counter because a load
+     * that fails within a single frame collapses LOADING -> FAILED into one
+     * emission, leaving [state] unchanged from FAILED and nothing to wake an
+     * observer with.
      */
-    var consecutiveLoadFailures = 0
-        private set
+    private val _consecutiveLoadFailures = MutableStateFlow(0)
+    val consecutiveLoadFailures: StateFlow<Int> = _consecutiveLoadFailures.asStateFlow()
 
     // ── Diagnostics ───────────────────────────────────────────────────
     // This project has no analytics SDK, and adding one is out of scope for a
@@ -256,7 +261,7 @@ object AdRewardManager {
                 generation++
                 inFlightGeneration = -1
                 Diag.loadTimedOut++
-                consecutiveLoadFailures++
+                _consecutiveLoadFailures.value++
                 _state.value = AdState.FAILED
                 log("load_timeout gen=$gen")
                 scheduleRetry()
@@ -282,7 +287,7 @@ object AdRewardManager {
                     rewardedAd = ad
                     loadedAtMs = System.currentTimeMillis()
                     retryIndex = 0
-                    consecutiveLoadFailures = 0
+                    _consecutiveLoadFailures.value = 0
                     Diag.loadSucceeded++
                     Diag.lastLoadMs = loadedAtMs - startedAt
                     _state.value = AdState.READY
@@ -302,7 +307,7 @@ object AdRewardManager {
                     Diag.lastErrorCode = error.code
                     Diag.lastErrorDomain = error.domain
                     Diag.lastLoadMs = System.currentTimeMillis() - startedAt
-                    consecutiveLoadFailures++
+                    _consecutiveLoadFailures.value++
                     _state.value = AdState.FAILED
                     log("load_failed gen=$gen code=${error.code} domain=${error.domain}")
                     scheduleRetry()
@@ -331,10 +336,16 @@ object AdRewardManager {
             delay(delayMs)
             val ctx = appContext ?: return@launch
             if (!isForeground) {
+                // The chain stops here; nothing reschedules it. Count the
+                // attempt so a caller waiting on it is not left hanging.
+                _consecutiveLoadFailures.value++
                 log("retry_skipped_background n=$retryIndex")
                 return@launch
             }
             if (!AdGraceManager.isOnline(ctx)) {
+                // Same, and onAdFailed() will recognise the offline case and
+                // show the offline dialog rather than spending grace.
+                _consecutiveLoadFailures.value++
                 log("retry_skipped_offline n=$retryIndex")
                 return@launch
             }

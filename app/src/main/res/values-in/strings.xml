@@ -119,6 +119,5 @@
     <string name="ad_gate_ready_title">Iklan siap</string>
     <string name="ad_gate_ready_desc">Tonton iklan untuk menyimpan tanpa watermark.</string>
     <string name="btn_watch_ad">Tonton iklan</string>
-    <string name="btn_keep_waiting">Tunggu lagi</string>
     <string name="btn_close">Tutup</string>
 </resources>
