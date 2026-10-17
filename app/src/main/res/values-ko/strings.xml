@@ -124,6 +124,4 @@
     <!-- Keep-screen-awake tile (control rail) -->
     <string name="rail_keep_screen_on">유지</string>
     <string name="rail_keep_screen_auto">자동</string>
-    <string name="toast_keep_screen_on">화면이 자동으로 꺼지지 않습니다.</string>
-    <string name="toast_keep_screen_auto">휴대폰의 화면 꺼짐 설정을 따릅니다.</string>
 </resources>

@@ -124,6 +124,4 @@
     <!-- Keep-screen-awake tile (control rail) -->
     <string name="rail_keep_screen_on">Ligado</string>
     <string name="rail_keep_screen_auto">Auto</string>
-    <string name="toast_keep_screen_on">A tela não vai desligar automaticamente.</string>
-    <string name="toast_keep_screen_auto">Segue a configuração de desligamento de tela do aparelho.</string>
 </resources>

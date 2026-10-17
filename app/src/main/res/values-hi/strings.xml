@@ -124,6 +124,4 @@
     <!-- Keep-screen-awake tile (control rail) -->
     <string name="rail_keep_screen_on">चालू</string>
     <string name="rail_keep_screen_auto">ऑटो</string>
-    <string name="toast_keep_screen_on">आपकी स्क्रीन अपने आप बंद नहीं होगी।</string>
-    <string name="toast_keep_screen_auto">फ़ोन की स्क्रीन टाइमआउट सेटिंग का पालन करता है।</string>
 </resources>

@@ -124,6 +124,4 @@
     <!-- Keep-screen-awake tile (control rail) -->
     <string name="rail_keep_screen_on">ON</string>
     <string name="rail_keep_screen_auto">AUTO</string>
-    <string name="toast_keep_screen_on">Your screen won’t turn off automatically.</string>
-    <string name="toast_keep_screen_auto">Follows your phone’s screen timeout setting.</string>
 </resources>
