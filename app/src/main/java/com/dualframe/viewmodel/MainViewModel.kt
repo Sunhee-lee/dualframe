@@ -894,6 +894,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onAdFailed() {
         val app: android.app.Application = getApplication()
+        // The user has already moved on — they picked the watermark save, or a
+        // reward landed first. Spending grace and starting a second encode of
+        // the same clip behind them would be wrong either way.
+        if (_uiState.value.appStatus == AppStatus.SAVING) {
+            Log.w(TAG, "Ad failure ignored — a save is already running")
+            return
+        }
         val online = com.dualframe.monetize.AdGraceManager.isOnline(app)
         Log.i(TAG, "Ad failed — online=$online")
 

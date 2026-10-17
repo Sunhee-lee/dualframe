@@ -94,6 +94,16 @@ object AdRewardManager {
     private var retryIndex = 0
     private var lastForegroundLoadAtMs = 0L
 
+    /**
+     * Load attempts that have come back failed since the last success.
+     *
+     * One failure with a retry already queued is not the same thing as an ad
+     * the app cannot deliver — the retry may still produce one. Callers use
+     * this to decide when a FAILED state is worth acting on.
+     */
+    var consecutiveLoadFailures = 0
+        private set
+
     // ── Diagnostics ───────────────────────────────────────────────────
     // This project has no analytics SDK, and adding one is out of scope for a
     // bug fix. Counters live in memory and every transition is logged under a
@@ -246,6 +256,7 @@ object AdRewardManager {
                 generation++
                 inFlightGeneration = -1
                 Diag.loadTimedOut++
+                consecutiveLoadFailures++
                 _state.value = AdState.FAILED
                 log("load_timeout gen=$gen")
                 scheduleRetry()
@@ -271,6 +282,7 @@ object AdRewardManager {
                     rewardedAd = ad
                     loadedAtMs = System.currentTimeMillis()
                     retryIndex = 0
+                    consecutiveLoadFailures = 0
                     Diag.loadSucceeded++
                     Diag.lastLoadMs = loadedAtMs - startedAt
                     _state.value = AdState.READY
@@ -290,6 +302,7 @@ object AdRewardManager {
                     Diag.lastErrorCode = error.code
                     Diag.lastErrorDomain = error.domain
                     Diag.lastLoadMs = System.currentTimeMillis() - startedAt
+                    consecutiveLoadFailures++
                     _state.value = AdState.FAILED
                     log("load_failed gen=$gen code=${error.code} domain=${error.domain}")
                     scheduleRetry()
@@ -376,6 +389,11 @@ object AdRewardManager {
         loadedAtMs = 0L
         _state.value = AdState.IDLE
 
+        // Reward and show-failure are the two ways a presentation can end, and
+        // the SDK is not obliged to pick only one. This flag makes the first one
+        // to arrive the only one the app acts on, so a reward can never be paired
+        // with a failure for the same ad.
+        var outcomeDelivered = false
         var rewardDelivered = false
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdShowedFullScreenContent() {
@@ -395,13 +413,22 @@ object AdRewardManager {
                 Diag.lastErrorCode = error.code
                 Diag.lastErrorDomain = error.domain
                 log("show_failed code=${error.code} domain=${error.domain}")
-                onFailedToShow()
+                if (outcomeDelivered) {
+                    log("show_failed_after_outcome_ignored")
+                } else {
+                    outcomeDelivered = true
+                    onFailedToShow()
+                }
                 ensureLoaded()
             }
         }
 
         ad.show(activity) { _ ->
-            if (rewardDelivered) return@show
+            if (outcomeDelivered) {
+                log("reward_after_outcome_ignored")
+                return@show
+            }
+            outcomeDelivered = true
             rewardDelivered = true
             Diag.rewardsEarned++
             log("reward_earned")

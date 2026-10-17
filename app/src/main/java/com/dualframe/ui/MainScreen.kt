@@ -1367,6 +1367,14 @@ private fun ErrorArea(state: UiState, onDismiss: () -> Unit) {
 private const val AD_GATE_WAIT_LIMIT_MS = 10_000L
 
 /**
+ * Failed load attempts before the save policy is applied: the initial load plus
+ * the first automatic retry. Leaving the gate — closing it or choosing the
+ * watermark save — cancels this effect, so a failure confirmed after the user
+ * has moved on never starts a save behind their back.
+ */
+private const val AD_GATE_FAILURES_BEFORE_POLICY = 2
+
+/**
  * Stands between "I want to watch an ad" and the ad playing.
  *
  * Before this existed, a tap while a load was in flight was reported as an
@@ -1393,22 +1401,27 @@ private fun AdGateDialog(
 
     LaunchedEffect(Unit) { com.dualframe.monetize.AdRewardManager.ensureLoaded() }
 
-    LaunchedEffect(adState, waitRound) {
+    // One budget for the whole visit, not one per state change: a load that
+    // stumbles and retries must not keep pushing the panel further away.
+    // Expiring it only stops the spinner — the request lives on, nothing is
+    // reported as failed, and grace is untouched.
+    LaunchedEffect(waitRound) {
         waitedTooLong = false
-        when (adState) {
-            com.dualframe.monetize.AdRewardManager.AdState.FAILED -> {
-                // Confirmed failure — hand it to the untouched existing policy.
-                if (!failureHandled) {
-                    failureHandled = true
-                    onDismiss()
-                    viewModel.onAdFailed()
-                }
-            }
-            com.dualframe.monetize.AdRewardManager.AdState.READY -> Unit
-            else -> {
-                delay(AD_GATE_WAIT_LIMIT_MS)
-                waitedTooLong = true
-            }
+        delay(AD_GATE_WAIT_LIMIT_MS)
+        waitedTooLong = true
+    }
+
+    LaunchedEffect(adState) {
+        // A single failure with a retry already queued is a stumble, not an ad
+        // the app cannot deliver; waiting for that retry to come back costs the
+        // user nothing and keeps their one grace save for a real failure.
+        val confirmed = adState == com.dualframe.monetize.AdRewardManager.AdState.FAILED &&
+            com.dualframe.monetize.AdRewardManager.consecutiveLoadFailures >=
+            AD_GATE_FAILURES_BEFORE_POLICY
+        if (confirmed && !failureHandled) {
+            failureHandled = true
+            onDismiss()
+            viewModel.onAdFailed()
         }
     }
 
