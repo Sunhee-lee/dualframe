@@ -400,10 +400,13 @@ fun MainScreen(
             failType = failType,
             onRetry = {
                 viewModel.dismissAdFailDialog()
-                // Reuses an in-flight load instead of firing another request and
-                // reporting the same failure back immediately.
-                com.dualframe.monetize.AdRewardManager.retryNow()
-                viewModel.openAdGate()
+                // A background retry may already have landed one.
+                if (!playAdIfReady(viewModel, context)) {
+                    // Reuses an in-flight load instead of firing another request
+                    // and reporting the same failure back immediately.
+                    com.dualframe.monetize.AdRewardManager.retryNow()
+                    viewModel.openAdGate()
+                }
             },
             onSaveWithWatermark = {
                 viewModel.dismissAdFailDialog()
@@ -1295,7 +1298,9 @@ private fun RemoveWatermarkDialog(
                         if (isProcessing) return@clickable
                         isProcessing = true
                         onDismiss()
-                        viewModel.openAdGate()
+                        // Straight into the ad when one is waiting; the gate is
+                        // only for the case where there is something to wait for.
+                        if (!playAdIfReady(viewModel, context)) viewModel.openAdGate()
                     }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1360,6 +1365,34 @@ private fun ErrorArea(state: UiState, onDismiss: () -> Unit) {
 }
 
 /**
+ * Plays the rewarded ad if one is in hand, and reports whether it did.
+ *
+ * Every entry point goes through here so a tap never costs a second tap when
+ * an ad was already waiting. Returns false when nothing is ready — the caller
+ * then opens the gate, which starts a load and takes over from there.
+ */
+private fun playAdIfReady(
+    viewModel: MainViewModel,
+    context: android.content.Context,
+): Boolean {
+    val activity = context as? Activity ?: return false
+    return com.dualframe.monetize.AdRewardManager.showIfReady(
+        activity = activity,
+        onRewarded = {
+            viewModel.onAdRewarded()
+            // Reward can land after this Activity is gone; the app context
+            // outlives it.
+            android.widget.Toast.makeText(
+                context.applicationContext,
+                context.getString(R.string.toast_watermark_removed),
+                android.widget.Toast.LENGTH_SHORT,
+            ).show()
+        },
+        onFailedToShow = { viewModel.onAdFailed() },
+    )
+}
+
+/**
  * How long the user is asked to stare at a spinner. Hitting this cap only ends
  * the waiting presentation — the SDK request keeps running, it is not a failure,
  * and grace is not touched.
@@ -1400,6 +1433,7 @@ private fun AdGateDialog(
     var failureHandled by remember { mutableStateOf(false) }
     var launching by remember { mutableStateOf(false) }
     var leftTheApp by remember { mutableStateOf(false) }
+    var autoPlayed by remember { mutableStateOf(false) }
 
     val ready = adState == com.dualframe.monetize.AdRewardManager.AdState.READY
     // Once the user has been away, this visit stops deciding for them: whatever
@@ -1407,6 +1441,19 @@ private fun AdGateDialog(
     val showChoices = waitedTooLong || leftTheApp
 
     LaunchedEffect(appForeground) { if (!appForeground) leftTheApp = true }
+
+    // The gate only opens because the user asked to watch an ad, so when the
+    // load they are waiting on lands, play it rather than asking a second time.
+    // Guarded to that one request: it fires once, only while they are actually
+    // in the app, and never for a visit they have walked away from — a return
+    // from the background or a reconnection must not start a fullscreen ad.
+    LaunchedEffect(adState, appForeground) {
+        if (!ready || autoPlayed || launching) return@LaunchedEffect
+        if (!appForeground || leftTheApp) return@LaunchedEffect
+        autoPlayed = true
+        launching = true
+        if (playAdIfReady(viewModel, context)) onDismiss() else launching = false
+    }
 
     LaunchedEffect(Unit) { com.dualframe.monetize.AdRewardManager.ensureLoaded() }
 
@@ -1496,22 +1543,7 @@ private fun AdGateDialog(
                         .clickable {
                             if (launching) return@clickable
                             launching = true
-                            val activity = context as? Activity
-                            val shown = activity != null &&
-                                com.dualframe.monetize.AdRewardManager.showIfReady(
-                                    activity = activity,
-                                    onRewarded = {
-                                        viewModel.onAdRewarded()
-                                        // Reward can land after this Activity is
-                                        // gone; the app context outlives it.
-                                        android.widget.Toast.makeText(
-                                            context.applicationContext,
-                                            context.getString(R.string.toast_watermark_removed),
-                                            android.widget.Toast.LENGTH_SHORT).show()
-                                    },
-                                    onFailedToShow = { viewModel.onAdFailed() },
-                                )
-                            if (shown) onDismiss() else launching = false
+                            if (playAdIfReady(viewModel, context)) onDismiss() else launching = false
                         },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1528,8 +1560,10 @@ private fun AdGateDialog(
                             // No-op when a load is already in flight, a fresh
                             // request otherwise — so this is never a dead tap.
                             com.dualframe.monetize.AdRewardManager.retryNow()
-                            // An explicit ask puts this visit back in charge.
+                            // An explicit ask puts this visit back in charge,
+                            // including the right to play what it asked for.
                             leftTheApp = false
+                            autoPlayed = false
                             waitRound++
                         },
                     contentAlignment = Alignment.Center,
