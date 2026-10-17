@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.WorkspacePremium
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -389,25 +390,20 @@ fun MainScreen(
         RemoveWatermarkDialog(viewModel, context) { viewModel.dismissRemoveWatermarkDialog() }
     }
 
+    if (state.adGateOpen) {
+        AdGateDialog(viewModel, context) { viewModel.closeAdGate() }
+    }
+
     // Ad failure dialogs
     state.adFailDialog?.let { failType ->
         AdFailDialog(
             failType = failType,
             onRetry = {
                 viewModel.dismissAdFailDialog()
-                val activity = context as? Activity
-                if (activity != null) {
-                    com.dualframe.monetize.AdRewardManager.showAd(
-                        activity = activity,
-                        onRewarded = {
-                            viewModel.onAdRewarded()
-                            android.widget.Toast.makeText(context,
-                                context.getString(R.string.toast_watermark_removed),
-                                android.widget.Toast.LENGTH_SHORT).show()
-                        },
-                        onFailed = { viewModel.onAdFailed() },
-                    )
-                }
+                // Reuses an in-flight load instead of firing another request and
+                // reporting the same failure back immediately.
+                com.dualframe.monetize.AdRewardManager.retryNow()
+                viewModel.openAdGate()
             },
             onSaveWithWatermark = {
                 viewModel.dismissAdFailDialog()
@@ -1299,19 +1295,7 @@ private fun RemoveWatermarkDialog(
                         if (isProcessing) return@clickable
                         isProcessing = true
                         onDismiss()
-                        val activity = context as? android.app.Activity
-                        if (activity != null) {
-                            com.dualframe.monetize.AdRewardManager.showAd(
-                                activity = activity,
-                                onRewarded = {
-                                    viewModel.onAdRewarded()
-                                    android.widget.Toast.makeText(context,
-                                        context.getString(R.string.toast_watermark_removed),
-                                        android.widget.Toast.LENGTH_SHORT).show()
-                                },
-                                onFailed = { viewModel.onAdFailed() },
-                            )
-                        }
+                        viewModel.openAdGate()
                     }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1372,6 +1356,167 @@ private fun ErrorArea(state: UiState, onDismiss: () -> Unit) {
         Text(error, color = Color(0xFFCF6679), fontSize = 12.sp)
         Spacer(Modifier.height(4.dp))
         androidx.compose.material3.TextButton(onDismiss) { Text(stringResource(R.string.error_dismiss), color = Color(0xFFCF6679), fontSize = 11.sp) }
+    }
+}
+
+/**
+ * How long the user is asked to stare at a spinner. Hitting this cap only ends
+ * the waiting presentation — the SDK request keeps running, it is not a failure,
+ * and grace is not touched.
+ */
+private const val AD_GATE_WAIT_LIMIT_MS = 10_000L
+
+/**
+ * Stands between "I want to watch an ad" and the ad playing.
+ *
+ * Before this existed, a tap while a load was in flight was reported as an
+ * instant failure, and the retry button reported it again just as fast — the
+ * user never learned an ad was on its way. Here "still loading" is a state of
+ * its own: the dialog waits, and only a confirmed failure is handed to
+ * onAdFailed(), which keeps the existing offline/grace/repeated policy intact.
+ *
+ * A loaded ad never starts playing on its own; the user taps to watch it.
+ */
+@Composable
+private fun AdGateDialog(
+    viewModel: MainViewModel,
+    context: android.content.Context,
+    onDismiss: () -> Unit,
+) {
+    val adState by com.dualframe.monetize.AdRewardManager.state.collectAsState()
+    var waitedTooLong by remember { mutableStateOf(false) }
+    var waitRound by remember { mutableStateOf(0) }
+    var failureHandled by remember { mutableStateOf(false) }
+    var launching by remember { mutableStateOf(false) }
+
+    val ready = adState == com.dualframe.monetize.AdRewardManager.AdState.READY
+
+    LaunchedEffect(Unit) { com.dualframe.monetize.AdRewardManager.ensureLoaded() }
+
+    LaunchedEffect(adState, waitRound) {
+        waitedTooLong = false
+        when (adState) {
+            com.dualframe.monetize.AdRewardManager.AdState.FAILED -> {
+                // Confirmed failure — hand it to the untouched existing policy.
+                if (!failureHandled) {
+                    failureHandled = true
+                    onDismiss()
+                    viewModel.onAdFailed()
+                }
+            }
+            com.dualframe.monetize.AdRewardManager.AdState.READY -> Unit
+            else -> {
+                delay(AD_GATE_WAIT_LIMIT_MS)
+                waitedTooLong = true
+            }
+        }
+    }
+
+    val title = when {
+        ready -> stringResource(R.string.ad_gate_ready_title)
+        waitedTooLong -> stringResource(R.string.ad_gate_slow_title)
+        else -> stringResource(R.string.ad_gate_loading_title)
+    }
+    val desc = when {
+        ready -> stringResource(R.string.ad_gate_ready_desc)
+        waitedTooLong -> stringResource(R.string.ad_gate_slow_desc)
+        else -> stringResource(R.string.ad_gate_loading_desc)
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismiss() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(0.85f)
+                .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
+                .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {}
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(title, color = Color.White, fontSize = 17.sp,
+                fontWeight = FontWeight.Bold, fontFamily = PretendardFont,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(8.dp))
+            Text(desc, color = Color(0xFFAAAAAA), fontSize = 14.sp,
+                fontFamily = PretendardFont,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+
+            if (!ready && !waitedTooLong) {
+                Spacer(Modifier.height(18.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    color = Color(0xFF4CAF50),
+                    strokeWidth = 3.dp,
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            if (ready) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF4CAF50))
+                        .clickable {
+                            if (launching) return@clickable
+                            launching = true
+                            val activity = context as? Activity
+                            val shown = activity != null &&
+                                com.dualframe.monetize.AdRewardManager.showIfReady(
+                                    activity = activity,
+                                    onRewarded = {
+                                        viewModel.onAdRewarded()
+                                        android.widget.Toast.makeText(context,
+                                            context.getString(R.string.toast_watermark_removed),
+                                            android.widget.Toast.LENGTH_SHORT).show()
+                                    },
+                                    onFailedToShow = { viewModel.onAdFailed() },
+                                )
+                            if (shown) onDismiss() else launching = false
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(stringResource(R.string.btn_watch_ad), color = Color.White, fontSize = 15.sp,
+                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(Modifier.height(8.dp))
+            } else if (waitedTooLong) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp))
+                        .clickable { waitRound++ },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(stringResource(R.string.btn_keep_waiting), color = Color.White, fontSize = 15.sp,
+                        fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // Always available, so a slow or failing ad can never trap the user.
+            Box(
+                modifier = Modifier.fillMaxWidth().height(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .border(1.dp, Color(0xFF555555), RoundedCornerShape(10.dp))
+                    .clickable {
+                        onDismiss()
+                        viewModel.saveBothWithWatermark()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(stringResource(R.string.btn_save_with_watermark), color = Color.White, fontSize = 15.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Text(stringResource(R.string.btn_close), color = Color(0xFF888888), fontSize = 14.sp,
+                fontFamily = PretendardFont,
+                modifier = Modifier.clickable { onDismiss() })
+        }
     }
 }
 

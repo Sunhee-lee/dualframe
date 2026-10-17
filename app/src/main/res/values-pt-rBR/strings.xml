@@ -110,4 +110,15 @@
     <string name="label_off">OFF</string>
     <string name="label_beauty_on">Beauty\nON</string>
     <string name="label_beauty_off">Beauty\nOFF</string>
+
+    <!-- Ad gate (ad preparing / ready) -->
+    <string name="ad_gate_loading_title">Preparando o anúncio…</string>
+    <string name="ad_gate_loading_desc">Normalmente leva alguns segundos.</string>
+    <string name="ad_gate_slow_title">O anúncio está demorando</string>
+    <string name="ad_gate_slow_desc">Você pode continuar esperando ou salvar com a marca d\'água.</string>
+    <string name="ad_gate_ready_title">Anúncio pronto</string>
+    <string name="ad_gate_ready_desc">Assista para salvar sem a marca d\'água.</string>
+    <string name="btn_watch_ad">Assistir anúncio</string>
+    <string name="btn_keep_waiting">Continuar esperando</string>
+    <string name="btn_close">Fechar</string>
 </resources>

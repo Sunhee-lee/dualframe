@@ -32,6 +32,9 @@ data class UiState(
     // Whether the Remove Watermark dialog is showing
     val showRemoveWatermarkDialog: Boolean = false,
     val adFailDialog: AdFailType? = null,
+    // Ad gate: shown while the rewarded ad is being prepared, so "still loading"
+    // is never presented to the user as a failure.
+    val adGateOpen: Boolean = false,
     val showFhdFallbackToast: Boolean = false,
     val showAutoSaveCompleteToast: Boolean = false,
     val showAutoSaveFailToast: Boolean = false,

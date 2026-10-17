@@ -1,104 +1,383 @@
 package com.dualframe.monetize
 
 import android.app.Activity
+import android.app.Application
+import android.content.Context
 import android.util.Log
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.sunnlab.dualframe.BuildConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 // TODO: Add UMP consent flow (required for EU/EEA users)
 // TODO: Add privacy policy link to settings page
+
+/**
+ * Single source of truth for the rewarded ad.
+ *
+ * The previous version exposed only "show it or fail", so a tap while a load was
+ * still in flight reported failure instantly and the retry button re-reported it
+ * forever — the user never found out an ad was on its way. The UI now observes
+ * [state] instead, so "still loading" is a state of its own and never a failure.
+ *
+ * Invariants worth keeping:
+ *  - At most one SDK request is in flight. Every entry point funnels into
+ *    [ensureLoaded], which no-ops when LOADING or when a fresh ad is in hand.
+ *  - A callback from a superseded attempt can never overwrite a newer ad; each
+ *    attempt carries a generation number.
+ *  - A loaded ad is consumed the moment it is shown, so a spent reference is
+ *    never handed to show() a second time.
+ */
 object AdRewardManager {
 
-    private const val TAG = "AdRewardManager"
+    private const val TAG = "DF_AD"
 
+    /** What the save flow needs to know. */
+    enum class AdState { IDLE, LOADING, READY, FAILED }
+
+    /**
+     * How long a loaded ad is treated as usable.
+     *
+     * Rewarded ads expire some time after loading, and show() on an expired
+     * reference fails. This value is deliberately conservative rather than
+     * matched to a documented figure — confirm against Google's current
+     * rewarded-ad documentation and adjust here if it differs.
+     */
+    const val AD_TTL_MS = 50L * 60L * 1000L
+
+    /** Unsticks LOADING if an SDK callback never arrives. Does not cancel the request. */
+    private const val LOAD_TIMEOUT_MS = 30_000L
+
+    /** Background recovery after a *confirmed* load failure. */
+    private val RETRY_DELAYS_MS = longArrayOf(5_000L, 15_000L, 60_000L)
+
+    private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+
+    private val _state = MutableStateFlow(AdState.IDLE)
+    val state: StateFlow<AdState> = _state.asStateFlow()
+
+    /** Application context only — nothing here ever holds an Activity. */
+    private var appContext: Context? = null
     private var rewardedAd: RewardedAd? = null
-    private var isLoading = false
+    private var loadedAtMs = 0L
+    private var isForeground = false
+    private var initialized = false
 
-    fun loadAd(activity: Activity) {
-        if (rewardedAd != null || isLoading) return
-        if (activity.isFinishing || activity.isDestroyed) return
-        isLoading = true
-        RewardedAd.load(
-            activity,
-            BuildConfig.REWARDED_AD_UNIT_ID,
-            AdRequest.Builder().build(),
-            object : RewardedAdLoadCallback() {
-                override fun onAdLoaded(ad: RewardedAd) {
-                    rewardedAd = ad
-                    isLoading = false
-                    Log.i(TAG, "Rewarded ad loaded")
-                }
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    rewardedAd = null
-                    isLoading = false
-                    Log.e(TAG, "Rewarded ad failed to load: ${error.message}")
-                }
-            },
-        )
+    private var generation = 0
+    private var inFlightGeneration = -1
+
+    private var retryJob: Job? = null
+    private var timeoutJob: Job? = null
+    private var retryIndex = 0
+
+    // ── Diagnostics ───────────────────────────────────────────────────
+    // This project has no analytics SDK, and adding one is out of scope for a
+    // bug fix. Counters live in memory and every transition is logged under a
+    // single tag, so `adb logcat -s DF_AD` gives the whole picture on a test
+    // device. Nothing user-identifying is recorded.
+    object Diag {
+        var loadStarted = 0
+        var loadSucceeded = 0
+        var loadFailed = 0
+        var loadTimedOut = 0
+        var showFailed = 0
+        var rewardsEarned = 0
+        var retriesScheduled = 0
+        /** Taps on "retry" that arrived while a load was already in flight. */
+        var retryTapsWhileLoading = 0
+        var userRetryTaps = 0
+        var lastLoadMs = 0L
+        var lastErrorCode: Int? = null
+        var lastErrorDomain: String? = null
+
+        fun snapshot(): String =
+            "start=$loadStarted ok=$loadSucceeded fail=$loadFailed timeout=$loadTimedOut " +
+                "showFail=$showFailed reward=$rewardsEarned retry=$retriesScheduled " +
+                "userRetry=$userRetryTaps retryWhileLoading=$retryTapsWhileLoading " +
+                "lastMs=$lastLoadMs lastErr=$lastErrorCode/$lastErrorDomain"
     }
 
-    fun preload(context: android.content.Context) {
-        if (rewardedAd != null || isLoading) return
-        isLoading = true
-        RewardedAd.load(
-            context,
-            BuildConfig.REWARDED_AD_UNIT_ID,
-            AdRequest.Builder().build(),
-            object : RewardedAdLoadCallback() {
-                override fun onAdLoaded(ad: RewardedAd) {
-                    rewardedAd = ad
-                    isLoading = false
-                    Log.i(TAG, "Rewarded ad preloaded")
-                }
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    rewardedAd = null
-                    isLoading = false
-                    Log.e(TAG, "Rewarded ad preload failed: ${error.message}")
-                }
-            },
-        )
-    }
+    private fun log(event: String) = Log.i(TAG, "$event | ${Diag.snapshot()}")
 
-    fun showAd(
-        activity: Activity,
-        onRewarded: () -> Unit,
-        onFailed: (String) -> Unit,
-    ) {
-        val ad = rewardedAd
-        if (ad == null) {
-            onFailed(activity.getString(com.sunnlab.dualframe.R.string.error_ad_not_available))
-            loadAd(activity)
-            return
+    // ── Lifecycle ─────────────────────────────────────────────────────
+
+    /**
+     * Initializes the Mobile Ads SDK and primes the first ad.
+     *
+     * initialize() does disk and network work, so it runs off the main thread;
+     * the preload waits for its completion callback instead of racing it, with a
+     * timed fallback in case the callback never arrives.
+     */
+    fun init(app: Application) {
+        if (initialized) return
+        initialized = true
+        appContext = app.applicationContext
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                MobileAds.initialize(app) {
+                    log("sdk_initialized")
+                    scope.launch { ensureLoaded() }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "sdk_init_failed", e)
+            }
         }
 
-        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-            override fun onAdDismissedFullScreenContent() {
-                rewardedAd = null
-                if (!activity.isFinishing && !activity.isDestroyed) {
-                    loadAd(activity)
-                }
+        scope.launch {
+            delay(5_000L)
+            if (_state.value == AdState.IDLE) {
+                log("init_fallback_load")
+                ensureLoaded()
             }
+        }
+    }
+
+    /** Called from the Application's activity-lifecycle tracker. */
+    fun notifyForeground(foreground: Boolean) {
+        if (isForeground == foreground) return
+        isForeground = foreground
+        if (!foreground) return
+        val ctx = appContext ?: return
+        if (!AdGraceManager.isOnline(ctx)) return
+        // Idempotent: no-op while LOADING or holding a fresh ad. Coming back to
+        // the app is the natural moment to recover from an exhausted retry run.
+        ensureLoaded()
+    }
+
+    // ── Loading ───────────────────────────────────────────────────────
+
+    /** Starts a load only if there is nothing usable and nothing in flight. */
+    fun ensureLoaded() {
+        val ctx = appContext ?: return
+        if (validAdOrNull() != null) {
+            _state.value = AdState.READY
+            return
+        }
+        if (_state.value == AdState.LOADING) return
+        startLoad(ctx)
+    }
+
+    /**
+     * User asked for an ad right now.
+     *
+     * The whole point of the fix: while a load is in flight this reuses it
+     * instead of firing another request and reporting failure.
+     */
+    fun retryNow() {
+        Diag.userRetryTaps++
+        val ctx = appContext ?: return
+        if (_state.value == AdState.LOADING) {
+            Diag.retryTapsWhileLoading++
+            log("user_retry_reused_inflight")
+            return
+        }
+        if (validAdOrNull() != null) {
+            _state.value = AdState.READY
+            return
+        }
+        retryJob?.cancel()
+        retryIndex = 0
+        log("user_retry_load")
+        startLoad(ctx)
+    }
+
+    private fun startLoad(ctx: Context) {
+        generation++
+        val gen = generation
+        inFlightGeneration = gen
+        _state.value = AdState.LOADING
+        val startedAt = System.currentTimeMillis()
+        Diag.loadStarted++
+        log("load_start gen=$gen attempt=$retryIndex")
+
+        timeoutJob?.cancel()
+        timeoutJob = scope.launch {
+            delay(LOAD_TIMEOUT_MS)
+            if (inFlightGeneration == gen && _state.value == AdState.LOADING) {
+                // The request may still be alive inside the SDK; we only stop
+                // waiting on it so the UI and the state machine are not pinned.
+                inFlightGeneration = -1
+                Diag.loadTimedOut++
+                _state.value = AdState.FAILED
+                log("load_timeout gen=$gen")
+                scheduleRetry()
+            }
+        }
+
+        RewardedAd.load(
+            ctx,
+            BuildConfig.REWARDED_AD_UNIT_ID,
+            AdRequest.Builder().build(),
+            object : RewardedAdLoadCallback() {
+                override fun onAdLoaded(ad: RewardedAd) {
+                    if (gen != inFlightGeneration) {
+                        // Late winner from a timed-out attempt. Adopt it only
+                        // when we are empty and nothing newer is in flight, so
+                        // a stale callback can never replace a fresher ad.
+                        if (rewardedAd == null && inFlightGeneration == -1) {
+                            rewardedAd = ad
+                            loadedAtMs = System.currentTimeMillis()
+                            _state.value = AdState.READY
+                            log("late_load_adopted gen=$gen")
+                        } else {
+                            log("stale_load_dropped gen=$gen")
+                        }
+                        return
+                    }
+                    inFlightGeneration = -1
+                    timeoutJob?.cancel()
+                    rewardedAd = ad
+                    loadedAtMs = System.currentTimeMillis()
+                    retryIndex = 0
+                    Diag.loadSucceeded++
+                    Diag.lastLoadMs = loadedAtMs - startedAt
+                    _state.value = AdState.READY
+                    log("load_ok gen=$gen")
+                }
+
+                override fun onAdFailedToLoad(error: LoadAdError) {
+                    if (gen != inFlightGeneration) {
+                        log("stale_fail_dropped gen=$gen code=${error.code}")
+                        return
+                    }
+                    inFlightGeneration = -1
+                    timeoutJob?.cancel()
+                    rewardedAd = null
+                    loadedAtMs = 0L
+                    Diag.loadFailed++
+                    Diag.lastErrorCode = error.code
+                    Diag.lastErrorDomain = error.domain
+                    Diag.lastLoadMs = System.currentTimeMillis() - startedAt
+                    _state.value = AdState.FAILED
+                    log("load_failed gen=$gen code=${error.code} domain=${error.domain}")
+                    scheduleRetry()
+                }
+            },
+        )
+    }
+
+    /**
+     * Limited background recovery. Capped at [RETRY_DELAYS_MS].size attempts and
+     * skipped while backgrounded or offline, so a failing device cannot turn into
+     * a request generator. Returning to the foreground gives one more attempt via
+     * [notifyForeground]; an explicit user retry resets the run.
+     */
+    private fun scheduleRetry() {
+        retryJob?.cancel()
+        if (retryIndex >= RETRY_DELAYS_MS.size) {
+            log("retry_exhausted")
+            return
+        }
+        val delayMs = RETRY_DELAYS_MS[retryIndex]
+        retryIndex++
+        Diag.retriesScheduled++
+        log("retry_scheduled n=$retryIndex in_ms=$delayMs")
+        retryJob = scope.launch {
+            delay(delayMs)
+            val ctx = appContext ?: return@launch
+            if (!isForeground) {
+                log("retry_skipped_background n=$retryIndex")
+                return@launch
+            }
+            if (!AdGraceManager.isOnline(ctx)) {
+                log("retry_skipped_offline n=$retryIndex")
+                return@launch
+            }
+            if (rewardedAd != null || _state.value == AdState.LOADING) return@launch
+            startLoad(ctx)
+        }
+    }
+
+    /** Returns the cached ad, discarding and clearing it once past [AD_TTL_MS]. */
+    private fun validAdOrNull(): RewardedAd? {
+        val ad = rewardedAd ?: return null
+        val ageMs = System.currentTimeMillis() - loadedAtMs
+        if (ageMs >= AD_TTL_MS) {
+            rewardedAd = null
+            loadedAtMs = 0L
+            if (_state.value == AdState.READY) _state.value = AdState.IDLE
+            log("ad_expired age_ms=$ageMs")
+            return null
+        }
+        return ad
+    }
+
+    /** True when an unexpired ad is in hand. Never triggers a load. */
+    fun hasValidAd(): Boolean = validAdOrNull() != null
+
+    // ── Showing ───────────────────────────────────────────────────────
+
+    /**
+     * Shows the cached ad if one is ready, and reports whether it did.
+     *
+     * Never loads-then-plays: the caller decides when to show, so an ad that
+     * finishes loading while the user is reading the dialog does not start
+     * playing on its own.
+     *
+     * @return false when no usable ad is in hand; a load is kicked off instead.
+     */
+    fun showIfReady(
+        activity: Activity,
+        onRewarded: () -> Unit,
+        onFailedToShow: () -> Unit,
+    ): Boolean {
+        val ad = validAdOrNull()
+        if (ad == null) {
+            ensureLoaded()
+            return false
+        }
+
+        var rewardDelivered = false
+        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+            override fun onAdShowedFullScreenContent() {
+                // A RewardedAd may be shown once. Drop it here rather than in
+                // onAdDismissed, so a reference that never gets a dismiss
+                // callback cannot be handed to show() again.
+                rewardedAd = null
+                loadedAtMs = 0L
+                _state.value = AdState.IDLE
+                log("ad_shown")
+            }
+
+            override fun onAdDismissedFullScreenContent() {
+                log("ad_dismissed rewarded=$rewardDelivered")
+                ensureLoaded()
+            }
+
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
                 rewardedAd = null
-                if (!activity.isFinishing && !activity.isDestroyed) {
-                    onFailed(activity.getString(com.sunnlab.dualframe.R.string.error_ad_not_available))
-                    loadAd(activity)
-                }
+                loadedAtMs = 0L
+                _state.value = AdState.IDLE
+                Diag.showFailed++
+                Diag.lastErrorCode = error.code
+                Diag.lastErrorDomain = error.domain
+                log("show_failed code=${error.code} domain=${error.domain}")
+                onFailedToShow()
+                ensureLoaded()
             }
         }
 
         ad.show(activity) { _ ->
-            Log.i(TAG, "User earned reward")
-            if (!activity.isFinishing && !activity.isDestroyed) {
-                onRewarded()
-            }
+            if (rewardDelivered) return@show
+            rewardDelivered = true
+            Diag.rewardsEarned++
+            log("reward_earned")
+            onRewarded()
         }
+        return true
     }
-
-    val isAdReady: Boolean get() = rewardedAd != null
 }

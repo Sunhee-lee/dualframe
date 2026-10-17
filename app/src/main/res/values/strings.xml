@@ -110,4 +110,15 @@
     <string name="label_off">OFF</string>
     <string name="label_beauty_on">Beauty\nON</string>
     <string name="label_beauty_off">Beauty\nOFF</string>
+
+    <!-- Ad gate (ad preparing / ready) -->
+    <string name="ad_gate_loading_title">Preparing ad…</string>
+    <string name="ad_gate_loading_desc">This usually takes a few seconds.</string>
+    <string name="ad_gate_slow_title">The ad is taking a while</string>
+    <string name="ad_gate_slow_desc">You can keep waiting, or save with the watermark instead.</string>
+    <string name="ad_gate_ready_title">Ad ready</string>
+    <string name="ad_gate_ready_desc">Watch it to save without the watermark.</string>
+    <string name="btn_watch_ad">Watch ad</string>
+    <string name="btn_keep_waiting">Keep waiting</string>
+    <string name="btn_close">Close</string>
 </resources>

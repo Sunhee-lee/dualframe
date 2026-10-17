@@ -864,8 +864,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ── Ad gate ───────────────────────────────────────────────────────
+    // The gate is what the user sees between "I want to watch an ad" and the ad
+    // actually playing. It exists so a load still in flight is shown as
+    // "preparing" rather than reported as a failure — which is what made the
+    // retry button repeat the same error forever.
+
+    fun openAdGate() {
+        com.dualframe.monetize.AdRewardManager.ensureLoaded()
+        _uiState.update { it.copy(adGateOpen = true, adFailDialog = null) }
+    }
+
+    fun closeAdGate() {
+        _uiState.update { it.copy(adGateOpen = false) }
+    }
+
     fun onAdRewarded() {
         val app: android.app.Application = getApplication()
+        // The reward listener fires once per ad, but a re-composition or a
+        // second callback must not start a second encode of the same clip.
+        if (_uiState.value.appStatus == AppStatus.SAVING) {
+            Log.w(TAG, "Reward ignored — a save is already running")
+            return
+        }
         Log.i(TAG, "Ad watched — saving without watermark")
         com.dualframe.monetize.AdGraceManager.resetGrace(app)
         saveBothClean()

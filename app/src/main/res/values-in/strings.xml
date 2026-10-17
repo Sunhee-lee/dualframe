@@ -110,4 +110,15 @@
     <string name="label_off">OFF</string>
     <string name="label_beauty_on">Beauty\nON</string>
     <string name="label_beauty_off">Beauty\nOFF</string>
+
+    <!-- Ad gate (ad preparing / ready) -->
+    <string name="ad_gate_loading_title">Menyiapkan iklan…</string>
+    <string name="ad_gate_loading_desc">Biasanya hanya perlu beberapa detik.</string>
+    <string name="ad_gate_slow_title">Iklan membutuhkan waktu lebih lama</string>
+    <string name="ad_gate_slow_desc">Anda bisa menunggu, atau menyimpan dengan watermark.</string>
+    <string name="ad_gate_ready_title">Iklan siap</string>
+    <string name="ad_gate_ready_desc">Tonton iklan untuk menyimpan tanpa watermark.</string>
+    <string name="btn_watch_ad">Tonton iklan</string>
+    <string name="btn_keep_waiting">Tunggu lagi</string>
+    <string name="btn_close">Tutup</string>
 </resources>

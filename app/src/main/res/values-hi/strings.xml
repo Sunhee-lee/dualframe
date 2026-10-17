@@ -110,4 +110,15 @@
     <string name="label_off">OFF</string>
     <string name="label_beauty_on">Beauty\nON</string>
     <string name="label_beauty_off">Beauty\nOFF</string>
+
+    <!-- Ad gate (ad preparing / ready) -->
+    <string name="ad_gate_loading_title">विज्ञापन तैयार हो रहा है…</string>
+    <string name="ad_gate_loading_desc">आमतौर पर इसमें कुछ ही सेकंड लगते हैं।</string>
+    <string name="ad_gate_slow_title">विज्ञापन में समय लग रहा है</string>
+    <string name="ad_gate_slow_desc">आप प्रतीक्षा कर सकते हैं, या वॉटरमार्क के साथ सहेज सकते हैं।</string>
+    <string name="ad_gate_ready_title">विज्ञापन तैयार है</string>
+    <string name="ad_gate_ready_desc">वॉटरमार्क के बिना सहेजने के लिए विज्ञापन देखें।</string>
+    <string name="btn_watch_ad">विज्ञापन देखें</string>
+    <string name="btn_keep_waiting">प्रतीक्षा करें</string>
+    <string name="btn_close">बंद करें</string>
 </resources>
