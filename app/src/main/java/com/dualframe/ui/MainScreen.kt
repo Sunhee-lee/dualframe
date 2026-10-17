@@ -335,7 +335,18 @@ fun MainScreen(
                 },
                 onFlashToggle = { viewModel.toggleFlash() },
                 onKeepScreenToggle = {
-                    viewModel.updateSettings(state.settings.copy(keepScreenAwake = !keepScreenOn))
+                    val keepOn = !keepScreenOn
+                    viewModel.updateSettings(state.settings.copy(keepScreenAwake = keepOn))
+                    // A phone icon and one word cannot say what the tile does;
+                    // the toast spells it out on the tap that changes it.
+                    android.widget.Toast.makeText(
+                        context,
+                        context.getString(
+                            if (keepOn) R.string.toast_keep_screen_on
+                            else R.string.toast_keep_screen_auto,
+                        ),
+                        android.widget.Toast.LENGTH_SHORT,
+                    ).show()
                 },
                 onSelfieEffectToggle = {
                     viewModel.updateSettings(state.settings.copy(frontCameraEffect = !state.settings.frontCameraEffect))

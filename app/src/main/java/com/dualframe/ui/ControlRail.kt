@@ -16,8 +16,7 @@ import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicOff
 import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.rounded.FlashOff
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material3.Icon
@@ -34,6 +33,7 @@ import androidx.compose.ui.text.font.FontFamily
 import com.dualframe.ui.theme.PretendardFont
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -93,8 +93,12 @@ fun SettingsPanel(
             if (guidesEnabled) stringResource(R.string.label_on) else stringResource(R.string.label_off),
             guidesEnabled, rot, onGuideToggle)
 
-        IconTile(if (keepScreenOn) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-            if (keepScreenOn) stringResource(R.string.label_on) else stringResource(R.string.label_off),
+        // One icon for both states, like the guides tile: the label and its
+        // colour carry the state. "Auto" reads as deferring to the phone, which
+        // is what off actually means here.
+        IconTile(Icons.Outlined.Smartphone,
+            if (keepScreenOn) stringResource(R.string.rail_keep_screen_on)
+            else stringResource(R.string.rail_keep_screen_auto),
             keepScreenOn, rot, onKeepScreenToggle)
 
         ZoomTile(zoomRatio, rot, onZoomToggle)
@@ -193,7 +197,10 @@ private fun IconTile(
                 Text(stateText,
                     color = if (isActive) RailTheme.activeColor else RailTheme.inactiveColor,
                     fontSize = 11.sp, lineHeight = 11.sp,
-                    fontWeight = FontWeight.Medium, fontFamily = RailTheme.font)
+                    fontWeight = FontWeight.Medium, fontFamily = RailTheme.font,
+                    // The tile is a fixed 56.dp square; a translation long
+                    // enough to wrap would push the column out of it.
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

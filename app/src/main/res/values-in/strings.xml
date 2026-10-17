@@ -120,4 +120,10 @@
     <string name="ad_gate_ready_desc">Tonton iklan untuk menyimpan tanpa watermark.</string>
     <string name="btn_watch_ad">Tonton iklan</string>
     <string name="btn_close">Tutup</string>
+
+    <!-- Keep-screen-awake tile (control rail) -->
+    <string name="rail_keep_screen_on">Aktif</string>
+    <string name="rail_keep_screen_auto">Auto</string>
+    <string name="toast_keep_screen_on">Layar tidak akan mati secara otomatis.</string>
+    <string name="toast_keep_screen_auto">Mengikuti pengaturan waktu layar mati ponsel.</string>
 </resources>
