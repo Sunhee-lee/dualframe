@@ -31,50 +31,10 @@ object FileStorage {
         return File(dir, "DF_${stamp}_$suffix.mp4")
     }
 
-    fun createPhotoFile(context: Context, suffix: String): File {
-        val dir = File(context.cacheDir, TEMP_DIR).apply { mkdirs() }
-        val stamp = dateFormat.format(Date())
-        return File(dir, "DF_${stamp}_$suffix.jpg")
-    }
-
     fun hasEnoughStorage(context: Context, requiredBytes: Long): Boolean {
         val stat = android.os.StatFs(context.cacheDir.absolutePath)
         val available = stat.availableBytes
         return available > requiredBytes
-    }
-
-    /**
-     * Stills go to Pictures/DualFrame, beside the videos in Movies/DualFrame.
-     * Same pending-then-commit shape as the video save, including the cleanup
-     * of the placeholder row when the copy fails.
-     */
-    fun saveImageToMediaStore(context: Context, sourceFile: File, displayName: String): Uri? {
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$GALLERY_DIR")
-            put(MediaStore.Images.Media.IS_PENDING, 1)
-        }
-
-        val resolver = context.contentResolver
-        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-            ?: return null
-
-        return try {
-            resolver.openOutputStream(uri)?.use { outputStream ->
-                sourceFile.inputStream().use { inputStream ->
-                    inputStream.copyTo(outputStream)
-                }
-            }
-            contentValues.clear()
-            contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
-            resolver.update(uri, contentValues, null, null)
-            uri
-        } catch (e: Exception) {
-            Log.e(TAG, "MediaStore image save failed, cleaning pending Uri", e)
-            runCatching { resolver.delete(uri, null, null) }
-            null
-        }
     }
 
     fun saveToMediaStore(context: Context, sourceFile: File, displayName: String): Uri? {

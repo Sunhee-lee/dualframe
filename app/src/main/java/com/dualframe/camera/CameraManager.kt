@@ -50,10 +50,6 @@ class CameraManager(private val context: Context) {
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var videoCapture: VideoCapture<Recorder>? = null
-    private var imageCapture: androidx.camera.core.ImageCapture? = null
-    /** Which use cases are currently bound. Photo and video never share a session. */
-    @Volatile private var boundMode: com.dualframe.data.CaptureMode =
-        com.dualframe.data.CaptureMode.VIDEO
     private var activeRecording: Recording? = null
     private var preview: Preview? = null
     private var camera: androidx.camera.core.Camera? = null
@@ -73,9 +69,6 @@ class CameraManager(private val context: Context) {
 
     private var boundLifecycleOwner: LifecycleOwner? = null
     private var boundQuality: Quality = Quality.FHD
-
-    val currentMode: com.dualframe.data.CaptureMode get() = boundMode
-    val isPhotoReady: Boolean get() = isCameraBound && imageCapture != null
     // ── Camera binding (always 2 use cases) ───────────────────────────
 
     /**
@@ -359,189 +352,6 @@ class CameraManager(private val context: Context) {
         }
     }
 
-    // ── Photo mode ────────────────────────────────────────────────────
-
-    /**
-     * Binds Preview + ImageCapture.
-     *
-     * Deliberately separate from [bindInternal]: the video bind carries a
-     * stabilization probe and a quality-downgrade recovery loop that mean
-     * nothing for stills, and keeping the two apart is what guarantees photo
-     * mode cannot change how recording binds.
-     *
-     * The ViewPort is the same 9:16 the video path uses, so the still is framed
-     * exactly as the preview showed it and the landscape copy can be cut from
-     * it with the CropMath the exporter already uses.
-     */
-    suspend fun bindPhoto(lifecycleOwner: LifecycleOwner, onError: (String) -> Unit): Boolean {
-        boundLifecycleOwner = lifecycleOwner
-        if (isRecording) {
-            Log.w(TAG, "bindPhoto refused: a recording is in progress")
-            return false
-        }
-        try {
-            val provider = getCameraProvider()
-            cameraProvider = provider
-            isCameraBound = false
-            provider.unbindAll()
-            // Nothing from the video session survives the switch.
-            videoCapture = null
-            activeRecording = null
-
-            preview = Preview.Builder().build().also { previewUseCase ->
-                previewUseCase.surfaceProvider = Preview.SurfaceProvider { request ->
-                    onSurfaceRequested(request)
-                }
-            }
-            renderer.mirrorHorizontally = false
-
-            // No target resolution is set: CameraX then picks its own largest
-            // supported still size. Whether that is the sensor maximum is a
-            // per-device question, so the result is logged below rather than
-            // assumed.
-            imageCapture = androidx.camera.core.ImageCapture.Builder()
-                .setCaptureMode(androidx.camera.core.ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-                .setTargetRotation(currentTargetRotation)
-                .build()
-
-            val viewPort = androidx.camera.core.ViewPort.Builder(
-                android.util.Rational(9, 16),
-                android.view.Surface.ROTATION_0,
-            )
-                .setScaleType(androidx.camera.core.ViewPort.FILL_CENTER)
-                .build()
-
-            val useCaseGroup = androidx.camera.core.UseCaseGroup.Builder()
-                .addUseCase(preview!!)
-                .addUseCase(imageCapture!!)
-                .setViewPort(viewPort)
-                .build()
-
-            camera = provider.bindToLifecycle(lifecycleOwner, currentCameraSelector(), useCaseGroup)
-            isCameraBound = true
-            boundMode = com.dualframe.data.CaptureMode.PHOTO
-            _zoomRatio.value = 1f
-
-            val stillRes = imageCapture?.resolutionInfo?.resolution
-            val stillCrop = imageCapture?.resolutionInfo?.cropRect
-            val previewRes = preview?.attachedSurfaceResolution
-            Log.i(DIAG_TAG, "=== PHOTO BIND ===")
-            Log.i(DIAG_TAG, "  ImageCapture resolution : $stillRes")
-            Log.i(DIAG_TAG, "  ViewPort crop rect      : $stillCrop")
-            if (stillCrop != null) {
-                val cw = stillCrop.width()
-                val ch = stillCrop.height()
-                val mp = cw.toLong() * ch / 1_000_000.0
-                Log.i(DIAG_TAG, "  Effective after crop    : ${cw}x${ch} " +
-                    "(${"%.1f".format(mp)}MP, aspect=${"%.4f".format(cw.toFloat() / ch)})")
-            }
-            Log.i(DIAG_TAG, "  Preview resolution      : $previewRes")
-            Log.i(DIAG_TAG, "==================")
-
-            // Same WYSIWYG hand-off the video bind performs, so the renderer
-            // frames the preview to what the still will actually contain.
-            if (stillCrop != null && stillCrop.width() > 0 && stillCrop.height() > 0) {
-                val shorter = minOf(stillCrop.width(), stillCrop.height()).toFloat()
-                val longer = maxOf(stillCrop.width(), stillCrop.height()).toFloat()
-                renderer.masterVisualAspect = shorter / longer
-                Log.i(DIAG_TAG, "Master visual aspect set on renderer: " +
-                    "${"%.4f".format(shorter / longer)}")
-            }
-            return true
-        } catch (e: Exception) {
-            Log.e(TAG, "Photo bind failed", e)
-            imageCapture = null
-            isCameraBound = false
-            onError("Camera setup failed: ${e.message}")
-            return false
-        }
-    }
-
-    /**
-     * Rebinds into [mode], reusing the lifecycle owner this manager already
-     * holds — so the ViewModel never has to keep an Activity reference alive
-     * just to switch modes.
-     */
-    suspend fun switchMode(
-        mode: com.dualframe.data.CaptureMode,
-        onError: (String) -> Unit,
-    ): Boolean {
-        val owner = boundLifecycleOwner
-        if (owner == null) {
-            Log.w(TAG, "switchMode refused: nothing bound yet")
-            return false
-        }
-        if (isRecording) {
-            Log.w(TAG, "switchMode refused: a recording is in progress")
-            return false
-        }
-        if (boundMode == mode && isCameraBound) return true
-        return if (mode == com.dualframe.data.CaptureMode.PHOTO) {
-            bindPhoto(owner, onError)
-        } else {
-            bindVideo(owner, onError)
-        }
-    }
-
-    /** Restores the recording session after photo mode. */
-    suspend fun bindVideo(lifecycleOwner: LifecycleOwner, onError: (String) -> Unit): Boolean {
-        boundLifecycleOwner = lifecycleOwner
-        imageCapture = null
-        val ok = bindInternal(lifecycleOwner, boundQuality, onError)
-        if (ok) boundMode = com.dualframe.data.CaptureMode.VIDEO
-        return ok
-    }
-
-    /**
-     * Takes one still and hands back its bytes with the ViewPort rect and the
-     * rotation that belong to it, so the caller can cut both frames from it.
-     */
-    suspend fun takePhoto(): PhotoCapture? {
-        val capture = imageCapture
-        if (capture == null || !isCameraBound) {
-            Log.e(TAG, "takePhoto blocked: ImageCapture not bound")
-            return null
-        }
-        return suspendCancellableCoroutine { cont ->
-            capture.takePicture(
-                ContextCompat.getMainExecutor(context),
-                object : androidx.camera.core.ImageCapture.OnImageCapturedCallback() {
-                    override fun onCaptureSuccess(image: androidx.camera.core.ImageProxy) {
-                        try {
-                            val buffer = image.planes[0].buffer
-                            val bytes = ByteArray(buffer.remaining())
-                            buffer.get(bytes)
-                            val result = PhotoCapture(
-                                jpegBytes = bytes,
-                                cropRect = android.graphics.Rect(image.cropRect),
-                                rotationDegrees = image.imageInfo.rotationDegrees,
-                            )
-                            Log.i(TAG, "Photo captured: ${bytes.size} bytes, " +
-                                "crop=${result.cropRect}, rotation=${result.rotationDegrees}")
-                            if (cont.isActive) cont.resume(result)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Reading the captured image failed", e)
-                            if (cont.isActive) cont.resume(null)
-                        } finally {
-                            image.close()
-                        }
-                    }
-
-                    override fun onError(exception: androidx.camera.core.ImageCaptureException) {
-                        Log.e(TAG, "takePicture failed: code=${exception.imageCaptureError}", exception)
-                        if (cont.isActive) cont.resume(null)
-                    }
-                },
-            )
-        }
-    }
-
-    data class PhotoCapture(
-        val jpegBytes: ByteArray,
-        val cropRect: android.graphics.Rect,
-        val rotationDegrees: Int,
-    )
-
     // ── Camera switching ──────────────────────────────────────────────
 
     suspend fun switchCamera(onError: (String) -> Unit): Boolean {
@@ -583,7 +393,6 @@ class CameraManager(private val context: Context) {
         currentTargetRotation = surfaceRotation
         preview?.targetRotation = surfaceRotation
         videoCapture?.targetRotation = surfaceRotation
-        imageCapture?.targetRotation = surfaceRotation
     }
 
     // ── Focus / Metering ─────────────────────────────────────────────

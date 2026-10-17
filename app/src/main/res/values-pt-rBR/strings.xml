@@ -144,11 +144,4 @@
     <string name="tile_flash_desc">Ligar/desligar a luz</string>
     <string name="tile_settings_name">Config.</string>
     <string name="tile_settings_desc">Mais ajustes de câmera</string>
-
-    <!-- Photo capture mode (stage 1) -->
-    <string name="settings_capture_mode">Modo de captura</string>
-    <string name="mode_video">Vídeo</string>
-    <string name="mode_photo">Foto</string>
-    <string name="toast_photo_saved">Foto salva</string>
-    <string name="error_photo_failed">Não foi possível tirar a foto. Tente de novo.</string>
 </resources>

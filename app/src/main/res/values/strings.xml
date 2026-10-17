@@ -144,11 +144,4 @@
     <string name="tile_flash_desc">Toggle camera light</string>
     <string name="tile_settings_name">Settings</string>
     <string name="tile_settings_desc">More camera settings</string>
-
-    <!-- Photo capture mode (stage 1) -->
-    <string name="settings_capture_mode">Capture mode</string>
-    <string name="mode_video">Video</string>
-    <string name="mode_photo">Photo</string>
-    <string name="toast_photo_saved">Photo saved</string>
-    <string name="error_photo_failed">Could not take the photo. Please try again.</string>
 </resources>

@@ -30,7 +30,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material.icons.rounded.Cameraswitch
-import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
@@ -75,10 +74,6 @@ import com.sunnlab.dualframe.R
 fun SettingsPage(
     settings: AppSettings,
     onSettingsChange: (AppSettings) -> Unit,
-    // Separate from onSettingsChange: changing the mode rebinds the camera, so
-    // it cannot go through the plain settings write without the stored value and
-    // the live session drifting apart.
-    onCaptureModeChange: (com.dualframe.data.CaptureMode) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -86,7 +81,6 @@ fun SettingsPage(
     var showProSheet by remember { mutableStateOf(false) }
     var showAutoSavePage by remember { mutableStateOf(false) }
     var showCameraDialog by remember { mutableStateOf(false) }
-    var showCaptureModeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     BackHandler { onBack() }
 
@@ -201,14 +195,6 @@ fun SettingsPage(
         )
         Spacer(Modifier.height(12.dp))
         SettingsRow(
-            icon = Icons.Rounded.PhotoCamera,
-            title = stringResource(R.string.settings_capture_mode),
-            value = if (settings.captureMode == com.dualframe.data.CaptureMode.PHOTO)
-                stringResource(R.string.mode_photo) else stringResource(R.string.mode_video),
-            onClick = { showCaptureModeDialog = true },
-        )
-        Spacer(Modifier.height(12.dp))
-        SettingsRow(
             icon = Icons.Rounded.Cameraswitch,
             title = stringResource(R.string.settings_default_camera),
             value = if (settings.defaultFrontCamera) stringResource(R.string.settings_camera_front)
@@ -269,43 +255,6 @@ fun SettingsPage(
             fontFamily = PretendardFont,
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        }
-    }
-
-    // Capture mode dialog
-    if (showCaptureModeDialog) {
-        BackHandler { showCaptureModeDialog = false }
-        Box(
-            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
-                .clickable { showCaptureModeDialog = false },
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(0.7f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF1E1E1E))
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(stringResource(R.string.settings_capture_mode), color = Color.White, fontSize = 18.sp,
-                    fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(16.dp))
-                DialogOption(
-                    stringResource(R.string.mode_video),
-                    settings.captureMode == com.dualframe.data.CaptureMode.VIDEO,
-                ) {
-                    onCaptureModeChange(com.dualframe.data.CaptureMode.VIDEO)
-                    showCaptureModeDialog = false
-                }
-                Spacer(Modifier.height(8.dp))
-                DialogOption(
-                    stringResource(R.string.mode_photo),
-                    settings.captureMode == com.dualframe.data.CaptureMode.PHOTO,
-                ) {
-                    onCaptureModeChange(com.dualframe.data.CaptureMode.PHOTO)
-                    showCaptureModeDialog = false
-                }
-            }
         }
     }
 
