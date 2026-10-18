@@ -768,23 +768,67 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(beautySliderOpen = false) }
     }
 
-    /** Persisted, and pushed to the preview on the next frame. */
+    /**
+     * What the slider shows: the stored strength while the effect is on, and
+     * zero while it is off.
+     *
+     * Off and zero are the same thing to look at, so the slider says zero — and
+     * it has to, or dragging to the strength already stored would register as
+     * no change at all and never switch the effect back on. The stored value is
+     * kept behind it so the button can restore it.
+     */
+    fun shownBeautyLevel(settings: AppSettings): Int =
+        if (settings.frontCameraEffect) settings.beautyLevel else 0
+
+    /**
+     * A strength chosen on the slider, which is also how the effect is switched
+     * on and off from there.
+     *
+     * Anything above zero turns it on at that strength; zero turns it off. A
+     * touch that lands on the value already shown changes nothing and is
+     * ignored, so resting a finger on the thumb cannot switch the effect on by
+     * itself. Opening and closing the slider go through their own functions and
+     * touch none of this.
+     *
+     * Choosing zero leaves [AppSettings.beautyLevel] alone rather than writing
+     * the zero: it is the strength to come back to, and the button turning the
+     * effect on again should find it there.
+     */
     fun setBeautyLevel(level: Int) {
-        val snapped = (level / com.dualframe.util.BeautyParams.LEVEL_STEP *
-            com.dualframe.util.BeautyParams.LEVEL_STEP).coerceIn(0, 100)
-        if (snapped == _uiState.value.settings.beautyLevel) return
-        updateSettings(_uiState.value.settings.copy(beautyLevel = snapped))
+        val step = com.dualframe.util.BeautyParams.LEVEL_STEP
+        val snapped = (level / step * step).coerceIn(0, 100)
+        val settings = _uiState.value.settings
+        if (snapped == shownBeautyLevel(settings)) return
+
+        updateSettings(
+            settings.copy(
+                beautyLevel = if (snapped > 0) snapped else settings.beautyLevel,
+                frontCameraEffect = snapped > 0,
+            )
+        )
+        // Whoever just used the slider does not need to be told it exists.
+        if (snapped > 0) SettingsStore.markBeautyHintShown(getApplication())
     }
 
     /**
      * Turn the effect on or off, and the first time it goes on, say once that
      * the tile also has a strength control. A slider nobody knows about is a
      * slider nobody uses.
+     *
+     * Turning off keeps the strength, so turning on again restores it rather
+     * than starting over.
      */
     fun toggleBeauty() {
         val settings = _uiState.value.settings
         val turningOn = !settings.frontCameraEffect
-        updateSettings(settings.copy(frontCameraEffect = turningOn))
+        // On at zero would be on in name only. Only reachable from a state
+        // saved before the slider existed, but cheaper to handle than to rule out.
+        val level = if (turningOn && settings.beautyLevel <= 0) {
+            com.dualframe.util.BeautyParams.INITIAL_LEVEL
+        } else {
+            settings.beautyLevel
+        }
+        updateSettings(settings.copy(frontCameraEffect = turningOn, beautyLevel = level))
         val app = getApplication<android.app.Application>()
         if (turningOn && !SettingsStore.isBeautyHintShown(app)) {
             SettingsStore.markBeautyHintShown(app)

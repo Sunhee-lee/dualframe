@@ -391,7 +391,7 @@ fun MainScreen(
     // control for something that is not running.
     if (state.beautySliderOpen && isFrontCamera) {
         BeautyStrengthPopup(
-            level = state.settings.beautyLevel,
+            level = viewModel.shownBeautyLevel(state.settings),
             deviceRotation = deviceRotation,
             anchor = beautyTileBounds,
             onLevelChange = { viewModel.setBeautyLevel(it) },
