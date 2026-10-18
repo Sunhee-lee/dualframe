@@ -208,6 +208,12 @@ private fun RailTile(
     // long press that ends in a release still fires the tile's action.
     val upright = rotation == 0f
 
+    // A tile with its own long-press action has no tooltip at all. There is one
+    // onLongClick, so only one of the two can ever fire — but saying it here as
+    // well means the exclusion survives someone editing the branch below, and
+    // the tooltip cannot reappear over a control that opens something.
+    val tooltipAllowed = onLongPress == null
+
     LaunchedEffect(upright) { if (!upright) tooltipShown = false }
 
     if (tooltipShown) {
@@ -224,9 +230,8 @@ private fun RailTile(
             .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(RailTheme.tileRadius))
             .combinedClickable(
                 onClick = onClick,
-                // A tile that has its own long-press action takes it in every
-                // orientation; the tooltip is the thing with no room sideways,
-                // not the gesture.
+                // Its own action runs in every orientation; it is the tooltip
+                // that has no room sideways, not the gesture.
                 onLongClick = if (onLongPress != null) {
                     {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -252,7 +257,7 @@ private fun RailTile(
         content()
         // Guarded here as well as in the effect above, so turning the phone
         // cannot leave a tooltip drawn for the frame before the effect runs.
-        if (tooltipShown && upright) {
+        if (tooltipShown && upright && tooltipAllowed) {
             RailTooltip(name, description, rotation) { tooltipShown = false }
         }
     }

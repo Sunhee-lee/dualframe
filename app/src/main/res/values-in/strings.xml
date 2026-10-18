@@ -55,7 +55,7 @@
     <string name="toast_watermark_removed">Watermark dihapus dari kedua video yang disimpan.</string>
     <string name="toast_export_fallback_fhd">Ekspor 4K tidak didukung di perangkat ini. Disimpan dalam FHD.</string>
     <string name="toast_beauty_fallback">Penghalusan kulit tidak didukung di perangkat ini. Disimpan dengan koreksi warna saja.</string>
-    <string name="beauty_strength_title">Penghalusan kulit</string>
+    <string name="beauty_strength_title">Kekuatan beauty</string>
     <string name="toast_beauty_hint">Beauty aktif. Tekan dan tahan tombol untuk mengatur kekuatannya.</string>
     <string name="toast_auto_save_complete">✓ Tersimpan</string>
     <string name="toast_auto_save_failed">Simpan otomatis gagal. Coba simpan secara manual.</string>

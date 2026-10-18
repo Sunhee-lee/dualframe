@@ -382,6 +382,7 @@ fun MainScreen(
     if (state.beautySliderOpen && isFrontCamera) {
         BeautyStrengthPopup(
             level = state.settings.beautyLevel,
+            deviceRotation = deviceRotation,
             onLevelChange = { viewModel.setBeautyLevel(it) },
             onDismiss = { viewModel.closeBeautySlider() },
         )
@@ -1716,13 +1717,22 @@ private fun AdFailDialog(
  *
  * The preview updates as the slider moves — the strength is a shader uniform,
  * not baked source, so there is nothing to rebuild between frames.
+ *
+ * The heading and the live value are what explain the control. The beauty tile
+ * gives up its tooltip to open this, so there is nothing else left to say what
+ * a long press does; a caption that named the slider and then vanished after
+ * two seconds would have been the worse of the two anyway.
  */
 @Composable
 private fun BeautyStrengthPopup(
     level: Int,
+    deviceRotation: Int,
     onLevelChange: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // The same angle the rail turns its tiles by, so held sideways the heading
+    // and the value read the right way up instead of along the phone's edge.
+    val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
     Box(
         modifier = Modifier.fillMaxSize()
             .clickable(
@@ -1734,6 +1744,7 @@ private fun BeautyStrengthPopup(
         Column(
             modifier = Modifier
                 .padding(end = 70.dp)
+                .rotate(rot)
                 .widthIn(min = 150.dp, max = 220.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(Color(0xFF151515).copy(alpha = 0.95f))
