@@ -12,8 +12,8 @@ android {
         applicationId = "com.sunnlab.dualframe"
         minSdk = 29  // Android 10 — needed for scoped storage + stable CameraX behavior
         targetSdk = 36
-        versionCode = 21
-        versionName = "2.1.2"
+        versionCode = 22
+        versionName = "2.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
