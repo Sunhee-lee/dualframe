@@ -21,7 +21,7 @@
     <!-- Save options popup -->
     <string name="save_popup_title">वीडियो सहेजें</string>
     <string name="save_popup_pro_title">DualFrame PRO</string>
-    <string name="save_popup_pro_subtitle">बिना विज्ञापन · आजीवन</string>
+    <string name="save_popup_pro_subtitle">विज्ञापन और वॉटरमार्क के बिना सहेजें</string>
     <string name="save_popup_ad_title">मुफ्त में सहेजने के लिए विज्ञापन देखें</string>
     <string name="save_popup_ad_desc">वॉटरमार्क के बिना सहेजें</string>
     <string name="save_popup_watermark_title">वॉटरमार्क के साथ सहेजें</string>

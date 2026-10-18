@@ -21,7 +21,7 @@
     <!-- Save options popup -->
     <string name="save_popup_title">Simpan Video</string>
     <string name="save_popup_pro_title">DualFrame PRO</string>
-    <string name="save_popup_pro_subtitle">Tanpa iklan · Selamanya</string>
+    <string name="save_popup_pro_subtitle">Simpan tanpa iklan atau watermark</string>
     <string name="save_popup_ad_title">Tonton iklan untuk menyimpan gratis</string>
     <string name="save_popup_ad_desc">Simpan tanpa watermark</string>
     <string name="save_popup_watermark_title">Simpan dengan watermark</string>

@@ -21,7 +21,7 @@
     <!-- Save options popup -->
     <string name="save_popup_title">Salvar Vídeos</string>
     <string name="save_popup_pro_title">DualFrame PRO</string>
-    <string name="save_popup_pro_subtitle">Sem anúncios · Vitalício</string>
+    <string name="save_popup_pro_subtitle">Salve sem anúncios ou marca d\'água</string>
     <string name="save_popup_ad_title">Assista a um anúncio para salvar grátis</string>
     <string name="save_popup_ad_desc">Salve sem marca d\'água</string>
     <string name="save_popup_watermark_title">Salvar com marca d\'água</string>
