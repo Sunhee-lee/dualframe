@@ -55,7 +55,7 @@
     <string name="toast_watermark_removed">दोनों सहेजे गए वीडियो से वॉटरमार्क हटा दिए गए।</string>
     <string name="toast_export_fallback_fhd">इस डिवाइस पर 4K एक्सपोर्ट समर्थित नहीं। FHD में सहेजा गया।</string>
     <string name="toast_beauty_fallback">इस डिवाइस पर स्किन स्मूदिंग समर्थित नहीं। केवल रंग सुधार के साथ सहेजा गया।</string>
-    <string name="beauty_strength_title">ब्यूटी तीव्रता</string>
+    <string name="beauty_strength_title">तीव्रता</string>
     <string name="toast_beauty_hint">ब्यूटी चालू है। बटन को देर तक दबाकर इसकी तीव्रता सेट करें।</string>
     <string name="toast_auto_save_complete">✓ सहेजा गया</string>
     <string name="toast_auto_save_failed">ऑटो-सेव विफल। मैन्युअली सहेजने का प्रयास करें।</string>

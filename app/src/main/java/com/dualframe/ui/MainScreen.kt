@@ -97,6 +97,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -1730,57 +1732,99 @@ private fun BeautyStrengthPopup(
     onLevelChange: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // The same angle the rail turns its tiles by, so held sideways the heading
-    // and the value read the right way up instead of along the phone's edge.
+    // The activity is locked to portrait, so turning the phone does not move
+    // the layout — only the widgets counter-rotate, the way the rail turns its
+    // tiles. The card does the same so its heading reads upright.
     val rot = when (deviceRotation) { 270 -> 90f; 90 -> -90f; else -> 0f }
+    val landscape = deviceRotation == 90 || deviceRotation == 270
+
+    // One row, so the card is about as tall as the gear in the header. The
+    // slider keeps its own 48dp height, which is the touch target, and the
+    // padding around it is what was cut.
+    // Portrait keeps the width it had, so the card sits exactly where it sat.
+    // Turned, the card's width runs down the screen's long side, where there is
+    // room to spare, so it gets more and the slider gets a longer throw.
+    val cardWidth = if (landscape) 260.dp else 220.dp
+    val cardHeight = 52.dp
+    val sliderWidth = if (landscape) 130.dp else 100.dp
+
     Box(
         modifier = Modifier.fillMaxSize()
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
             ) { onDismiss() },
-        contentAlignment = Alignment.CenterEnd,
     ) {
-        Column(
+        // rotate() turns the drawing, not the layout, so a card laid out 215
+        // wide and 52 tall covers 52 by 215 on screen once turned. This box is
+        // sized to what is actually covered, which is what lets the alignment
+        // and padding below mean what they say in both orientations.
+        Box(
             modifier = Modifier
-                .padding(end = 70.dp)
-                .rotate(rot)
-                .widthIn(min = 150.dp, max = 220.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFF151515).copy(alpha = 0.95f))
-                .border(0.5.dp, Color(0xFF333333), RoundedCornerShape(14.dp))
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                ) {}
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .align(if (landscape) Alignment.TopEnd else Alignment.CenterEnd)
+                .padding(
+                    // Landscape: up beside the gear, clear of the rail — the
+                    // rail is 56dp of tile plus its own 2dp, so 66 leaves 8.
+                    // Portrait: exactly where it was, vertically centred.
+                    top = if (landscape) 60.dp else 0.dp,
+                    end = if (landscape) 66.dp else 70.dp,
+                )
+                .size(
+                    width = if (landscape) cardHeight else cardWidth,
+                    height = if (landscape) cardWidth else cardHeight,
+                ),
+            contentAlignment = Alignment.Center,
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.size(cardWidth, cardHeight)
+                    .rotate(rot)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF151515).copy(alpha = 0.95f))
+                    .border(0.5.dp, Color(0xFF333333), RoundedCornerShape(14.dp))
+                    // Swallows taps so dragging the slider does not reach the
+                    // scrim behind and dismiss the card mid-drag.
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) {}
+                    .padding(start = 12.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // The slider's width is fixed and the heading takes what is
+                // left, so a long translation shortens the heading rather than
+                // squeezing the control: "Intensidade do beauty" would have cut
+                // the track to 40dp. Weighted with fill off, it asks for no
+                // more than it needs.
                 Text(stringResource(R.string.beauty_strength_title),
-                    color = Color(0xFFCCCCCC), fontSize = 13.sp,
-                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                    modifier = Modifier.weight(1f, fill = false),
+                    color = Color(0xFFCCCCCC), fontSize = 12.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.width(6.dp))
+                // A floor under the width so the slider does not shift sideways
+                // as the number goes from one digit to three.
                 Text("$level",
-                    color = Color(0xFF4CAF50), fontSize = 14.sp,
-                    fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+                    modifier = Modifier.widthIn(min = 26.dp),
+                    color = Color(0xFF4CAF50), fontSize = 13.sp,
+                    textAlign = TextAlign.End,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.Bold,
+                    maxLines = 1)
+                Slider(
+                    value = level.toFloat(),
+                    onValueChange = { onLevelChange(it.roundToInt()) },
+                    valueRange = 0f..100f,
+                    // 21 stops at a step of 5: the two ends plus 19 between them.
+                    steps = 19,
+                    modifier = Modifier.width(sliderWidth).padding(start = 6.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(0xFF4CAF50),
+                        activeTrackColor = Color(0xFF4CAF50),
+                        inactiveTrackColor = Color(0xFF3A3A3A),
+                        activeTickColor = Color.Transparent,
+                        inactiveTickColor = Color.Transparent,
+                    ),
+                )
             }
-            Slider(
-                value = level.toFloat(),
-                onValueChange = { onLevelChange(it.roundToInt()) },
-                valueRange = 0f..100f,
-                // 21 stops at a step of 5: the two ends plus 19 between them.
-                steps = 19,
-                colors = SliderDefaults.colors(
-                    thumbColor = Color(0xFF4CAF50),
-                    activeTrackColor = Color(0xFF4CAF50),
-                    inactiveTrackColor = Color(0xFF3A3A3A),
-                    activeTickColor = Color.Transparent,
-                    inactiveTickColor = Color.Transparent,
-                ),
-            )
         }
     }
 }
