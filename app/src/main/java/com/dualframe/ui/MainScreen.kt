@@ -1197,7 +1197,8 @@ private fun RemoveWatermarkDialog(
     context: android.content.Context,
     onDismiss: () -> Unit,
 ) {
-    val price = com.dualframe.monetize.BillingManager.getInstance(context).formattedPrice
+    val price = com.dualframe.monetize.BillingManager.getInstance(context)
+        .formattedPriceFlow.collectAsState().value
     var isProcessing by remember { mutableStateOf(false) }
 
     Box(

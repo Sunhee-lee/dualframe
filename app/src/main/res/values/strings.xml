@@ -21,7 +21,7 @@
     <!-- Save options popup -->
     <string name="save_popup_title">Save Videos</string>
     <string name="save_popup_pro_title">DualFrame PRO</string>
-    <string name="save_popup_pro_subtitle">Save without ads or watermark</string>
+    <string name="save_popup_pro_subtitle">No ads · Lifetime</string>
     <string name="save_popup_ad_title">Watch ad to save for free</string>
     <string name="save_popup_ad_desc">Save without watermark</string>
     <string name="save_popup_watermark_title">Save with watermark</string>
@@ -88,8 +88,8 @@
     <string name="settings_review">Rate DualFrame</string>
     <string name="settings_contact">Send Feedback</string>
     <string name="pro_sheet_title_full">DualFrame PRO</string>
-    <string name="pro_sheet_subtitle">One-time purchase. Lifetime access.</string>
-    <string name="pro_sheet_get">Unlock PRO</string>
+    <string name="pro_sheet_subtitle">Save instantly — no ads, no watermark</string>
+    <string name="pro_sheet_get">Buy lifetime PRO</string>
     <string name="pro_sheet_thanks">Thank you for supporting DualFrame!</string>
     <string name="pro_sheet_restore">Restore Purchase</string>
     <string name="pro_sheet_restore_prompt">Already have PRO? Restore purchase</string>

@@ -43,6 +43,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -172,7 +173,7 @@ fun SettingsPage(
                     fontFamily = PretendardFont)
             }
             if (!isPro) {
-                val price = BillingManager.getInstance(context).formattedPrice
+                val price = BillingManager.getInstance(context).formattedPriceFlow.collectAsState().value
                 if (price != null) {
                     Text(price, color = Color.White, fontSize = 16.sp,
                         fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
@@ -512,7 +513,7 @@ fun ProUpgradeSheet(
     onDismiss: () -> Unit,
     onPurchased: () -> Unit,
 ) {
-    val price = BillingManager.getInstance(context).formattedPrice
+    val price = BillingManager.getInstance(context).formattedPriceFlow.collectAsState().value
 
     Box(
         modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f))

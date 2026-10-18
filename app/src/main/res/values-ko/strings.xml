@@ -21,7 +21,7 @@
     <!-- Save options popup -->
     <string name="save_popup_title">영상 저장</string>
     <string name="save_popup_pro_title">DualFrame PRO</string>
-    <string name="save_popup_pro_subtitle">광고·워터마크 없이 저장</string>
+    <string name="save_popup_pro_subtitle">광고 없이 바로 저장 · 평생 이용</string>
     <string name="save_popup_ad_title">광고 보고 무료 저장</string>
     <string name="save_popup_ad_desc">워터마크 없이 저장</string>
     <string name="save_popup_watermark_title">워터마크 포함 저장</string>
@@ -88,8 +88,8 @@
     <string name="settings_review">리뷰 남기기</string>
     <string name="settings_contact">문의 및 제안</string>
     <string name="pro_sheet_title_full">DualFrame PRO</string>
-    <string name="pro_sheet_subtitle">광고 없이 바로 저장하세요</string>
-    <string name="pro_sheet_get">PRO 잠금 해제</string>
+    <string name="pro_sheet_subtitle">광고·워터마크 없이 바로 저장하세요</string>
+    <string name="pro_sheet_get">평생 PRO 구매</string>
     <string name="pro_sheet_thanks">DualFrame을 지원해 주셔서 감사합니다!</string>
     <string name="pro_sheet_restore">구매 복원</string>
     <string name="pro_sheet_restore_prompt">이미 구매하셨나요? 구매 복원</string>

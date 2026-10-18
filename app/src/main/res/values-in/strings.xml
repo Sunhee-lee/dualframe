@@ -21,7 +21,7 @@
     <!-- Save options popup -->
     <string name="save_popup_title">Simpan Video</string>
     <string name="save_popup_pro_title">DualFrame PRO</string>
-    <string name="save_popup_pro_subtitle">Simpan tanpa iklan atau watermark</string>
+    <string name="save_popup_pro_subtitle">Tanpa iklan · Selamanya</string>
     <string name="save_popup_ad_title">Tonton iklan untuk menyimpan gratis</string>
     <string name="save_popup_ad_desc">Simpan tanpa watermark</string>
     <string name="save_popup_watermark_title">Simpan dengan watermark</string>
@@ -88,8 +88,8 @@
     <string name="settings_review">Beri Rating DualFrame</string>
     <string name="settings_contact">Kirim Umpan Balik</string>
     <string name="pro_sheet_title_full">DualFrame PRO</string>
-    <string name="pro_sheet_subtitle">Pembelian sekali. Akses seumur hidup.</string>
-    <string name="pro_sheet_get">Buka PRO</string>
+    <string name="pro_sheet_subtitle">Simpan langsung — tanpa iklan, tanpa watermark</string>
+    <string name="pro_sheet_get">Beli PRO seumur hidup</string>
     <string name="pro_sheet_thanks">Terima kasih telah mendukung DualFrame!</string>
     <string name="pro_sheet_restore">Pulihkan Pembelian</string>
     <string name="pro_sheet_restore_prompt">Sudah punya PRO? Pulihkan pembelian</string>

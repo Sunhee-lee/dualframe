@@ -14,6 +14,9 @@ import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class BillingManager private constructor(private val context: Context) {
 
@@ -37,8 +40,20 @@ class BillingManager private constructor(private val context: Context) {
     private var isConnected = false
     private var connectionRetryCount = 0
 
-    val formattedPrice: String?
-        get() = productDetails?.oneTimePurchaseOfferDetails?.formattedPrice
+    private val _formattedPrice = MutableStateFlow<String?>(null)
+
+    /**
+     * The product's price as Google Play localises it, or null until the query
+     * answers — and null for good if it never does.
+     *
+     * Observable because the query is asynchronous and the screens that show a
+     * price can be composed before it returns. Read as a plain value, a screen
+     * composed in that window would show no price and have nothing to tell it
+     * when one arrived. Nothing here invents a figure to fill the gap: a price
+     * the store did not confirm is not a price to put in front of someone
+     * about to pay it, so the UI shows none and says nothing about cost.
+     */
+    val formattedPriceFlow: StateFlow<String?> = _formattedPrice.asStateFlow()
 
     private val purchasesUpdatedListener = PurchasesUpdatedListener { result, purchases ->
         Log.i(TAG, "purchasesUpdated: code=${result.responseCode} msg=${result.debugMessage}")
@@ -122,6 +137,7 @@ class BillingManager private constructor(private val context: Context) {
             Log.i(TAG, "queryProductDetails: code=${result.responseCode} " +
                 "msg=${result.debugMessage} count=${detailsList.productDetailsList.size}")
             productDetails = detailsList.productDetailsList.firstOrNull()
+            _formattedPrice.value = productDetails?.oneTimePurchaseOfferDetails?.formattedPrice
             if (productDetails != null) {
                 Log.i(TAG, "Product loaded: id=${productDetails?.productId} " +
                     "title=${productDetails?.title} " +

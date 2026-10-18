@@ -21,7 +21,7 @@
     <!-- Save options popup -->
     <string name="save_popup_title">Salvar Vídeos</string>
     <string name="save_popup_pro_title">DualFrame PRO</string>
-    <string name="save_popup_pro_subtitle">Salve sem anúncios ou marca d\'água</string>
+    <string name="save_popup_pro_subtitle">Sem anúncios · Vitalício</string>
     <string name="save_popup_ad_title">Assista a um anúncio para salvar grátis</string>
     <string name="save_popup_ad_desc">Salve sem marca d\'água</string>
     <string name="save_popup_watermark_title">Salvar com marca d\'água</string>
@@ -88,8 +88,8 @@
     <string name="settings_review">Avaliar DualFrame</string>
     <string name="settings_contact">Enviar Feedback</string>
     <string name="pro_sheet_title_full">DualFrame PRO</string>
-    <string name="pro_sheet_subtitle">Compra única. Acesso vitalício.</string>
-    <string name="pro_sheet_get">Desbloquear PRO</string>
+    <string name="pro_sheet_subtitle">Salve na hora — sem anúncios nem marca d\'água</string>
+    <string name="pro_sheet_get">Comprar PRO vitalício</string>
     <string name="pro_sheet_thanks">Obrigado por apoiar o DualFrame!</string>
     <string name="pro_sheet_restore">Restaurar Compra</string>
     <string name="pro_sheet_restore_prompt">Já tem PRO? Restaurar compra</string>
