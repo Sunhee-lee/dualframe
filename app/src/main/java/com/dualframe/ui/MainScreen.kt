@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
@@ -1755,8 +1756,8 @@ private fun BeautyStrengthPopup(
                 interactionSource = remember { MutableInteractionSource() },
             ) { onDismiss() },
     ) {
-        // rotate() turns the drawing, not the layout, so a card laid out 215
-        // wide and 52 tall covers 52 by 215 on screen once turned. This box is
+        // rotate() turns the drawing, not the layout, so a card laid out 260
+        // wide and 52 tall covers 52 by 260 on screen once turned. This box is
         // sized to what is actually covered, which is what lets the alignment
         // and padding below mean what they say in both orientations.
         Box(
@@ -1776,7 +1777,15 @@ private fun BeautyStrengthPopup(
             contentAlignment = Alignment.Center,
         ) {
             Row(
-                modifier = Modifier.size(cardWidth, cardHeight)
+                // requiredSize, not size: the box above is 52 wide when the
+                // phone is turned, and size() is coerced into whatever the
+                // parent allows — so the card measured 52 by 52, the heading
+                // ellipsised away and the slider collapsed to nothing, leaving
+                // the number alone in a small black square. requiredSize
+                // ignores the incoming constraints, which is the point: the
+                // card is deliberately larger than the space it is placed in,
+                // because rotating it is what brings it back inside.
+                modifier = Modifier.requiredSize(cardWidth, cardHeight)
                     .rotate(rot)
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFF151515).copy(alpha = 0.95f))
