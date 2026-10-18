@@ -59,6 +59,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private const val SAVE_PASS_2_START = 0.45f
         private const val SAVE_PASS_2_END = 0.90f
         private const val SAVE_MEDIASTORE_MID = 0.95f
+
+        /**
+         * How long to record before bytes-on-disk divided by seconds means
+         * anything.
+         *
+         * The first tick is a single sample taken a second after the timer
+         * started, which is not a second after the recorder did, and the muxer
+         * writes in bursts rather than evenly — so the file can hold anything
+         * from nothing to two seconds of video while this believes one second
+         * has passed. At 4K that reads as double the real rate and halves the
+         * estimate, which is enough to put a storage warning on screen at the
+         * start of a recording on a phone with several gigabytes free, and take
+         * it off again once the average settles. A fresh install records at 4K,
+         * because first launch picks the best quality the camera offers, so
+         * this is the first thing a new user sees.
+         *
+         * Three seconds of averaging is enough for the burst to stop mattering.
+         * Until then the nominal bitrate is used, which understates 4K and so
+         * errs towards saying nothing.
+         */
+        private const val MIN_RATE_SAMPLE_SEC = 3
     }
 
     private val _uiState = MutableStateFlow(UiState())
@@ -433,22 +454,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         val master = masterFile ?: return null
         val elapsedSec = _uiState.value.recordingDurationSeconds
-        if (!master.exists() || elapsedSec <= 0) {
-            // Fallback: estimate from nominal bitrate
+
+        // Need buffer for finalizing (moov atom, cropped export ≈ 2x master size)
+        val reserveBytes = 50_000_000L
+        val usable = (available - reserveBytes).coerceAtLeast(0L)
+
+        if (!master.exists() || elapsedSec < MIN_RATE_SAMPLE_SEC) {
+            // Nominal bitrate until the measurement below is worth trusting.
             val bitrate = when (_uiState.value.settings.videoQuality) {
                 com.dualframe.data.VideoQuality.UHD -> 40_000_000L
                 com.dualframe.data.VideoQuality.FHD -> 16_000_000L
                 else -> 8_000_000L
             }
-            val bytesPerSec = bitrate / 8
-            return (available / bytesPerSec).toInt()
+            return (usable / (bitrate / 8)).toInt()
         }
 
         // Live rate: actual bytes / elapsed seconds
         val bytesPerSec = (master.length() / elapsedSec.toLong()).coerceAtLeast(1L)
-        // Need buffer for finalizing (moov atom, cropped export ≈ 2x master size)
-        val reserveBytes = 50_000_000L
-        val usable = (available - reserveBytes).coerceAtLeast(0L)
         return (usable / bytesPerSec).toInt()
     }
 
