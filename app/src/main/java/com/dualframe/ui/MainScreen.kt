@@ -1815,7 +1815,9 @@ private fun BeautyStrengthPopup(
                 modifier = Modifier.requiredSize(cardWidth, cardHeight)
                     .rotate(rot)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFF151515).copy(alpha = 0.95f))
+                    // The rail's own token, so the card is exactly as see-through
+                    // as the tile that opens it and cannot drift from it later.
+                    .background(RailTheme.tileBg)
                     .border(0.5.dp, Color(0xFF333333), RoundedCornerShape(14.dp))
                     // Swallows taps so dragging the slider does not reach the
                     // scrim behind and dismiss the card mid-drag.
