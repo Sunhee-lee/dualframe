@@ -34,7 +34,7 @@ class SkinSmoothEffect(
      * a recording keeps the strength it was shot with, whatever the slider says
      * by the time the file is saved.
      */
-    private val level: Int = BeautyParams.DEFAULT_LEVEL,
+    private val level: Int = BeautyParams.TUNED_LEVEL,
 ) : GlEffect {
 
     override fun toGlShaderProgram(context: Context, useHdr: Boolean) =

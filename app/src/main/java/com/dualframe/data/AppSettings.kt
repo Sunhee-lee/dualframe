@@ -16,10 +16,13 @@ data class AppSettings(
      */
     val frontCameraEffect: Boolean = false,
     /**
-     * Selfie effect strength, 0-100 in steps of 5. The default is the level the
-     * effect was tuned at, so turning it on gives the look it always gave.
+     * Selfie effect strength, 0-100 in steps of 5.
+     *
+     * Starts at [com.dualframe.util.BeautyParams.INITIAL_LEVEL] and not at the
+     * level the effect was tuned at: the two are different numbers on purpose,
+     * and only the tuned one may not move.
      */
-    val beautyLevel: Int = com.dualframe.util.BeautyParams.DEFAULT_LEVEL,
+    val beautyLevel: Int = com.dualframe.util.BeautyParams.INITIAL_LEVEL,
     val keepScreenAwake: Boolean = true,
     val showGuides: Boolean = true,
     val autoSave: Boolean = false,
@@ -62,7 +65,9 @@ object SettingsStore {
             },
             saveSelfieUnmirrored = prefs.getBoolean(KEY_MIRROR_FRONT, true),
             frontCameraEffect = prefs.getBoolean(KEY_FRONT_EFFECT, false),
-            beautyLevel = prefs.getInt(KEY_BEAUTY_LEVEL, com.dualframe.util.BeautyParams.DEFAULT_LEVEL)
+            // A stored level always wins, so nobody who has already set one
+            // has it taken away by this default changing.
+            beautyLevel = prefs.getInt(KEY_BEAUTY_LEVEL, com.dualframe.util.BeautyParams.INITIAL_LEVEL)
                 .coerceIn(0, 100),
             keepScreenAwake = prefs.getBoolean(KEY_SCREEN_AWAKE, true),
             showGuides = prefs.getBoolean(KEY_GUIDES, true),

@@ -117,13 +117,31 @@ object BeautyParams {
 
 
     // ── Strength levels ───────────────────────────────────────────────
-    // The constants above are the look at [DEFAULT_LEVEL]; these turn a 0-100
+    // The constants above are the look at [TUNED_LEVEL]; these turn a 0-100
     // slider into them. They are uniforms at runtime rather than literals baked
     // into the shader, so one compiled program serves every level and the
     // preview answers a drag immediately.
 
-    /** The level that reproduces the tuned look above, exactly. */
-    const val DEFAULT_LEVEL = 60
+    /**
+     * The level that reproduces the tuned look above, exactly.
+     *
+     * This is a property of the maths, not a product decision: [forLevel] pivots
+     * on it, and at exactly this level every amount comes back as its constant
+     * untouched. Moving it rescales the whole curve and the tuned look stops
+     * being reproducible at any level. What a new user starts at is
+     * [INITIAL_LEVEL], which is free to be anything.
+     */
+    const val TUNED_LEVEL = 60
+
+    /**
+     * What the slider reads the first time someone turns the effect on.
+     *
+     * A touch below the tuned look, because a filter noticed is a filter
+     * resented, and the slider is right there for anyone who wants more. Only
+     * ever a starting point: once the slider is moved, the stored value wins,
+     * and an existing user's stored value is never overwritten by this.
+     */
+    const val INITIAL_LEVEL = 50
 
     /** Slider granularity. */
     const val LEVEL_STEP = 5
@@ -151,21 +169,21 @@ object BeautyParams {
     /**
      * The four shader uniforms plus the radius, for a slider level.
      *
-     * Below [DEFAULT_LEVEL] every amount scales linearly to zero, tone
+     * Below [TUNED_LEVEL] every amount scales linearly to zero, tone
      * correction included — otherwise level 0 would still shift the colour of
      * the whole frame and would not be "no effect" at all. Above it, only the
      * skin amounts grow and tone holds at full: past the tuned look the user is
      * asking for smoother skin, not a brighter picture, and letting brightness
      * climb is how a filter starts looking washed out.
      *
-     * At exactly [DEFAULT_LEVEL] the interpolation factor is 1.0, so each value
+     * At exactly [TUNED_LEVEL] the interpolation factor is 1.0, so each value
      * is its constant untouched — the tuned look is reproduced bit for bit, not
      * approximated.
      */
     fun forLevel(level: Int): Strength {
         val l = level.coerceIn(0, 100)
-        if (l <= DEFAULT_LEVEL) {
-            val t = l / DEFAULT_LEVEL.toFloat()
+        if (l <= TUNED_LEVEL) {
+            val t = l / TUNED_LEVEL.toFloat()
             return Strength(
                 luma = SMOOTH_LUMA_STRENGTH * t,
                 chroma = SMOOTH_CHROMA_STRENGTH * t,
@@ -177,7 +195,7 @@ object BeautyParams {
                 tone = t,
             )
         }
-        val t = (l - DEFAULT_LEVEL) / (100f - DEFAULT_LEVEL)
+        val t = (l - TUNED_LEVEL) / (100f - TUNED_LEVEL)
         return Strength(
             luma = SMOOTH_LUMA_STRENGTH + (MAX_LUMA_STRENGTH - SMOOTH_LUMA_STRENGTH) * t,
             chroma = SMOOTH_CHROMA_STRENGTH + (MAX_CHROMA_STRENGTH - SMOOTH_CHROMA_STRENGTH) * t,

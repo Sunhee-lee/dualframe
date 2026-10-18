@@ -58,6 +58,9 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import com.sunnlab.dualframe.R
 import kotlinx.coroutines.delay
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 
 /** How long a long-press tooltip stays up before it withdraws on its own. */
 private const val TOOLTIP_DURATION_MS = 2_200L
@@ -96,6 +99,9 @@ fun SettingsPanel(
     onKeepScreenToggle: () -> Unit,
     onSelfieEffectToggle: () -> Unit,
     onSelfieEffectLongPress: () -> Unit,
+    /** Where the beauty tile actually landed, so the strength card can be
+     *  put beside it rather than at a guessed coordinate. */
+    onBeautyTileBounds: (Rect) -> Unit = {},
     onResolutionCycle: () -> Unit,
     onMoreClick: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -144,6 +150,7 @@ fun SettingsPanel(
             description = stringResource(R.string.tile_timer_desc))
 
         if (isFrontCamera) {
+            Box(Modifier.onGloballyPositioned { onBeautyTileBounds(it.boundsInRoot()) }) {
             TextTile(
                 if (selfieEffect) stringResource(R.string.label_beauty_on) else stringResource(R.string.label_beauty_off),
                 rot, onSelfieEffectToggle, isActive = selfieEffect,
@@ -155,6 +162,7 @@ fun SettingsPanel(
                 // explains the control better than a caption could.
                 onLongPress = onSelfieEffectLongPress,
             )
+            }
         }
 
         if (showFlash) {

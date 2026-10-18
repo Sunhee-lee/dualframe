@@ -78,7 +78,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * (thumbnail, watermarked save, clean save, auto-save) reads this rather
      * than the live setting. What was framed is what gets written.
      */
-    private var recordingBeautyLevel = com.dualframe.util.BeautyParams.DEFAULT_LEVEL
+    private var recordingBeautyLevel = com.dualframe.util.BeautyParams.TUNED_LEVEL
     private var timerJob: Job? = null
     private var countdownJob: Job? = null
 

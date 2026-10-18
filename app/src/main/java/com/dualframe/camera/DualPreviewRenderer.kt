@@ -94,7 +94,7 @@ class DualPreviewRenderer {
      * 0-100, the slider's value. Read every frame, so a drag shows up on the
      * next one without a shader rebuild.
      */
-    var beautyLevel = com.dualframe.util.BeautyParams.DEFAULT_LEVEL
+    var beautyLevel = com.dualframe.util.BeautyParams.TUNED_LEVEL
     var masterVisualAspect: Float = 9f / 16f
     @Volatile var landscapeCropOffsetY: Float = 0f
 

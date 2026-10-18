@@ -67,7 +67,7 @@ object WatermarkHelper {
         applyWatermark: Boolean,
         applyBeauty: Boolean,
         mirrorHorizontally: Boolean = false,
-        beautyLevel: Int = BeautyParams.DEFAULT_LEVEL,
+        beautyLevel: Int = BeautyParams.TUNED_LEVEL,
         onProgress: (Float) -> Unit = {},
         onSkinSmoothUnavailable: () -> Unit = {},
     ): File? {

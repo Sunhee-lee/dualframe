@@ -115,6 +115,8 @@ import com.dualframe.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.IntOffset
 
 @UnstableApi
 @androidx.camera.camera2.interop.ExperimentalCamera2Interop
@@ -172,6 +174,10 @@ fun MainScreen(
     // Back button confirmation dialog
     var showExitDialog by remember { mutableStateOf(false) }
     var settingsExpanded by remember { mutableStateOf(false) }
+    // Where the beauty tile actually is. The strength card is placed from
+    // this rather than from a coordinate guessed off the rail's dimensions,
+    // which would drift with tile size, density or a different screen.
+    var beautyTileBounds by remember { mutableStateOf<Rect?>(null) }
     var showSettingsPage by remember {
         val prefs = context.getSharedPreferences("dualframe_settings", android.content.Context.MODE_PRIVATE)
         val reopen = prefs.getBoolean("reopen_settings", false)
@@ -346,6 +352,7 @@ fun MainScreen(
                 },
                 onSelfieEffectToggle = { viewModel.toggleBeauty() },
                 onSelfieEffectLongPress = { viewModel.openBeautySlider() },
+                onBeautyTileBounds = { beautyTileBounds = it },
                 onResolutionCycle = {
                     val qualities = com.dualframe.data.VideoQuality.entries
                     val idx = qualities.indexOf(state.settings.videoQuality)
@@ -386,6 +393,7 @@ fun MainScreen(
         BeautyStrengthPopup(
             level = state.settings.beautyLevel,
             deviceRotation = deviceRotation,
+            anchor = beautyTileBounds,
             onLevelChange = { viewModel.setBeautyLevel(it) },
             onDismiss = { viewModel.closeBeautySlider() },
         )
@@ -1730,6 +1738,7 @@ private fun AdFailDialog(
 private fun BeautyStrengthPopup(
     level: Int,
     deviceRotation: Int,
+    anchor: Rect?,
     onLevelChange: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -1749,31 +1758,49 @@ private fun BeautyStrengthPopup(
     val cardHeight = 52.dp
     val sliderWidth = if (landscape) 130.dp else 100.dp
 
-    Box(
+    // rotate() turns the drawing, not the layout, so a card laid out 260 wide
+    // and 52 tall covers 52 by 260 on screen once turned. Every placement below
+    // works in what is actually covered.
+    val coveredWidth = if (landscape) cardHeight else cardWidth
+    val coveredHeight = if (landscape) cardWidth else cardHeight
+
+    BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
             ) { onDismiss() },
     ) {
-        // rotate() turns the drawing, not the layout, so a card laid out 260
-        // wide and 52 tall covers 52 by 260 on screen once turned. This box is
-        // sized to what is actually covered, which is what lets the alignment
-        // and padding below mean what they say in both orientations.
-        Box(
-            modifier = Modifier
+        val rootHeight = constraints.maxHeight
+        val rootWidth = constraints.maxWidth
+        // Turned, the card goes immediately left of the tile that opened it and
+        // level with its middle, measured from where that tile actually landed.
+        // Upright it stays where it has been all along.
+        val placement = if (landscape && anchor != null) {
+            Modifier.offset {
+                val gap = 10.dp.roundToPx()
+                val edge = 8.dp.roundToPx()
+                val w = coveredWidth.roundToPx()
+                val h = coveredHeight.roundToPx()
+                IntOffset(
+                    x = (anchor.left.roundToInt() - gap - w)
+                        .coerceIn(edge, (rootWidth - w - edge).coerceAtLeast(edge)),
+                    y = (anchor.center.y.roundToInt() - h / 2)
+                        .coerceIn(edge, (rootHeight - h - edge).coerceAtLeast(edge)),
+                )
+            }
+        } else {
+            // No anchor yet on the first frame, or upright: the rail is 56dp of
+            // tile plus its own 2dp, so 66 clears it by 8.
+            Modifier
                 .align(if (landscape) Alignment.TopEnd else Alignment.CenterEnd)
                 .padding(
-                    // Landscape: up beside the gear, clear of the rail — the
-                    // rail is 56dp of tile plus its own 2dp, so 66 leaves 8.
-                    // Portrait: exactly where it was, vertically centred.
                     top = if (landscape) 60.dp else 0.dp,
                     end = if (landscape) 66.dp else 70.dp,
                 )
-                .size(
-                    width = if (landscape) cardHeight else cardWidth,
-                    height = if (landscape) cardWidth else cardHeight,
-                ),
+        }
+        Box(
+            modifier = placement.size(coveredWidth, coveredHeight),
             contentAlignment = Alignment.Center,
         ) {
             Row(

@@ -75,7 +75,7 @@ object BeautyBitmapFilter {
      * anything goes wrong. The caller owns both; when the result is a different
      * instance the source is no longer needed.
      */
-    fun apply(source: Bitmap, level: Int = BeautyParams.DEFAULT_LEVEL): Bitmap {
+    fun apply(source: Bitmap, level: Int = BeautyParams.TUNED_LEVEL): Bitmap {
         if (source.width <= 0 || source.height <= 0) return source
 
         val scaled = downscale(source)
