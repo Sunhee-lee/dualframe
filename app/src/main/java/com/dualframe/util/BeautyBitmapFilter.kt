@@ -75,7 +75,7 @@ object BeautyBitmapFilter {
      * anything goes wrong. The caller owns both; when the result is a different
      * instance the source is no longer needed.
      */
-    fun apply(source: Bitmap): Bitmap {
+    fun apply(source: Bitmap, level: Int = BeautyParams.DEFAULT_LEVEL): Bitmap {
         if (source.width <= 0 || source.height <= 0) return source
 
         val scaled = downscale(source)
@@ -135,7 +135,7 @@ object BeautyBitmapFilter {
                 return bail(source, scaled, "frame larger than GL_MAX_TEXTURE_SIZE")
             }
 
-            val out = render(scaled, w, h) ?: return bail(source, scaled, "render failed")
+            val out = render(scaled, w, h, level) ?: return bail(source, scaled, "render failed")
             if (scaled !== source) scaled.recycle()
             return out
         } catch (e: Exception) {
@@ -172,7 +172,7 @@ object BeautyBitmapFilter {
         )
     }
 
-    private fun render(source: Bitmap, w: Int, h: Int): Bitmap? {
+    private fun render(source: Bitmap, w: Int, h: Int, level: Int): Bitmap? {
         var program = 0
         val textures = IntArray(2)
         val framebuffers = IntArray(1)
@@ -227,10 +227,15 @@ object BeautyBitmapFilter {
             GLES20.glUniform2f(
                 GLES20.glGetUniformLocation(program, "uTexelSize"), 1f / w, 1f / h,
             )
+            val strength = BeautyParams.forLevel(level)
             GLES20.glUniform1f(
                 GLES20.glGetUniformLocation(program, "uRadius"),
-                BeautyParams.smoothRadiusPx(w, h),
+                BeautyParams.smoothRadiusPx(w, h, strength.radiusRatio),
             )
+            GLES20.glUniform1f(GLES20.glGetUniformLocation(program, "uLumaStrength"), strength.luma)
+            GLES20.glUniform1f(GLES20.glGetUniformLocation(program, "uChromaStrength"), strength.chroma)
+            GLES20.glUniform1f(GLES20.glGetUniformLocation(program, "uSkinBrighten"), strength.skinBrighten)
+            GLES20.glUniform1f(GLES20.glGetUniformLocation(program, "uToneAmount"), strength.tone)
 
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
             GLES20.glDisableVertexAttribArray(positionHandle)

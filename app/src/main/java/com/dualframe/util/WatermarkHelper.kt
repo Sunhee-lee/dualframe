@@ -67,13 +67,15 @@ object WatermarkHelper {
         applyWatermark: Boolean,
         applyBeauty: Boolean,
         mirrorHorizontally: Boolean = false,
+        beautyLevel: Int = BeautyParams.DEFAULT_LEVEL,
         onProgress: (Float) -> Unit = {},
         onSkinSmoothUnavailable: () -> Unit = {},
     ): File? {
         val skinShaderUsed = applyBeauty && BeautyParams.SKIN_SMOOTH_ENABLED
         val first = attemptEffects(
             context, sourceFile, outputFile, applyWatermark, applyBeauty,
-            mirrorHorizontally, skipSkinEffect = !skinShaderUsed, onProgress = onProgress,
+            mirrorHorizontally, beautyLevel, skipSkinEffect = !skinShaderUsed,
+            onProgress = onProgress,
         )
         if (first != null || !skinShaderUsed) return first
 
@@ -91,7 +93,8 @@ object WatermarkHelper {
             "The saved file will be less smooth than the preview was.")
         val second = attemptEffects(
             context, sourceFile, outputFile, applyWatermark, applyBeauty,
-            mirrorHorizontally, skipSkinEffect = true, onProgress = onProgress,
+            mirrorHorizontally, beautyLevel, skipSkinEffect = true,
+            onProgress = onProgress,
         )
         // Only once the fallback actually produced a file is there a saved clip
         // that differs from the preview. If it failed too, the caller's own
@@ -111,6 +114,7 @@ object WatermarkHelper {
         applyWatermark: Boolean,
         applyBeauty: Boolean,
         mirrorHorizontally: Boolean,
+        beautyLevel: Int,
         skipSkinEffect: Boolean,
         onProgress: (Float) -> Unit,
     ): File? = withContext(Dispatchers.Main) {
@@ -137,7 +141,7 @@ object WatermarkHelper {
             // part, because those could not smooth skin and maintaining the
             // look in two places is what let the two drift apart.
             if (applyBeauty && !skipSkinEffect) {
-                videoEffects.add(SkinSmoothEffect())
+                videoEffects.add(SkinSmoothEffect(beautyLevel))
             } else if (applyBeauty) {
                 // Fallback pass: the custom shader failed once for this clip, so
                 // apply what Media3 can do on its own rather than lose the look

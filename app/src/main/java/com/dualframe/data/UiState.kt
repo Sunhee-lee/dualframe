@@ -42,6 +42,11 @@ data class UiState(
     // tone correction only, so the saved file is less smooth than the preview
     // was. Told to the user rather than passed off as a normal save.
     val showBeautyFallbackToast: Boolean = false,
+    // The strength slider, opened by long-pressing the beauty tile. Closed
+    // while recording so the preview cannot drift from what is being written.
+    val beautySliderOpen: Boolean = false,
+    // One-off nudge telling the user the tile has a long press.
+    val showBeautyHintToast: Boolean = false,
     // Storage-based recording limit
     val remainingRecordingSeconds: Int? = null,  // null when > 5 min or not recording
     val endedEarlyDueToStorage: Boolean = false,

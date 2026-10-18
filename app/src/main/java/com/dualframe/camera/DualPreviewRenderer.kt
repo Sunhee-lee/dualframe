@@ -89,6 +89,12 @@ class DualPreviewRenderer {
 
     var mirrorHorizontally = false
     var beautyEnabled = false
+
+    /**
+     * 0-100, the slider's value. Read every frame, so a drag shows up on the
+     * next one without a shader rebuild.
+     */
+    var beautyLevel = com.dualframe.util.BeautyParams.DEFAULT_LEVEL
     var masterVisualAspect: Float = 9f / 16f
     @Volatile var landscapeCropOffsetY: Float = 0f
 
@@ -100,6 +106,10 @@ class DualPreviewRenderer {
     private var uBeautyHandle = 0
     private var uTexelSizeHandle = 0
     private var uRadiusHandle = 0
+    private var uLumaStrengthHandle = 0
+    private var uChromaStrengthHandle = 0
+    private var uSkinBrightenHandle = 0
+    private var uToneAmountHandle = 0
     private var aPositionHandle = 0
     private var aTexCoordHandle = 0
 
@@ -263,10 +273,17 @@ class DualPreviewRenderer {
             val texW = if (previewWidth > 0) previewWidth else 1
             val texH = if (previewHeight > 0) previewHeight else 1
             GLES20.glUniform2f(uTexelSizeHandle, 1f / texW, 1f / texH)
+            // The exporter and the thumbnail filter read the same helper for
+            // the same level, so all three smooth by the same amount.
+            val strength = com.dualframe.util.BeautyParams.forLevel(beautyLevel)
             GLES20.glUniform1f(
                 uRadiusHandle,
-                com.dualframe.util.BeautyParams.smoothRadiusPx(texW, texH),
+                com.dualframe.util.BeautyParams.smoothRadiusPx(texW, texH, strength.radiusRatio),
             )
+            GLES20.glUniform1f(uLumaStrengthHandle, strength.luma)
+            GLES20.glUniform1f(uChromaStrengthHandle, strength.chroma)
+            GLES20.glUniform1f(uSkinBrightenHandle, strength.skinBrighten)
+            GLES20.glUniform1f(uToneAmountHandle, strength.tone)
 
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
             GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId)
@@ -342,6 +359,10 @@ class DualPreviewRenderer {
         uBeautyHandle = GLES20.glGetUniformLocation(program, "uBeauty")
         uTexelSizeHandle = GLES20.glGetUniformLocation(program, "uTexelSize")
         uRadiusHandle = GLES20.glGetUniformLocation(program, "uRadius")
+        uLumaStrengthHandle = GLES20.glGetUniformLocation(program, "uLumaStrength")
+        uChromaStrengthHandle = GLES20.glGetUniformLocation(program, "uChromaStrength")
+        uSkinBrightenHandle = GLES20.glGetUniformLocation(program, "uSkinBrighten")
+        uToneAmountHandle = GLES20.glGetUniformLocation(program, "uToneAmount")
         aPositionHandle = GLES20.glGetAttribLocation(program, "aPosition")
         aTexCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
 

@@ -17,6 +17,22 @@ package com.dualframe.util
 object BeautyShader {
 
     /**
+     * The strength uniforms, declared once so all three pipelines get the same
+     * four and none can forget one.
+     *
+     * These used to be literals interpolated into the source, which meant a
+     * strength change was a shader recompile. As uniforms, one compiled program
+     * covers every level and a slider drag shows up on the very next frame.
+     * [BeautyParams.forLevel] is what fills them.
+     */
+    const val UNIFORMS_GLSL = """
+        uniform float uLumaStrength;
+        uniform float uChromaStrength;
+        uniform float uSkinBrighten;
+        uniform float uToneAmount;
+    """
+
+    /**
      * Skin detection in YCbCr, which separates hue from brightness well enough
      * to find skin without finding a face. The bands are deliberately soft —
      * smoothstep rather than a threshold — so the effect fades in at the edge
@@ -55,6 +71,7 @@ object BeautyShader {
      */
     val TONE_GLSL = """
         vec3 dfTone(vec3 c) {
+            vec3 src = c;
             c = c + ${glsl(BeautyParams.BRIGHTNESS)};
             c = (c - 0.5) * (1.0 + ${glsl(BeautyParams.CONTRAST)}) + 0.5;
             c.r = c.r * ${glsl(BeautyParams.RED_SCALE)};
@@ -62,7 +79,9 @@ object BeautyShader {
             c.b = c.b * ${glsl(BeautyParams.BLUE_SCALE)};
             float g = dfLuma(c);
             c = mix(vec3(g), c, ${glsl(1f + BeautyParams.SATURATION_BOOST / 100f)});
-            return clamp(c, 0.0, 1.0);
+            // At full strength mix() returns c untouched, so the tuned look is
+            // reproduced exactly rather than approximately.
+            return clamp(mix(src, c, uToneAmount), 0.0, 1.0);
         }
     """
 
@@ -131,15 +150,15 @@ object BeautyShader {
             float mask = dfSkinMask(centre);
 
             float sy = dfLuma(smoothed);
-            float y  = mix(cy, sy, mask * ${glsl(BeautyParams.SMOOTH_LUMA_STRENGTH)});
+            float y  = mix(cy, sy, mask * uLumaStrength);
             vec3  ch = mix(centre - vec3(cy), smoothed - vec3(sy),
-                           mask * ${glsl(BeautyParams.SMOOTH_CHROMA_STRENGTH)});
+                           mask * uChromaStrength);
             vec3 result = vec3(y) + ch;
 
             // Skin only, strongest in shadow and gone before the highlights, so
             // a face brightens without the frame going pale or a forehead
             // blowing out. The mask keeps it off the background entirely.
-            result += mask * ${glsl(BeautyParams.SKIN_BRIGHTEN)}
+            result += mask * uSkinBrighten
                       * (1.0 - smoothstep(0.55, 0.95, cy));
 
             return dfTone(clamp(result, 0.0, 1.0));
@@ -177,7 +196,7 @@ object BeautyShader {
      * so both pipelines keep compiling and keep their colour while the
      * smoothing drops out entirely.
      */
-    val COMMON_GLSL: String = SKIN_MASK_GLSL + TONE_GLSL +
+    val COMMON_GLSL: String = UNIFORMS_GLSL + SKIN_MASK_GLSL + TONE_GLSL +
         if (BeautyParams.SKIN_SMOOTH_ENABLED) BEAUTY_GLSL else """
         vec3 dfBeauty(vec2 uv, vec2 texel, float radius) {
             return dfTone(DF_SAMPLE(uv).rgb);

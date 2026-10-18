@@ -55,6 +55,8 @@
     <string name="toast_watermark_removed">가로/세로 영상의 워터마크가 제거되었습니다.</string>
     <string name="toast_export_fallback_fhd">이 기기에서는 4K 저장이 제한되어 FHD로 저장되었습니다.</string>
     <string name="toast_beauty_fallback">이 기기에서는 피부 보정을 적용할 수 없어 색감 보정만 적용해 저장했습니다.</string>
+    <string name="beauty_strength_title">피부 보정 강도</string>
+    <string name="toast_beauty_hint">뷰티가 켜졌습니다. 버튼을 길게 누르면 강도를 조절할 수 있습니다.</string>
     <string name="toast_auto_save_complete">✓ 저장 완료</string>
     <string name="toast_auto_save_failed">자동 저장에 실패했습니다. 수동으로 저장해 주세요.</string>
     <string name="recording_paused_prefix">일시정지</string>

@@ -15,6 +15,11 @@ data class AppSettings(
      * selfie they shoot.
      */
     val frontCameraEffect: Boolean = false,
+    /**
+     * Selfie effect strength, 0-100 in steps of 5. The default is the level the
+     * effect was tuned at, so turning it on gives the look it always gave.
+     */
+    val beautyLevel: Int = com.dualframe.util.BeautyParams.DEFAULT_LEVEL,
     val keepScreenAwake: Boolean = true,
     val showGuides: Boolean = true,
     val autoSave: Boolean = false,
@@ -37,6 +42,8 @@ object SettingsStore {
     private const val KEY_INITIALIZED = "settings_initialized"
     private const val KEY_MIRROR_FRONT = "mirror_front_camera"
     private const val KEY_FRONT_EFFECT = "front_camera_effect"
+    private const val KEY_BEAUTY_LEVEL = "beauty_level"
+    private const val KEY_BEAUTY_HINT = "beauty_slider_hint_shown"
     private const val KEY_SCREEN_AWAKE = "keep_screen_awake"
     private const val KEY_GUIDES = "show_guides"
     private const val KEY_AUTO_SAVE = "auto_save"
@@ -55,6 +62,8 @@ object SettingsStore {
             },
             saveSelfieUnmirrored = prefs.getBoolean(KEY_MIRROR_FRONT, true),
             frontCameraEffect = prefs.getBoolean(KEY_FRONT_EFFECT, false),
+            beautyLevel = prefs.getInt(KEY_BEAUTY_LEVEL, com.dualframe.util.BeautyParams.DEFAULT_LEVEL)
+                .coerceIn(0, 100),
             keepScreenAwake = prefs.getBoolean(KEY_SCREEN_AWAKE, true),
             showGuides = prefs.getBoolean(KEY_GUIDES, true),
             autoSave = prefs.getBoolean(KEY_AUTO_SAVE, false),
@@ -70,6 +79,7 @@ object SettingsStore {
             putString(KEY_QUALITY, settings.videoQuality.name)
             putBoolean(KEY_MIRROR_FRONT, settings.saveSelfieUnmirrored)
             putBoolean(KEY_FRONT_EFFECT, settings.frontCameraEffect)
+            putInt(KEY_BEAUTY_LEVEL, settings.beautyLevel)
             putBoolean(KEY_SCREEN_AWAKE, settings.keepScreenAwake)
             putBoolean(KEY_GUIDES, settings.showGuides)
             putBoolean(KEY_AUTO_SAVE, settings.autoSave)
@@ -83,6 +93,14 @@ object SettingsStore {
 
     fun markInitialized(context: Context) {
         prefs(context).edit { putBoolean(KEY_INITIALIZED, true) }
+    }
+
+    /** Whether the one-off "long-press to set strength" hint has been shown. */
+    fun isBeautyHintShown(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_BEAUTY_HINT, false)
+
+    fun markBeautyHintShown(context: Context) {
+        prefs(context).edit { putBoolean(KEY_BEAUTY_HINT, true) }
     }
 
     private fun prefs(context: Context): SharedPreferences =

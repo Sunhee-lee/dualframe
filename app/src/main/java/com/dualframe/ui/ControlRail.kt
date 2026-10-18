@@ -95,6 +95,7 @@ fun SettingsPanel(
     onFlashToggle: () -> Unit,
     onKeepScreenToggle: () -> Unit,
     onSelfieEffectToggle: () -> Unit,
+    onSelfieEffectLongPress: () -> Unit,
     onResolutionCycle: () -> Unit,
     onMoreClick: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -148,6 +149,11 @@ fun SettingsPanel(
                 rot, onSelfieEffectToggle, isActive = selfieEffect,
                 name = stringResource(R.string.tile_beauty_name),
                 description = stringResource(R.string.tile_beauty_desc),
+                // This one tile spends its long press on the strength slider
+                // instead of a tooltip. The description still reaches a screen
+                // reader through the tile's semantics, and the slider itself
+                // explains the control better than a caption could.
+                onLongPress = onSelfieEffectLongPress,
             )
         }
 
@@ -190,6 +196,7 @@ private fun RailTile(
     stateText: String?,
     rotation: Float,
     onClick: () -> Unit,
+    onLongPress: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     var tooltipShown by remember { mutableStateOf(false) }
@@ -217,7 +224,15 @@ private fun RailTile(
             .border(0.5.dp, RailTheme.tileBorder, RoundedCornerShape(RailTheme.tileRadius))
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = if (upright) {
+                // A tile that has its own long-press action takes it in every
+                // orientation; the tooltip is the thing with no room sideways,
+                // not the gesture.
+                onLongClick = if (onLongPress != null) {
+                    {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongPress()
+                    }
+                } else if (upright) {
                     {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         tooltipShown = true
@@ -325,6 +340,7 @@ private fun TextTile(
     description: String,
     isActive: Boolean = false,
     fontSize: TextUnit = 12.sp,
+    onLongPress: (() -> Unit)? = null,
 ) {
     RailTile(
         name = name,
@@ -332,6 +348,7 @@ private fun TextTile(
         stateText = text,
         rotation = rotation,
         onClick = onClick,
+        onLongPress = onLongPress,
     ) {
         Text(text,
             color = if (isActive) RailTheme.activeColor else RailTheme.iconColor,

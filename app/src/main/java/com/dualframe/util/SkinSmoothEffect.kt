@@ -28,10 +28,17 @@ import androidx.media3.effect.GlEffect
  * same source text.
  */
 @UnstableApi
-class SkinSmoothEffect : GlEffect {
+class SkinSmoothEffect(
+    /**
+     * The slider level the clip was recorded at, 0-100. Fixed for the export:
+     * a recording keeps the strength it was shot with, whatever the slider says
+     * by the time the file is saved.
+     */
+    private val level: Int = BeautyParams.DEFAULT_LEVEL,
+) : GlEffect {
 
     override fun toGlShaderProgram(context: Context, useHdr: Boolean) =
-        SkinSmoothShaderProgram(useHdr)
+        SkinSmoothShaderProgram(useHdr, level)
 
     override fun isNoOp(inputWidth: Int, inputHeight: Int) = false
 }
@@ -39,7 +46,10 @@ class SkinSmoothEffect : GlEffect {
 @UnstableApi
 class SkinSmoothShaderProgram(
     useHdr: Boolean,
+    level: Int,
 ) : BaseGlShaderProgram(useHdr, /* texturePoolCapacity= */ 1) {
+
+    private val strength = BeautyParams.forLevel(level)
 
     private companion object {
         /**
@@ -94,7 +104,7 @@ class SkinSmoothShaderProgram(
     override fun configure(inputWidth: Int, inputHeight: Int): Size {
         texelWidth = 1f / inputWidth
         texelHeight = 1f / inputHeight
-        radiusPx = BeautyParams.smoothRadiusPx(inputWidth, inputHeight)
+        radiusPx = BeautyParams.smoothRadiusPx(inputWidth, inputHeight, strength.radiusRatio)
         return Size(inputWidth, inputHeight)
     }
 
@@ -104,6 +114,10 @@ class SkinSmoothShaderProgram(
             glProgram.setSamplerTexIdUniform("uTexSampler", inputTexId, /* texUnitIndex= */ 0)
             glProgram.setFloatsUniform("uTexelSize", floatArrayOf(texelWidth, texelHeight))
             glProgram.setFloatUniform("uRadius", radiusPx)
+            glProgram.setFloatUniform("uLumaStrength", strength.luma)
+            glProgram.setFloatUniform("uChromaStrength", strength.chroma)
+            glProgram.setFloatUniform("uSkinBrighten", strength.skinBrighten)
+            glProgram.setFloatUniform("uToneAmount", strength.tone)
             glProgram.bindAttributesAndUniforms()
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, /* first= */ 0, /* count= */ 4)
             GlUtil.checkGlError()

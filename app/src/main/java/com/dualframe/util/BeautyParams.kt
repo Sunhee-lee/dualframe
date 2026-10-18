@@ -60,8 +60,8 @@ object BeautyParams {
      * call this with their own frame's dimensions, in whichever orientation
      * they hold it, and get the same answer.
      */
-    fun smoothRadiusPx(width: Int, height: Int): Float =
-        (minOf(width, height) * SMOOTH_RADIUS_RATIO).coerceAtLeast(1f)
+    fun smoothRadiusPx(width: Int, height: Int, ratio: Float): Float =
+        (minOf(width, height) * ratio).coerceAtLeast(1f)
 
     /** Inner ring radius, as a fraction of the outer one. */
     const val INNER_RING_RATIO = 0.45f
@@ -114,4 +114,76 @@ object BeautyParams {
      * down if faces start looking pale.
      */
     const val SKIN_BRIGHTEN = 0.05f         // ← 올리면 화사, 과하면 하얗게 뜸
+
+
+    // ── Strength levels ───────────────────────────────────────────────
+    // The constants above are the look at [DEFAULT_LEVEL]; these turn a 0-100
+    // slider into them. They are uniforms at runtime rather than literals baked
+    // into the shader, so one compiled program serves every level and the
+    // preview answers a drag immediately.
+
+    /** The level that reproduces the tuned look above, exactly. */
+    const val DEFAULT_LEVEL = 60
+
+    /** Slider granularity. */
+    const val LEVEL_STEP = 5
+
+    // The ceiling at level 100. Smoothing luminance past about 0.85 is where a
+    // face stops having a surface, so 0.80 is as far as the slider goes;
+    // chroma, which holds no detail worth keeping, can run closer to 1. The
+    // brightening ceiling is kept low for the same reason it is faded out above
+    // mid-grey: a face that climbs towards white reads as a mistake, not a
+    // filter.
+    private const val MAX_LUMA_STRENGTH = 0.80f
+    private const val MAX_CHROMA_STRENGTH = 0.97f
+    private const val MAX_RADIUS_RATIO = 0.0095f
+    private const val MAX_SKIN_BRIGHTEN = 0.07f
+
+    /** What the shader needs to know for one level. */
+    data class Strength(
+        val luma: Float,
+        val chroma: Float,
+        val radiusRatio: Float,
+        val skinBrighten: Float,
+        val tone: Float,
+    )
+
+    /**
+     * The four shader uniforms plus the radius, for a slider level.
+     *
+     * Below [DEFAULT_LEVEL] every amount scales linearly to zero, tone
+     * correction included — otherwise level 0 would still shift the colour of
+     * the whole frame and would not be "no effect" at all. Above it, only the
+     * skin amounts grow and tone holds at full: past the tuned look the user is
+     * asking for smoother skin, not a brighter picture, and letting brightness
+     * climb is how a filter starts looking washed out.
+     *
+     * At exactly [DEFAULT_LEVEL] the interpolation factor is 1.0, so each value
+     * is its constant untouched — the tuned look is reproduced bit for bit, not
+     * approximated.
+     */
+    fun forLevel(level: Int): Strength {
+        val l = level.coerceIn(0, 100)
+        if (l <= DEFAULT_LEVEL) {
+            val t = l / DEFAULT_LEVEL.toFloat()
+            return Strength(
+                luma = SMOOTH_LUMA_STRENGTH * t,
+                chroma = SMOOTH_CHROMA_STRENGTH * t,
+                // Held constant: the mix amounts above already decide how much
+                // of the smoothed value is used, and shrinking the ring as well
+                // would weaken it twice over.
+                radiusRatio = SMOOTH_RADIUS_RATIO,
+                skinBrighten = SKIN_BRIGHTEN * t,
+                tone = t,
+            )
+        }
+        val t = (l - DEFAULT_LEVEL) / (100f - DEFAULT_LEVEL)
+        return Strength(
+            luma = SMOOTH_LUMA_STRENGTH + (MAX_LUMA_STRENGTH - SMOOTH_LUMA_STRENGTH) * t,
+            chroma = SMOOTH_CHROMA_STRENGTH + (MAX_CHROMA_STRENGTH - SMOOTH_CHROMA_STRENGTH) * t,
+            radiusRatio = SMOOTH_RADIUS_RATIO + (MAX_RADIUS_RATIO - SMOOTH_RADIUS_RATIO) * t,
+            skinBrighten = SKIN_BRIGHTEN + (MAX_SKIN_BRIGHTEN - SKIN_BRIGHTEN) * t,
+            tone = 1f,
+        )
+    }
 }

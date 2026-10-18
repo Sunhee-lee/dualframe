@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
@@ -58,6 +59,8 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -108,6 +111,7 @@ import com.dualframe.util.formatDuration
 import com.dualframe.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @UnstableApi
 @androidx.camera.camera2.interop.ExperimentalCamera2Interop
@@ -337,9 +341,8 @@ fun MainScreen(
                 onKeepScreenToggle = {
                     viewModel.updateSettings(state.settings.copy(keepScreenAwake = !keepScreenOn))
                 },
-                onSelfieEffectToggle = {
-                    viewModel.updateSettings(state.settings.copy(frontCameraEffect = !state.settings.frontCameraEffect))
-                },
+                onSelfieEffectToggle = { viewModel.toggleBeauty() },
+                onSelfieEffectLongPress = { viewModel.openBeautySlider() },
                 onResolutionCycle = {
                     val qualities = com.dualframe.data.VideoQuality.entries
                     val idx = qualities.indexOf(state.settings.videoQuality)
@@ -361,6 +364,27 @@ fun MainScreen(
                 context.getString(R.string.toast_export_fallback_fhd),
                 android.widget.Toast.LENGTH_LONG).show()
         }
+    }
+
+    // One-off nudge, the first time the effect is switched on.
+    if (state.showBeautyHintToast) {
+        LaunchedEffect(Unit) {
+            android.widget.Toast.makeText(context,
+                context.getString(R.string.toast_beauty_hint),
+                android.widget.Toast.LENGTH_LONG).show()
+            viewModel.dismissBeautyHintToast()
+        }
+    }
+
+    // Front-only, like the effect and the tile that opens this. Switching to
+    // the rear camera with the slider up takes it down rather than leaving a
+    // control for something that is not running.
+    if (state.beautySliderOpen && isFrontCamera) {
+        BeautyStrengthPopup(
+            level = state.settings.beautyLevel,
+            onLevelChange = { viewModel.setBeautyLevel(it) },
+            onDismiss = { viewModel.closeBeautySlider() },
+        )
     }
 
     // The saved clip came out less smooth than the preview, because the skin
@@ -1678,6 +1702,74 @@ private fun AdFailDialog(
                     fontFamily = PretendardFont,
                     modifier = Modifier.clickable { onViewPro() }.padding(4.dp))
             }
+        }
+    }
+}
+
+/**
+ * The selfie-effect strength slider.
+ *
+ * Sits against the right edge, clear of the rail it belongs to and well clear
+ * of the shutter at the bottom, so nothing it covers is something the user
+ * might be reaching for. A scrim catches taps outside and closes it; the card
+ * itself swallows them so dragging the slider does not dismiss it.
+ *
+ * The preview updates as the slider moves — the strength is a shader uniform,
+ * not baked source, so there is nothing to rebuild between frames.
+ */
+@Composable
+private fun BeautyStrengthPopup(
+    level: Int,
+    onLevelChange: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+            ) { onDismiss() },
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(end = 70.dp)
+                .widthIn(min = 150.dp, max = 220.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFF151515).copy(alpha = 0.95f))
+                .border(0.5.dp, Color(0xFF333333), RoundedCornerShape(14.dp))
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                ) {}
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.beauty_strength_title),
+                    color = Color(0xFFCCCCCC), fontSize = 13.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.SemiBold)
+                Text("$level",
+                    color = Color(0xFF4CAF50), fontSize = 14.sp,
+                    fontFamily = PretendardFont, fontWeight = FontWeight.Bold)
+            }
+            Slider(
+                value = level.toFloat(),
+                onValueChange = { onLevelChange(it.roundToInt()) },
+                valueRange = 0f..100f,
+                // 21 stops at a step of 5: the two ends plus 19 between them.
+                steps = 19,
+                colors = SliderDefaults.colors(
+                    thumbColor = Color(0xFF4CAF50),
+                    activeTrackColor = Color(0xFF4CAF50),
+                    inactiveTrackColor = Color(0xFF3A3A3A),
+                    activeTickColor = Color.Transparent,
+                    inactiveTickColor = Color.Transparent,
+                ),
+            )
         }
     }
 }

@@ -68,6 +68,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val exportManager = ExportManager(application)
 
     private var masterFile: File? = null
+
+    /**
+     * The strength the current clip was recorded at.
+     *
+     * The slider is locked while recording, but the result screen stays up
+     * afterwards and the user can change it there before choosing to save — so
+     * the level is taken once, when recording starts, and every later step
+     * (thumbnail, watermarked save, clean save, auto-save) reads this rather
+     * than the live setting. What was framed is what gets written.
+     */
+    private var recordingBeautyLevel = com.dualframe.util.BeautyParams.DEFAULT_LEVEL
     private var timerJob: Job? = null
     private var countdownJob: Job? = null
 
@@ -189,8 +200,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * that state can move: a bind, a camera switch, a settings change.
      */
     private fun syncBeautyToRenderer() {
+        val settings = _uiState.value.settings
+        cameraManager.renderer.beautyLevel = settings.beautyLevel
+        // Level 0 takes the no-effect path rather than running a shader whose
+        // every amount is zero: the frame comes through untouched, bit for bit,
+        // and seventeen texture fetches per pixel are not spent proving it.
         cameraManager.renderer.beautyEnabled =
-            cameraManager.useFrontCamera.value && _uiState.value.settings.frontCameraEffect
+            cameraManager.useFrontCamera.value &&
+            settings.frontCameraEffect &&
+            settings.beautyLevel > 0
     }
 
     fun updateSettings(newSettings: AppSettings) {
@@ -302,9 +320,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (_uiState.value.appStatus == AppStatus.RECORDING) return
         clearError()
         val settings = _uiState.value.settings
+        recordingBeautyLevel = settings.beautyLevel
         _uiState.update {
             it.copy(
                 appStatus = AppStatus.RECORDING,
+                beautySliderOpen = false,
                 recordingDurationSeconds = 0,
                 thumbnailBitmap = null,
                 landscapeThumbnailBitmap = null,
@@ -571,9 +591,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // Same condition the save paths use for `beauty`, so the picture
             // on the result screen is the picture the save will produce.
             val thumbBeauty = cameraManager.useFrontCamera.value &&
-                _uiState.value.settings.frontCameraEffect
-            val thumbnail = generateThumbnail(nativeFile, thumbBeauty)
-            val landscapeThumbnail = generateThumbnail(croppedFile, thumbBeauty)
+                _uiState.value.settings.frontCameraEffect && recordingBeautyLevel > 0
+            val thumbnail = generateThumbnail(nativeFile, thumbBeauty, recordingBeautyLevel)
+            val landscapeThumbnail = generateThumbnail(croppedFile, thumbBeauty, recordingBeautyLevel)
 
             // Files ready in temp — NOT saved to gallery yet.
             // User must press Save Both or Remove Watermark to trigger gallery save.
@@ -645,7 +665,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val croppedFile = File(croppedPath)
 
             val isFront = cameraManager.useFrontCamera.value
-            val beauty = isFront && _uiState.value.settings.frontCameraEffect
+            val beauty = isFront && _uiState.value.settings.frontCameraEffect &&
+                recordingBeautyLevel > 0
             val mirror = isFront
             val needsTransform = beauty || mirror
 
@@ -654,6 +675,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 WatermarkHelper.applyEffects(
                     app, nativeFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                    beautyLevel = recordingBeautyLevel,
                     onSkinSmoothUnavailable = ::reportBeautyFallback,
                 ) ?: nativeFile
             } else nativeFile
@@ -663,6 +685,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 WatermarkHelper.applyEffects(
                     app, croppedFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                    beautyLevel = recordingBeautyLevel,
                     onSkinSmoothUnavailable = ::reportBeautyFallback,
                 ) ?: croppedFile
             } else croppedFile
@@ -704,6 +727,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun reportBeautyFallback() {
         Log.w(TAG, "Skin smoothing unavailable on this device — saved with tone correction only")
         _uiState.update { it.copy(showBeautyFallbackToast = true) }
+    }
+
+    /**
+     * Long-press on the beauty tile. Refused while a clip is being recorded or
+     * counted down: the export uses the level recording started with, so a
+     * change made mid-take would show in the preview and not in the file.
+     */
+    fun openBeautySlider() {
+        val status = _uiState.value.appStatus
+        if (status == AppStatus.RECORDING || status == AppStatus.PAUSED ||
+            status == AppStatus.COUNTDOWN
+        ) return
+        _uiState.update { it.copy(beautySliderOpen = true) }
+    }
+
+    fun closeBeautySlider() {
+        _uiState.update { it.copy(beautySliderOpen = false) }
+    }
+
+    /** Persisted, and pushed to the preview on the next frame. */
+    fun setBeautyLevel(level: Int) {
+        val snapped = (level / com.dualframe.util.BeautyParams.LEVEL_STEP *
+            com.dualframe.util.BeautyParams.LEVEL_STEP).coerceIn(0, 100)
+        if (snapped == _uiState.value.settings.beautyLevel) return
+        updateSettings(_uiState.value.settings.copy(beautyLevel = snapped))
+    }
+
+    /**
+     * Turn the effect on or off, and the first time it goes on, say once that
+     * the tile also has a strength control. A slider nobody knows about is a
+     * slider nobody uses.
+     */
+    fun toggleBeauty() {
+        val settings = _uiState.value.settings
+        val turningOn = !settings.frontCameraEffect
+        updateSettings(settings.copy(frontCameraEffect = turningOn))
+        val app = getApplication<android.app.Application>()
+        if (turningOn && !SettingsStore.isBeautyHintShown(app)) {
+            SettingsStore.markBeautyHintShown(app)
+            _uiState.update { it.copy(showBeautyHintToast = true) }
+        }
+    }
+
+    fun dismissBeautyHintToast() {
+        _uiState.update { it.copy(showBeautyHintToast = false) }
     }
 
     fun dismissBeautyFallbackToast() {
@@ -763,7 +831,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val croppedFile = File(croppedPath)
 
             val isFront = cameraManager.useFrontCamera.value
-            val beauty = isFront && _uiState.value.settings.frontCameraEffect
+            val beauty = isFront && _uiState.value.settings.frontCameraEffect &&
+                recordingBeautyLevel > 0
             val mirror = isFront
             val wmNative = FileStorage.createExportFile(app, "wm_V")
             val wmCropped = FileStorage.createExportFile(app, "wm_H")
@@ -773,12 +842,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val wmNativeResult = WatermarkHelper.applyEffects(
                 app, nativeFile, wmNative,
                 applyWatermark = true, applyBeauty = beauty, mirrorHorizontally = mirror,
+                beautyLevel = recordingBeautyLevel,
                 onSkinSmoothUnavailable = ::reportBeautyFallback,
                 onProgress = { p -> publishSaveProgress(SAVE_PASS_1_START, SAVE_PASS_1_END, p) },
             )
             val wmCroppedResult = WatermarkHelper.applyEffects(
                 app, croppedFile, wmCropped,
                 applyWatermark = true, applyBeauty = beauty, mirrorHorizontally = mirror,
+                beautyLevel = recordingBeautyLevel,
                 onSkinSmoothUnavailable = ::reportBeautyFallback,
                 onProgress = { p -> publishSaveProgress(SAVE_PASS_2_START, SAVE_PASS_2_END, p) },
             )
@@ -848,7 +919,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val croppedFile = File(croppedPath)
 
             val isFront = cameraManager.useFrontCamera.value
-            val beauty = isFront && _uiState.value.settings.frontCameraEffect
+            val beauty = isFront && _uiState.value.settings.frontCameraEffect &&
+                recordingBeautyLevel > 0
             val mirror = isFront
             val needsTransform = beauty || mirror
 
@@ -859,6 +931,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 WatermarkHelper.applyEffects(
                     app, nativeFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                    beautyLevel = recordingBeautyLevel,
                     onSkinSmoothUnavailable = ::reportBeautyFallback,
                     onProgress = { p -> publishSaveProgress(SAVE_PASS_1_START, SAVE_PASS_1_END, p) },
                 ) ?: nativeFile
@@ -869,6 +942,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 WatermarkHelper.applyEffects(
                     app, croppedFile, processed,
                     applyWatermark = false, applyBeauty = beauty, mirrorHorizontally = mirror,
+                    beautyLevel = recordingBeautyLevel,
                     onSkinSmoothUnavailable = ::reportBeautyFallback,
                     onProgress = { p -> publishSaveProgress(SAVE_PASS_2_START, SAVE_PASS_2_END, p) },
                 ) ?: croppedFile
@@ -999,6 +1073,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun generateThumbnail(
         videoFile: File,
         applyBeauty: Boolean,
+        beautyLevel: Int,
     ): Bitmap? = withContext(Dispatchers.IO) {
         val retriever = MediaMetadataRetriever()
         val frame = try {
@@ -1013,7 +1088,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (frame == null || !applyBeauty) return@withContext frame
-        val filtered = BeautyBitmapFilter.apply(frame)
+        val filtered = BeautyBitmapFilter.apply(frame, beautyLevel)
         // apply() hands back the original when it could not run, so only
         // recycle what it actually replaced.
         if (filtered !== frame) frame.recycle()
